@@ -2,11 +2,19 @@ import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import { GameState } from './logic/GameState'
 import GameBoard from './components/GameBoard'
+import { io } from 'socket.io-client'
+
+const socket = io('/', {
+  transports: ['polling', 'websocket'],
+  autoConnect: true
+})
 
 const MAX_PULL_DISTANCE = 300;
 
 function App() {
   const [playerState, setPlayerState] = useState(null)
+  const [isConnected, setIsConnected] = useState(socket.connected)
+  const [lastError, setLastError] = useState(null)
   const [selectedHubId, setSelectedHubId] = useState(null)
   const [selectedItemType, setSelectedItemType] = useState('HUB')
   const [launchMode, setLaunchMode] = useState(false) // Whether "Launch" mode is active
@@ -14,12 +22,45 @@ function App() {
   const [committedAction, setCommittedAction] = useState(null)
   const [showDebugPreview, setShowDebugPreview] = useState(false)
 
-  const gameRef = useRef(new GameState())
-
   useEffect(() => {
-    const pIds = ['player1', 'player2']
-    gameRef.current.initializeGame(pIds)
-    setPlayerState(gameRef.current.getState())
+    console.log('Connecting to socket...');
+
+    const onConnect = () => {
+      console.log('Socket connected!', socket.id);
+      setIsConnected(true);
+      socket.emit('requestState');
+    };
+
+    const onDisconnect = () => {
+      console.log('Socket disconnected');
+      setIsConnected(false);
+    };
+
+    const onUpdate = (newState) => {
+      console.log('Received game state update:', newState);
+      setPlayerState(newState)
+    };
+
+    const onError = (err) => {
+      console.error('Socket connection error:', err);
+      setIsConnected(false);
+      setLastError(err.message || JSON.stringify(err));
+    };
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    socket.on('gameStateUpdate', onUpdate);
+    socket.on('connect_error', onError);
+
+    // Initial check in case it connected before the effect ran
+    if (socket.connected) onConnect();
+
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('gameStateUpdate', onUpdate);
+      socket.off('connect_error', onError);
+    }
   }, [])
 
   const handleAimStart = (x, y) => {
@@ -63,15 +104,34 @@ function App() {
   }
 
   const handleExecuteTurn = () => {
-    const actions = committedAction ? [committedAction] : []
-    const nextState = gameRef.current.resolveTurn(actions)
-    setPlayerState(nextState)
+    if (committedAction) {
+      socket.emit('submitAction', committedAction)
+      setCommittedAction(null)
+      setSelectedHubId(null)
+      setLaunchMode(false)
+    }
+  }
+
+  const handleRestart = () => {
+    socket.emit('restartGame')
     setCommittedAction(null)
     setSelectedHubId(null)
     setLaunchMode(false)
   }
 
-  if (!playerState) return <div>Loading Game...</div>
+  if (!playerState) {
+    return (
+      <div className="loading-screen">
+        <h1>Titan: Nexus Command</h1>
+        <p>Connecting to Command Center...</p>
+        <div className="status-indicator">
+          Socket Status: {isConnected ? 'Connected' : 'Disconnected'}
+        </div>
+        {lastError && <div className="error-display" style={{ color: '#ff6464', marginTop: '10px' }}>Error: {lastError}</div>}
+        {!isConnected && <button onClick={() => { setLastError(null); socket.connect(); }} style={{ marginTop: '10px' }}>Retry Connection</button>}
+      </div>
+    )
+  }
   const p1 = playerState.players['player1']
 
   return (
@@ -143,6 +203,16 @@ function App() {
             : 'Click your Hub to select it.'}
         </p>
       </footer>
+
+      {playerState.winner && (
+        <div className="winner-overlay">
+          <div className="winner-card" style={{ borderColor: playerState.players[playerState.winner]?.color || '#fff' }}>
+            <h2>{playerState.winner === 'DRAW' ? "It's a Draw!" : "Victory!"}</h2>
+            <p>{playerState.winner === 'DRAW' ? "Mutual destruction on Titan." : `Player ${playerState.winner} has conquered the sector.`}</p>
+            <button className="restart-btn" onClick={handleRestart}>Initialize New Mission</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

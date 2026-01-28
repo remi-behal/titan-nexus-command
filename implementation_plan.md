@@ -1,13 +1,20 @@
-# Implementation Plan: Simultaneous Turn-Based Multiplayer Game
+# Implementation Plan: Titan: Nexus Command
 
 # Goal Description
-Create a browser-based, simultaneous turn-based multiplayer game for 2-8 players. The game involves launching structures (Hubs, Weapons, etc.) from existing hubs to control territory and eliminate opponents.
+Create a browser-based, simultaneous turn-based multiplayer game for 2-8 players set on the surface of Saturn's moon, Titan. The game involves launching structures (Hubs, Weapons, etc.) from existing hubs to control territory and eliminate opponents.
 
 ## User Review Required
 > [!NOTE]
-> **Conflict Resolution Strategy (Future)**
-> Since launches are simultaneous, two players might launch into the same spot.
-> *Draft Plan*: First-come-first-served based on random seed? Or mutual destruction? For MVP, we will allow overlapping or just First-Index-Wins.
+> **Refined Slingshot Mechanics**
+> - **Clamped Power**: Pull-back distance is capped at a `MAX_DISTANCE`.
+> - **Skill-based Aiming**: Landing zone is hidden by default. Players must judge distance/angle via a color-coded "Power Arrow" (Green -> Orange -> Red).
+> - **Debug Mode**: A toggle allows for "Pinpoint Preview" during development testing.
+
+> [!TIP]
+> **Titan Thematic Mechanics (Future Ideas for the User to Review)**
+> - **Atmospheric Drag**: High winds on Titan could add a random or turn-based "drift" to the slingshot launch vector.
+> - **Orange Haze**: Visual palette should eventually move toward amber/orange hues to match Titan's atmosphere.
+> - **Cryo-Mining**: Replace generic "Energy" with "Liquid Methane" or "Hydrocarbons" nodes.
 
 ## Development Roadmap
 
