@@ -5,6 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    fs: {
+      allow: ['..']
+    },
     proxy: {
       '/socket.io': {
         target: 'http://localhost:3000',

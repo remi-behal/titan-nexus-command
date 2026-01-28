@@ -19,6 +19,13 @@ Build a browser-based, simultaneous turn-based strategy game for 2-8 players set
 - **Host OS**: Antigravity runs on a Windows 11 machine, but **all project code** is in WSL.
 - **Terminal**: The integrated terminal is now fixed to default to **Ubuntu-24.04**. Connection to WSL was established by the user using the Command Palette "Remote-WSL: Connect to WSL". 
 
+## 5. Monorepo Structure
+- **Root**: Documentation and workspace management (`package.json`).
+- **`client/`**: React + Vite toolchain.
+- **`server/`**: Node.js API.
+- **`shared/`**: Game logic (Single Source of Truth) used by both halves.
+- **Command**: Use `npm run dev` from the root to start both client and server simultaneously.
+
 ## 5. Interaction Model: The Slingshot
 The game follows a strict state machine for actions:
 1. **Selection**: User clicks a Hub they own.

@@ -1,0 +1,14 @@
+{
+    "name": "titan-nexus-command",
+    "version": "1.0.0",
+    "description": "Browser-based simultaneous turn-based multiplayer game set on Titan.",
+    "scripts": {
+        "client": "npm run dev --prefix client",
+        "server": "npm run dev --prefix server",
+        "dev": "npx -y concurrently \"npm run server\" \"npm run client\"",
+        "install:all": "npm install --prefix client && npm install --prefix server",
+        "cleanup:git": "git rm -r --cached . && git add . && git commit -m 'chore: clean git index' && git push origin main"
+    },
+    "author": "",
+    "license": "ISC"
+}

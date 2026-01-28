@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
-import { GameState } from './logic/GameState'
+import { GameState } from '../../shared/GameState'
 import GameBoard from './components/GameBoard'
 import { io } from 'socket.io-client'
 
