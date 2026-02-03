@@ -1,6 +1,7 @@
 {
     "name": "titan-nexus-command",
     "version": "1.0.0",
+    "type": "module",
     "description": "Browser-based simultaneous turn-based multiplayer game set on Titan.",
     "scripts": {
         "client": "npm run dev --prefix client",

@@ -5,7 +5,19 @@ import React, { useRef, useEffect, useState } from 'react';
  *  
  * Takes the 'gameState' and renders it using HTML5 Canvas.
  */
-const GameBoard = ({ gameState, selectedHubId, isAiming, onAimStart, onAimUpdate, onAimEnd, onSelectHub, committedAction, showDebugPreview, maxPullDistance }) => {
+const GameBoard = ({
+    gameState,
+    myPlayerId,
+    selectedHubId,
+    isAiming,
+    onAimStart,
+    onAimUpdate,
+    onAimEnd,
+    onSelectHub,
+    committedAction,
+    showDebugPreview,
+    maxPullDistance
+}) => {
     const canvasRef = useRef(null);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
@@ -190,7 +202,7 @@ const GameBoard = ({ gameState, selectedHubId, isAiming, onAimStart, onAimUpdate
             return dist < 25;
         });
 
-        if (clickedEntity && clickedEntity.owner === 'player1' && clickedEntity.type === 'HUB') {
+        if (clickedEntity && clickedEntity.owner === myPlayerId && clickedEntity.type === 'HUB') {
             onSelectHub(clickedEntity.id);
         } else if (onAimStart) {
             onAimStart(x, y);

@@ -26,31 +26,177 @@ const PORT = process.env.PORT || 3000;
 
 // Initialize Server-authoritative Game State
 const game = new GameState();
-game.initializeGame(['player1', 'player2']);
+const playerIds = ['player1', 'player2'];
+game.initializeGame(playerIds);
+
+let playerAssignments = {
+    'player1': null,
+    'player2': null
+};
+
+let turnActions = {
+    'player1': null,
+    'player2': null
+};
+
+let lockedIn = {
+    'player1': false,
+    'player2': false
+};
+
+const TURN_DURATION = 30;
+let timeRemaining = TURN_DURATION;
+let timerTimeout = null;
+
+function startTimer() {
+    if (timerTimeout) {
+        clearTimeout(timerTimeout);
+        timerTimeout = null;
+    }
+    timeRemaining = TURN_DURATION;
+    console.log(`[Timer] Starting new turn timer: ${timeRemaining}s`);
+    io.emit('timerUpdate', timeRemaining);
+
+    timerTimeout = setTimeout(tick, 1000);
+}
+
+function tick() {
+    timeRemaining--;
+    // console.log(`[Timer] Tick: ${timeRemaining}`);
+    io.emit('timerUpdate', timeRemaining);
+
+    if (timeRemaining <= 0) {
+        console.log("[Timer] Time up! Auto-resolving turn...");
+        resolveTurn();
+    } else {
+        timerTimeout = setTimeout(tick, 1000);
+    }
+}
+
+function resolveTurn() {
+    if (timerTimeout) {
+        clearTimeout(timerTimeout);
+        timerTimeout = null;
+    }
+
+    console.log("--- Resolving Turn ---");
+
+    const actions = [];
+    if (turnActions.player1) actions.push(turnActions.player1);
+    if (turnActions.player2) actions.push(turnActions.player2);
+
+    try {
+        game.resolveTurn(actions);
+    } catch (err) {
+        console.error("CRITICAL ERROR: resolveTurn failed:", err);
+    }
+
+    // Reset for next turn
+    lockedIn.player1 = false;
+    lockedIn.player2 = false;
+    turnActions.player1 = null;
+    turnActions.player2 = null;
+
+    io.emit('gameStateUpdate', game.getState());
+    io.emit('syncStatus', { lockedIn });
+
+    // Start timer for the next turn
+    startTimer();
+}
+
+// Start first timer
+startTimer();
 
 io.on('connection', (socket) => {
     console.log(`User Connected: ${socket.id}`);
 
-    // Send current state to newly connected client
-    console.log(`Sending initial state to ${socket.id}`);
+    // Assign Player Slot
+    let assignedPlayerId = null;
+    for (const pid of playerIds) {
+        if (!playerAssignments[pid]) {
+            playerAssignments[pid] = socket.id;
+            assignedPlayerId = pid;
+            break;
+        }
+    }
+
+    if (assignedPlayerId) {
+        console.log(`Assigned ${socket.id} to ${assignedPlayerId}`);
+        socket.emit('playerAssignment', assignedPlayerId);
+    } else {
+        console.log(`${socket.id} joined as spectator`);
+        socket.emit('playerAssignment', 'spectator');
+    }
+
+    // Send current state
     socket.emit('gameStateUpdate', game.getState());
+    // Also send sync status
+    io.emit('syncStatus', { lockedIn });
 
     socket.on('requestState', () => {
-        console.log(`State requested by ${socket.id}`);
         socket.emit('gameStateUpdate', game.getState());
+        socket.emit('syncStatus', { lockedIn });
     });
 
     socket.on('submitAction', (action) => {
-        console.log(`Action received from ${socket.id}:`, action);
-        // In Phase 2/3, we'll queue actions. For now, let's resolve immediately 
-        // to verify communication.
-        game.resolveTurn([action]);
-        io.emit('gameStateUpdate', game.getState());
+        if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
+
+        console.log(`Action received from ${assignedPlayerId}:`, action);
+
+        // Ownership Guard
+        const sourceEntity = game.entities.find(e => e.id === action.sourceId);
+        if (!sourceEntity || sourceEntity.owner !== assignedPlayerId) {
+            console.warn(`Action REJECTED: Player ${assignedPlayerId} attempted to launch from unauthorized source ${action.sourceId}`);
+            return;
+        }
+
+        turnActions[assignedPlayerId] = { ...action, playerId: assignedPlayerId };
+        lockedIn[assignedPlayerId] = true;
+
+        // Notify everyone who is ready
+        io.emit('syncStatus', { lockedIn });
+
+        // Check if both players are locked in
+        if (lockedIn.player1 && lockedIn.player2) {
+            console.log("Both players locked in. Triggering resolution early...");
+            resolveTurn();
+        }
+    });
+
+    // Add a 'passTurn' event for when they don't want to launch anything
+    socket.on('passTurn', () => {
+        if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
+
+        console.log(`${assignedPlayerId} passed turn`);
+        turnActions[assignedPlayerId] = null;
+        lockedIn[assignedPlayerId] = true;
+
+        io.emit('syncStatus', { lockedIn });
+
+        if (lockedIn.player1 && lockedIn.player2) {
+            console.log("Both players locked in (via Pass). Triggering resolution early...");
+            resolveTurn();
+        }
     });
 
     socket.on('restartGame', () => {
-        game.initializeGame(['player1', 'player2']);
+        game.initializeGame(playerIds);
+        lockedIn.player1 = false;
+        lockedIn.player2 = false;
+        turnActions.player1 = null;
+        turnActions.player2 = null;
         io.emit('gameStateUpdate', game.getState());
+        io.emit('syncStatus', { lockedIn });
+        startTimer();
+    });
+
+    socket.on('disconnect', () => {
+        console.log(`User Disconnected: ${socket.id}`);
+        if (assignedPlayerId && assignedPlayerId !== 'spectator') {
+            playerAssignments[assignedPlayerId] = null;
+            // Option: auto-pass for disconnected players or wait? 
+            // For prototype, we'll just free the slot.
+        }
     });
 });
 

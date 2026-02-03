@@ -17,7 +17,7 @@ Focus on the transition from local state to server-side authority.
 
 - [ ] **Connection Stability**: Clients reconnect gracefully if the websocket drops.
 - [ ] **State Reconciliation**: Client renders exactly what the server broadcasts, even if local lag occurs.
-- [ ] **Multi-Tab Sync**: Actions taken in Tab A are immediately (or next turn) visible in Tab B.
+- [x] **Multi-Tab Sync**: Actions taken in Tab A are visible on the next turn visible in Tab B, and vice-versa.
 - [ ] **Latency Simulation**: Test how the "Slingshot" feel holds up with 100ms+ ping.
 
 ## 🔴 Phase 3: Turn & Authority Testing
@@ -29,7 +29,7 @@ Testing the fairness and security of the simultaneous turn system.
 - [ ] **Edge Case: Disconnect during turn**: How does the server handle a player who disconnects while their action is "Locked In"?
 
 ## 🛰️ Phase 4: Stress & Network Testing
-- [ ] **Max Player Capacity**: Test 8 players launching entities simultaneously.
+- [ ] **Max Player Capacity**: Test 8 players launching entities simultaneously. This will entail repeating tests in phase 1 & 2 but for 8 players.
 - [ ] **Docker Deployment**: Verify performance matches local dev when running inside the container.
 - [ ] **Mobile/Touch Input**: Verify the slingshot mechanic works on touchscreens (Canvas event listeners).
 

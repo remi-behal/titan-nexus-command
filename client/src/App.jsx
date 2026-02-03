@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
-import { GameState } from '../../shared/GameState'
+import { GameState } from '../../shared/GameState.js'
 import GameBoard from './components/GameBoard'
 import { io } from 'socket.io-client'
 
@@ -14,13 +14,16 @@ const MAX_PULL_DISTANCE = 300;
 function App() {
   const [playerState, setPlayerState] = useState(null)
   const [isConnected, setIsConnected] = useState(socket.connected)
+  const [myPlayerId, setMyPlayerId] = useState(null)
+  const [syncStatus, setSyncStatus] = useState({ lockedIn: { player1: false, player2: false } })
   const [lastError, setLastError] = useState(null)
   const [selectedHubId, setSelectedHubId] = useState(null)
   const [selectedItemType, setSelectedItemType] = useState('HUB')
-  const [launchMode, setLaunchMode] = useState(false) // Whether "Launch" mode is active
+  const [launchMode, setLaunchMode] = useState(false)
   const [isAiming, setIsAiming] = useState(false)
   const [committedAction, setCommittedAction] = useState(null)
   const [showDebugPreview, setShowDebugPreview] = useState(false)
+  const [timeRemaining, setTimeRemaining] = useState(30)
 
   useEffect(() => {
     console.log('Connecting to socket...');
@@ -39,7 +42,31 @@ function App() {
     const onUpdate = (newState) => {
       console.log('Received game state update:', newState);
       setPlayerState(newState)
+      // Reset local committed state when turn resolves
+      setCommittedAction(null)
+      setSelectedHubId(null)
+      setLaunchMode(false)
     };
+
+    const onAssignment = (assignedId) => {
+      console.log('Assigned as:', assignedId);
+      setMyPlayerId(assignedId);
+    };
+
+    const onSyncStatus = (status) => {
+      setSyncStatus(status);
+    };
+
+    const onTimerUpdate = (timeLeft) => {
+      console.log('Timer update:', timeLeft);
+      setTimeRemaining(timeLeft);
+    };
+
+    // CRASH REPORTER: Catch any runtime errors and show them on screen
+    const handleGlobalError = (event) => {
+      setLastError(`CRASH: ${event.message} at ${event.filename}:${event.lineno}`);
+    };
+    window.addEventListener('error', handleGlobalError);
 
     const onError = (err) => {
       console.error('Socket connection error:', err);
@@ -50,15 +77,22 @@ function App() {
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('gameStateUpdate', onUpdate);
+    socket.on('playerAssignment', onAssignment);
+    socket.on('syncStatus', onSyncStatus);
+    socket.on('timerUpdate', onTimerUpdate);
     socket.on('connect_error', onError);
 
     // Initial check in case it connected before the effect ran
     if (socket.connected) onConnect();
 
     return () => {
+      window.removeEventListener('error', handleGlobalError);
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('gameStateUpdate', onUpdate);
+      socket.off('playerAssignment', onAssignment);
+      socket.off('syncStatus', onSyncStatus);
+      socket.off('timerUpdate', onTimerUpdate);
       socket.off('connect_error', onError);
     }
   }, [])
@@ -89,7 +123,7 @@ function App() {
     const angle = Math.atan2(-dy, -dx) * (180 / Math.PI)
 
     const action = {
-      playerId: 'player1',
+      playerId: myPlayerId,
       type: 'LAUNCH',
       itemType: selectedItemType,
       sourceId: hub.id,
@@ -106,9 +140,8 @@ function App() {
   const handleExecuteTurn = () => {
     if (committedAction) {
       socket.emit('submitAction', committedAction)
-      setCommittedAction(null)
-      setSelectedHubId(null)
-      setLaunchMode(false)
+    } else {
+      socket.emit('passTurn')
     }
   }
 
@@ -119,70 +152,110 @@ function App() {
     setLaunchMode(false)
   }
 
-  if (!playerState) {
-    return (
-      <div className="loading-screen">
+  // Defensive check: Stay on loading screen until we have BOTH state and an assignment
+  // Ensure we have a valid player object (with defaults if still loading)
+  const pCurrent = (playerState?.players && playerState.players[myPlayerId])
+    ? playerState.players[myPlayerId]
+    : { energy: 0, color: '#fff', alive: true };
+
+  const isLocked = syncStatus?.lockedIn?.[myPlayerId] || false;
+
+  const header = (
+    <header className="game-header">
+      <div className="player-info" style={{ color: pCurrent.color }}>
         <h1>Titan: Nexus Command</h1>
-        <p>Connecting to Command Center...</p>
-        <div className="status-indicator">
-          Socket Status: {isConnected ? 'Connected' : 'Disconnected'}
+        <div className="status-bars">
+          <span className="badge">You: {myPlayerId || 'Pending'}</span>
+          <span className="energy">Energy: {pCurrent.energy}</span>
+          <span className="turn">Turn: {playerState?.turn || 1}</span>
+          <span className={`timer ${timeRemaining <= 10 ? 'low' : ''}`}>Time: {timeRemaining}s</span>
         </div>
-        {lastError && <div className="error-display" style={{ color: '#ff6464', marginTop: '10px' }}>Error: {lastError}</div>}
-        {!isConnected && <button onClick={() => { setLastError(null); socket.connect(); }} style={{ marginTop: '10px' }}>Retry Connection</button>}
+      </div>
+
+      <div className="sync-monitor">
+        <div className={`player-dot ${syncStatus?.lockedIn?.player1 ? 'ready' : ''}`} title="Player 1">P1</div>
+        <div className={`player-dot ${syncStatus?.lockedIn?.player2 ? 'ready' : ''}`} title="Player 2">P2</div>
+      </div>
+
+      <div className="controls">
+        <div className="debug-toggle">
+          <label>
+            <input
+              type="checkbox"
+              checked={showDebugPreview}
+              onChange={(e) => setShowDebugPreview(e.target.checked)}
+            />
+            Show Landing Preview
+          </label>
+        </div>
+
+        <select
+          value={selectedItemType}
+          onChange={(e) => setSelectedItemType(e.target.value)}
+          disabled={committedAction || isLocked}
+        >
+          <option value="HUB" disabled={pCurrent.energy < GameState.COSTS.HUB}>
+            New Hub ({GameState.COSTS.HUB} E)
+          </option>
+          <option value="WEAPON" disabled={pCurrent.energy < GameState.COSTS.WEAPON}>
+            Weapon ({GameState.COSTS.WEAPON} E)
+          </option>
+          <option value="EXTRACTOR" disabled={pCurrent.energy < GameState.COSTS.EXTRACTOR}>
+            Extractor ({GameState.COSTS.EXTRACTOR} E)
+          </option>
+          <option value="DEFENSE" disabled={pCurrent.energy < GameState.COSTS.DEFENSE}>
+            Static Defense ({GameState.COSTS.DEFENSE} E)
+          </option>
+        </select>
+
+        <button
+          className={`launch-btn ${launchMode ? 'active' : ''}`}
+          onClick={() => setLaunchMode(true)}
+          disabled={!selectedHubId || committedAction || isLocked || pCurrent.energy < (GameState.COSTS[selectedItemType] || 0)}
+        >
+          {committedAction
+            ? 'Action Committed'
+            : pCurrent.energy < (GameState.COSTS[selectedItemType] || 0)
+              ? `Insufficient Energy (${GameState.COSTS[selectedItemType]} E)`
+              : 'Select Hub to Launch'}
+        </button>
+
+        <button
+          className={`execute-btn ${isLocked ? 'waiting' : ''}`}
+          onClick={handleExecuteTurn}
+          disabled={isLocked}
+        >
+          {isLocked ? 'Waiting for others...' : (committedAction ? 'Lock In Action' : 'Pass Turn')}
+        </button>
+      </div>
+    </header>
+  );
+
+  // Defensive check: Stay on loading screen until we have BOTH state and an assignment
+  if (!playerState || !myPlayerId) {
+    return (
+      <div className="App">
+        {header}
+        <div className="loading-screen" style={{ minHeight: '300px' }}>
+          <p>{!playerState ? "Downloading Sector Data..." : "Authenticating Pilot..."}</p>
+          <div className="status-indicator">
+            Socket: {isConnected ? 'Online' : 'Offline'} | ID: {myPlayerId || 'Pending'}
+          </div>
+          {lastError && <div className="error-display" style={{ color: '#ff6464', marginTop: '10px' }}>Error: {lastError}</div>}
+          {!isConnected && <button onClick={() => { setLastError(null); socket.connect(); }} style={{ marginTop: '10px' }}>Reconnect</button>}
+        </div>
       </div>
     )
   }
-  const p1 = playerState.players['player1']
 
   return (
     <div className="App">
-      <header className="game-header">
-        <div className="player-info">
-          <h1>Titan: Nexus Command</h1>
-          <h2>Energy: {p1.energy}</h2>
-          <p>Turn: {playerState.turn}</p>
-        </div>
-
-        <div className="controls">
-          <div className="debug-toggle">
-            <label>
-              <input
-                type="checkbox"
-                checked={showDebugPreview}
-                onChange={(e) => setShowDebugPreview(e.target.checked)}
-              />
-              Show Landing Preview
-            </label>
-          </div>
-
-          <select
-            value={selectedItemType}
-            onChange={(e) => setSelectedItemType(e.target.value)}
-            disabled={committedAction}
-          >
-            <option value="HUB">New Hub</option>
-            <option value="WEAPON">Weapon</option>
-            <option value="EXTRACTOR">Extractor</option>
-            <option value="DEFENSE">Static Defense</option>
-          </select>
-
-          <button
-            className={`launch-btn ${launchMode ? 'active' : ''}`}
-            onClick={() => setLaunchMode(true)}
-            disabled={!selectedHubId || committedAction}
-          >
-            {committedAction ? 'Action Committed' : 'Click Hub to Launch'}
-          </button>
-
-          <button className="execute-btn" onClick={handleExecuteTurn}>
-            End Round (Simulate)
-          </button>
-        </div>
-      </header>
+      {header}
 
       <main className="game-world">
         <GameBoard
           gameState={playerState}
+          myPlayerId={myPlayerId}
           selectedHubId={selectedHubId}
           isAiming={isAiming}
           committedAction={committedAction}

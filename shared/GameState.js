@@ -21,6 +21,13 @@ export class GameState {
         this.winner = null;
     }
 
+    static COSTS = {
+        'HUB': 20,
+        'WEAPON': 15,
+        'EXTRACTOR': 25,
+        'DEFENSE': 30
+    };
+
     /**
      * Initialize a new game for a set of players
      */
@@ -86,9 +93,15 @@ export class GameState {
         // 2. Process Actions (Launches)
         playerActions.forEach(action => {
             const player = this.players[action.playerId];
-            if (!player || !player.alive || player.energy < 20) return;
+            if (!player || !player.alive) return;
 
-            player.energy -= 20;
+            const cost = GameState.COSTS[action.itemType] || 0;
+            if (player.energy < cost) {
+                console.log(`Action rejected: Player ${action.playerId} insufficient energy (${player.energy} < ${cost})`);
+                return;
+            }
+
+            player.energy -= cost;
 
             const rad = (action.angle * Math.PI) / 180;
             const targetX = action.sourceX + Math.cos(rad) * action.distance;
