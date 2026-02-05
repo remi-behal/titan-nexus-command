@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { GameState } from '../../../shared/GameState.js';
 
 /**
  * GameBoard Component
@@ -22,14 +23,20 @@ const GameBoard = ({
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
     const getStrengthColor = (ratio) => {
-        // 0.0 (Green) to 0.5 (Orange/Yellow) to 1.0 (Red)
+        // Linear transition: Green (0,255,0) -> Orange (255,165,0) -> Red (255,0,0)
+        let r, g, b = 0;
         if (ratio < 0.5) {
-            const r = Math.floor(255 * (ratio * 2));
-            return `rgb(${r}, 255, 0)`;
+            // Green to Orange
+            const segmentRatio = ratio * 2;
+            r = Math.floor(255 * segmentRatio);
+            g = Math.floor(255 - (90 * segmentRatio)); // 255 to 165
         } else {
-            const g = Math.floor(255 * (1 - (ratio - 0.5) * 2));
-            return `rgb(255, ${g}, 0)`;
+            // Orange to Red
+            const segmentRatio = (ratio - 0.5) * 2;
+            r = 255;
+            g = Math.floor(165 * (1 - segmentRatio)); // 165 to 0
         }
+        return `rgb(${r}, ${g}, ${b})`;
     };
 
     useEffect(() => {
@@ -121,9 +128,13 @@ const GameBoard = ({
                 ctx.stroke();
                 ctx.setLineDash([]);
 
-                // Draw the "Launch" indicator (opposite side)
+                // Draw the "Launch" indicator (opposite side) - POWER GAUGE
                 const launchAngle = Math.atan2(-dy, -dx);
-                const arrowLen = 40 + (ratio * 40); // Arrow grows slightly with power
+                // Fixed-length base + slight scaling (decoupled from actual map distance)
+                const arrowBaseLen = 40;
+                const arrowScale = 1 + (ratio * 0.5); // Grows by up to 50%
+                const arrowLen = arrowBaseLen * arrowScale;
+
                 const arrowX = hub.x + Math.cos(launchAngle) * arrowLen;
                 const arrowY = hub.y + Math.sin(launchAngle) * arrowLen;
 
@@ -142,16 +153,17 @@ const GameBoard = ({
                 ctx.fillStyle = strengthColor;
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
-                ctx.lineTo(-10, -5);
-                ctx.lineTo(-10, 5);
+                ctx.lineTo(-12, -7);
+                ctx.lineTo(-12, 7);
                 ctx.closePath();
                 ctx.fill();
                 ctx.restore();
 
                 // Draw PINPOINT PREVIEW (Only if enabled)
                 if (showDebugPreview) {
-                    const targetX = hub.x - dx;
-                    const targetY = hub.y - dy;
+                    const launchDistance = GameState.calculateLaunchDistance(distance);
+                    const targetX = hub.x + Math.cos(launchAngle) * launchDistance;
+                    const targetY = hub.y + Math.sin(launchAngle) * launchDistance;
 
                     ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
                     ctx.setLineDash([2, 5]);
@@ -163,7 +175,7 @@ const GameBoard = ({
 
                     ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
                     ctx.beginPath();
-                    ctx.arc(targetX, targetY, 10, 0, Math.PI * 2);
+                    ctx.arc(targetX, targetY, 12, 0, Math.PI * 2);
                     ctx.fill();
                 }
             }
@@ -175,8 +187,9 @@ const GameBoard = ({
             ctx.strokeStyle = 'rgba(128, 128, 128, 0.5)';
 
             const rad = (committedAction.angle * Math.PI) / 180;
-            const targetX = committedAction.sourceX + Math.cos(rad) * committedAction.distance;
-            const targetY = committedAction.sourceY + Math.sin(rad) * committedAction.distance;
+            const launchDistance = GameState.calculateLaunchDistance(committedAction.distance);
+            const targetX = committedAction.sourceX + Math.cos(rad) * launchDistance;
+            const targetY = committedAction.sourceY + Math.sin(rad) * launchDistance;
 
             ctx.beginPath();
             ctx.moveTo(committedAction.sourceX, committedAction.sourceY);

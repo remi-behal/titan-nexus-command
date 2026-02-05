@@ -28,6 +28,22 @@ export class GameState {
         'DEFENSE': 30
     };
 
+    // Slingshot Constants
+    static MAX_PULL = 300;
+    static MAX_LAUNCH = 800; // The maximum distance a projectile can travel
+    static POWER_EXPONENT = 1.6; // Higher = steeper difficulty curve at high power
+
+    /**
+     * Non-linear power curve math
+     * Given a raw pull distance, returns the tactical launch distance.
+     */
+    static calculateLaunchDistance(pullDistance) {
+        const clampedPull = Math.min(pullDistance, GameState.MAX_PULL);
+        const ratio = clampedPull / GameState.MAX_PULL;
+        // Exponential curve: precision at low power, high sensitivity at high power
+        return Math.pow(ratio, GameState.POWER_EXPONENT) * GameState.MAX_LAUNCH;
+    }
+
     /**
      * Initialize a new game for a set of players
      */
@@ -104,8 +120,10 @@ export class GameState {
             player.energy -= cost;
 
             const rad = (action.angle * Math.PI) / 180;
-            const targetX = action.sourceX + Math.cos(rad) * action.distance;
-            const targetY = action.sourceY + Math.sin(rad) * action.distance;
+            // Use the authoritative non-linear math to find the target
+            const launchDistance = GameState.calculateLaunchDistance(action.distance);
+            const targetX = action.sourceX + Math.cos(rad) * launchDistance;
+            const targetY = action.sourceY + Math.sin(rad) * launchDistance;
 
             // SIMPLE COLLISION/DESTRUCTION LOGIC FOR TESTING
             // If we land near an enemy HUB, destroy it
