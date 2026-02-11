@@ -8,7 +8,7 @@ We have a working multiplayer monorepo where two players can connect, lock in tu
 
 ---
 
-## 🗺️ Phase Roadmap
+## 🗺️ Phase Roadmap for Completed Barebones Prototype
 
 ### ✅ Phase 1: Prototype
 - Single-player local state engine.

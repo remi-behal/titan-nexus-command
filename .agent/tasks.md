@@ -11,9 +11,13 @@
     - [x] Client: Grey out structure types if energy is too low. Do not allow launch if energy is too low. <!-- id: 23 -->
 - [x] **Ownership Guard**: <!-- id: 24 -->
     - [x] Server: Verify that the `sourceId` for an action belongs to the requesting `playerId`. <!-- id: 25 -->
- - [ ] **Simultaneous Turn Logic** (Collision Handling) <!-- id: 26 -->
-    - [ ] Brainstorm issues/conflicts that might arise from simultaneous actions <!-- id: 27 -->
-    - [ ] In the event of conflict, decicision tree/priority order of actions <!-- id: 28 -->
+ - [x] **Simultaneous Turn Logic** (Collision Handling) <!-- id: 26 -->
+    - [x] Brainstorm issues/conflicts that might arise from simultaneous actions <!-- id: 27 -->
+    - [x] In the event of conflict, decicision tree/priority order of actions (NO CONFLICTS ACTED ON, REDO TASK LATER) <!-- id: 28 -->
+ - [x] **Iterative Round Resolution**: <!-- id: 33 -->
+    - [x] Server: Implement sub-round loop in `resolveTurn` <!-- id: 34 -->
+    - [x] Server: Implement "Link Decay" check at end of each sub-round <!-- id: 35 -->
+    - [x] Server: Handle "Autonomous Projectiles" (revenge) logic <!-- id: 36 -->
 
 ---
 

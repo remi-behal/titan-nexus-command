@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { GameState } from '../../../shared/GameState.js';
 
 /**
  * GameBoard Component
@@ -14,7 +15,7 @@ const GameBoard = ({
     onAimUpdate,
     onAimEnd,
     onSelectHub,
-    committedAction,
+    committedActions,
     showDebugPreview,
     maxPullDistance
 }) => {
@@ -22,14 +23,20 @@ const GameBoard = ({
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
     const getStrengthColor = (ratio) => {
-        // 0.0 (Green) to 0.5 (Orange/Yellow) to 1.0 (Red)
+        // Linear transition: Green (0,255,0) -> Orange (255,165,0) -> Red (255,0,0)
+        let r, g, b = 0;
         if (ratio < 0.5) {
-            const r = Math.floor(255 * (ratio * 2));
-            return `rgb(${r}, 255, 0)`;
+            // Green to Orange
+            const segmentRatio = ratio * 2;
+            r = Math.floor(255 * segmentRatio);
+            g = Math.floor(255 - (90 * segmentRatio)); // 255 to 165
         } else {
-            const g = Math.floor(255 * (1 - (ratio - 0.5) * 2));
-            return `rgb(255, ${g}, 0)`;
+            // Orange to Red
+            const segmentRatio = (ratio - 0.5) * 2;
+            r = 255;
+            g = Math.floor(165 * (1 - segmentRatio)); // 165 to 0
         }
+        return `rgb(${r}, ${g}, ${b})`;
     };
 
     useEffect(() => {
@@ -91,6 +98,33 @@ const GameBoard = ({
             ctx.font = '10px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(entity.type, entity.x, entity.y + 35);
+
+            // 3b. Draw Fuel Gauge (Green dots in top-right) - ONLY FOR OWNED STRUCTURES
+            if (entity.fuel !== undefined && entity.owner === myPlayerId) {
+                const radius = entity.type === 'HUB' ? 20 : 10;
+                const dotYOffset = entity.type === 'HUB' ? -15 : -10;
+                const dotXOffset = entity.type === 'HUB' ? 18 : 12;
+
+                for (let i = 0; i < entity.maxFuel; i++) {
+                    ctx.beginPath();
+                    // Stack dots vertically in the top-right area
+                    const dotX = entity.x + dotXOffset;
+                    const dotY = entity.y + dotYOffset + (i * 8);
+
+                    ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
+
+                    if (i < (entity.maxFuel - entity.fuel)) {
+                        // Consumed fuel: Hollow circle
+                        ctx.strokeStyle = '#2ecc71';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    } else {
+                        // Available fuel: Filled circle
+                        ctx.fillStyle = '#2ecc71';
+                        ctx.fill();
+                    }
+                }
+            }
         });
 
         // 4. Draw Slingshot Preview while aiming
@@ -121,9 +155,13 @@ const GameBoard = ({
                 ctx.stroke();
                 ctx.setLineDash([]);
 
-                // Draw the "Launch" indicator (opposite side)
+                // Draw the "Launch" indicator (opposite side) - POWER GAUGE
                 const launchAngle = Math.atan2(-dy, -dx);
-                const arrowLen = 40 + (ratio * 40); // Arrow grows slightly with power
+                // Fixed-length base + slight scaling (decoupled from actual map distance)
+                const arrowBaseLen = 40;
+                const arrowScale = 1 + (ratio * 0.5); // Grows by up to 50%
+                const arrowLen = arrowBaseLen * arrowScale;
+
                 const arrowX = hub.x + Math.cos(launchAngle) * arrowLen;
                 const arrowY = hub.y + Math.sin(launchAngle) * arrowLen;
 
@@ -142,16 +180,17 @@ const GameBoard = ({
                 ctx.fillStyle = strengthColor;
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
-                ctx.lineTo(-10, -5);
-                ctx.lineTo(-10, 5);
+                ctx.lineTo(-12, -7);
+                ctx.lineTo(-12, 7);
                 ctx.closePath();
                 ctx.fill();
                 ctx.restore();
 
                 // Draw PINPOINT PREVIEW (Only if enabled)
                 if (showDebugPreview) {
-                    const targetX = hub.x - dx;
-                    const targetY = hub.y - dy;
+                    const launchDistance = GameState.calculateLaunchDistance(distance);
+                    const targetX = hub.x + Math.cos(launchAngle) * launchDistance;
+                    const targetY = hub.y + Math.sin(launchAngle) * launchDistance;
 
                     ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
                     ctx.setLineDash([2, 5]);
@@ -163,33 +202,101 @@ const GameBoard = ({
 
                     ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
                     ctx.beginPath();
-                    ctx.arc(targetX, targetY, 10, 0, Math.PI * 2);
+                    ctx.arc(targetX, targetY, 12, 0, Math.PI * 2);
                     ctx.fill();
                 }
             }
         }
 
-        // 5. Draw Committed Action (Greyed out preview)
-        if (committedAction) {
-            ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
-            ctx.strokeStyle = 'rgba(128, 128, 128, 0.5)';
+        // 5. Draw Committed Actions (Frozen Arrows + Numbers)
+        committedActions.forEach((action, index) => {
+            const hub = gameState.entities.find(e => e.id === action.sourceId);
+            if (hub) {
+                const angleRad = (action.angle * Math.PI) / 180;
+                const ratio = action.distance / maxPullDistance;
+                const strengthColor = getStrengthColor(ratio);
 
-            const rad = (committedAction.angle * Math.PI) / 180;
-            const targetX = committedAction.sourceX + Math.cos(rad) * committedAction.distance;
-            const targetY = committedAction.sourceY + Math.sin(rad) * committedAction.distance;
+                // --- 5a. Draw Frozen Power Arrow ---
+                const arrowBaseLen = 40;
+                const arrowScale = 1 + (ratio * 0.5);
+                const arrowLen = arrowBaseLen * arrowScale;
 
-            ctx.beginPath();
-            ctx.moveTo(committedAction.sourceX, committedAction.sourceY);
-            ctx.lineTo(targetX, targetY);
-            ctx.stroke();
+                const arrowX = hub.x + Math.cos(angleRad) * arrowLen;
+                const arrowY = hub.y + Math.sin(angleRad) * arrowLen;
 
-            ctx.beginPath();
-            ctx.arc(targetX, targetY, 10, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillText("Committed", targetX, targetY - 15);
-        }
+                ctx.save();
+                ctx.strokeStyle = strengthColor;
+                ctx.lineWidth = 4;
+                ctx.globalAlpha = 0.8; // Slightly transparent to show it's committed
+                ctx.beginPath();
+                ctx.moveTo(hub.x, hub.y);
+                ctx.lineTo(arrowX, arrowY);
+                ctx.stroke();
 
-    }, [gameState, selectedHubId, isAiming, mousePos, committedAction, showDebugPreview, maxPullDistance]);
+                // Arrow head
+                ctx.translate(arrowX, arrowY);
+                ctx.rotate(angleRad);
+                ctx.fillStyle = strengthColor;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-12, -7);
+                ctx.lineTo(-12, 7);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+
+                // --- 5b. Draw Action Number ---
+                ctx.save();
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                // Position number just past the arrow tip
+                const textDist = arrowLen + 15;
+                const tx = hub.x + Math.cos(angleRad) * textDist;
+                const ty = hub.y + Math.sin(angleRad) * textDist;
+
+                // Draw a small circle background for the number
+                ctx.fillStyle = strengthColor;
+                ctx.beginPath();
+                ctx.arc(tx, ty, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.fillStyle = '#fff';
+                ctx.fillText((index + 1).toString(), tx, ty + 4);
+                ctx.restore();
+
+                // --- 5c. Optional Full Landing Preview (Behind Toggle) ---
+                if (showDebugPreview) {
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(128, 128, 128, 0.4)';
+                    ctx.setLineDash([5, 5]);
+
+                    const launchDistance = GameState.calculateLaunchDistance(action.distance);
+                    const targetX = action.sourceX + Math.cos(angleRad) * launchDistance;
+                    const targetY = action.sourceY + Math.sin(angleRad) * launchDistance;
+
+                    ctx.beginPath();
+                    ctx.moveTo(action.sourceX, action.sourceY);
+                    ctx.lineTo(targetX, targetY);
+                    ctx.stroke();
+
+                    ctx.fillStyle = 'rgba(128, 128, 128, 0.3)';
+                    ctx.beginPath();
+                    ctx.arc(targetX, targetY, 12, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#888';
+                    ctx.font = '10px Arial';
+                    ctx.fillText("Target Area", targetX, targetY - 18);
+                    ctx.restore();
+                }
+            }
+        });
+
+    }, [gameState, selectedHubId, isAiming, mousePos, committedActions, showDebugPreview, maxPullDistance]);
 
     const handleMouseDown = (e) => {
         const rect = canvasRef.current.getBoundingClientRect();

@@ -21,9 +21,11 @@ function App() {
   const [selectedItemType, setSelectedItemType] = useState('HUB')
   const [launchMode, setLaunchMode] = useState(false)
   const [isAiming, setIsAiming] = useState(false)
-  const [committedAction, setCommittedAction] = useState(null)
+  const [committedActions, setCommittedActions] = useState([])
   const [showDebugPreview, setShowDebugPreview] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(30)
+  const [isResolving, setIsResolving] = useState(false)
+  const [resolutionRound, setResolutionRound] = useState(null)
 
   useEffect(() => {
     console.log('Connecting to socket...');
@@ -43,7 +45,7 @@ function App() {
       console.log('Received game state update:', newState);
       setPlayerState(newState)
       // Reset local committed state when turn resolves
-      setCommittedAction(null)
+      setCommittedActions([])
       setSelectedHubId(null)
       setLaunchMode(false)
     };
@@ -74,12 +76,23 @@ function App() {
       setLastError(err.message || JSON.stringify(err));
     };
 
+    const onResolutionStatus = (status) => {
+      setIsResolving(status.active);
+      if (!status.active) setResolutionRound(null);
+    };
+
+    const onResolutionRound = (round) => {
+      setResolutionRound(round);
+    };
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('gameStateUpdate', onUpdate);
     socket.on('playerAssignment', onAssignment);
     socket.on('syncStatus', onSyncStatus);
     socket.on('timerUpdate', onTimerUpdate);
+    socket.on('resolutionStatus', onResolutionStatus);
+    socket.on('resolutionRound', onResolutionRound);
     socket.on('connect_error', onError);
 
     // Initial check in case it connected before the effect ran
@@ -93,12 +106,19 @@ function App() {
       socket.off('playerAssignment', onAssignment);
       socket.off('syncStatus', onSyncStatus);
       socket.off('timerUpdate', onTimerUpdate);
+      socket.off('resolutionStatus', onResolutionStatus);
+      socket.off('resolutionRound', onResolutionRound);
       socket.off('connect_error', onError);
     }
   }, [])
 
   const handleAimStart = (x, y) => {
-    if (launchMode && !committedAction && selectedHubId) {
+    // Check if selected structure has fuel
+    const selectedEntity = playerState?.entities?.find(e => e.id === selectedHubId);
+    const pendingFuelSpent = committedActions.filter(a => a.sourceId === selectedHubId).length;
+    const hasFuel = selectedEntity ? (selectedEntity.fuel === undefined || (selectedEntity.fuel - pendingFuelSpent) > 0) : false;
+
+    if (launchMode && !isLocked && selectedHubId && hasFuel) {
       setIsAiming(true)
     }
   }
@@ -133,30 +153,42 @@ function App() {
       distance: distance
     }
 
-    setCommittedAction(action)
+    setCommittedActions(prev => [...prev, action])
     setLaunchMode(false)
   }
 
   const handleExecuteTurn = () => {
-    if (committedAction) {
-      socket.emit('submitAction', committedAction)
+    if (committedActions.length > 0) {
+      socket.emit('submitActions', committedActions)
     } else {
       socket.emit('passTurn')
     }
   }
 
+  const handleClearActions = () => {
+    setCommittedActions([]);
+    setLaunchMode(false);
+  }
+
   const handleRestart = () => {
     socket.emit('restartGame')
-    setCommittedAction(null)
+    setCommittedActions([])
     setSelectedHubId(null)
     setLaunchMode(false)
   }
 
   // Defensive check: Stay on loading screen until we have BOTH state and an assignment
   // Ensure we have a valid player object (with defaults if still loading)
-  const pCurrent = (playerState?.players && playerState.players[myPlayerId])
+  const pBase = (playerState?.players && playerState.players[myPlayerId])
     ? playerState.players[myPlayerId]
     : { energy: 0, color: '#fff', alive: true };
+
+  // Calculate energy after local (but not yet sent) commitments
+  const pendingCost = committedActions.reduce((sum, act) => sum + (GameState.COSTS[act.itemType] || 0), 0);
+  const pCurrent = {
+    ...pBase,
+    energy: Math.max(0, pBase.energy - pendingCost)
+  };
 
   const isLocked = syncStatus?.lockedIn?.[myPlayerId] || false;
 
@@ -192,7 +224,7 @@ function App() {
         <select
           value={selectedItemType}
           onChange={(e) => setSelectedItemType(e.target.value)}
-          disabled={committedAction || isLocked}
+          disabled={isLocked}
         >
           <option value="HUB" disabled={pCurrent.energy < GameState.COSTS.HUB}>
             New Hub ({GameState.COSTS.HUB} E)
@@ -208,24 +240,42 @@ function App() {
           </option>
         </select>
 
-        <button
-          className={`launch-btn ${launchMode ? 'active' : ''}`}
-          onClick={() => setLaunchMode(true)}
-          disabled={!selectedHubId || committedAction || isLocked || pCurrent.energy < (GameState.COSTS[selectedItemType] || 0)}
-        >
-          {committedAction
-            ? 'Action Committed'
-            : pCurrent.energy < (GameState.COSTS[selectedItemType] || 0)
-              ? `Insufficient Energy (${GameState.COSTS[selectedItemType]} E)`
-              : 'Select Hub to Launch'}
-        </button>
+        {(() => {
+          const selectedEntity = playerState?.entities?.find(e => e.id === selectedHubId);
+          const pendingFuelSpent = committedActions.filter(a => a.sourceId === selectedHubId).length;
+          const remainingFuel = selectedEntity?.fuel !== undefined ? (selectedEntity.fuel - pendingFuelSpent) : Infinity;
+          const hasFuel = remainingFuel > 0;
+          const fuelCostWarning = !hasFuel ? "Out of Fuel" : null;
+
+          return (
+            <button
+              className={`launch-btn ${launchMode ? 'active' : ''}`}
+              onClick={() => setLaunchMode(active => !active)}
+              disabled={!selectedHubId || isLocked || pCurrent.energy < (GameState.COSTS[selectedItemType] || 0) || !hasFuel}
+            >
+              {isLocked
+                ? 'Mission Locked'
+                : fuelCostWarning
+                  ? fuelCostWarning
+                  : pCurrent.energy < (GameState.COSTS[selectedItemType] || 0)
+                    ? `Insufficient Energy (${GameState.COSTS[selectedItemType]} E)`
+                    : launchMode ? 'Cancel Aiming' : 'Launch New Structure'}
+            </button>
+          );
+        })()}
+
+        {committedActions.length > 0 && !isLocked && (
+          <button className="clear-btn" onClick={handleClearActions}>
+            Clear All ({committedActions.length})
+          </button>
+        )}
 
         <button
           className={`execute-btn ${isLocked ? 'waiting' : ''}`}
           onClick={handleExecuteTurn}
           disabled={isLocked}
         >
-          {isLocked ? 'Waiting for others...' : (committedAction ? 'Lock In Action' : 'Pass Turn')}
+          {isLocked ? 'Waiting for others...' : (committedActions.length > 0 ? `Lock In ${committedActions.length} Actions` : 'Pass Turn')}
         </button>
       </div>
     </header>
@@ -253,12 +303,29 @@ function App() {
       {header}
 
       <main className="game-world">
+        {isResolving && (
+          <div className="resolution-overlay">
+            <div className="spinner"></div>
+            <span>
+              {resolutionRound
+                ? `Executing Simultaneous Round ${resolutionRound}...`
+                : "Initialising Resolution..."}
+            </span>
+          </div>
+        )}
+
+        {!isResolving && !committedActions.length && selectedHubId && launchMode && (
+          <div className="hint-overlay">
+            Drag from your selected Hub to launch
+          </div>
+        )}
+
         <GameBoard
           gameState={playerState}
           myPlayerId={myPlayerId}
           selectedHubId={selectedHubId}
           isAiming={isAiming}
-          committedAction={committedAction}
+          committedActions={committedActions}
           showDebugPreview={showDebugPreview}
           maxPullDistance={MAX_PULL_DISTANCE}
           onSelectHub={setSelectedHubId}

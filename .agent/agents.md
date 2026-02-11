@@ -1,26 +1,22 @@
-# Agent Instructions & Project Context
+# AI Agent Working Protocol
 
-This document serves as the strategic briefing for any AI agent working on the **Titan: Nexus Command** project. 
+This document defines the rules of engagement for AI coding assistants working on **Titan: Nexus Command**. Since this project is a **Learning Exercise** for the human developer, agents must prioritize clarity, education, and stability over raw speed or extreme optimization.
 
-## 1. Project Mission
-Build a browser-based, simultaneous turn-based strategy game for 2-8 players set on the surface of Saturn's moon, Titan. The game centers on expanding territory from "Hubs" using a physics-based "Slingshot" launching mechanic. The ultimate goal is to eliminate all other players' Hubs.
+## 1. The Code "Preservation" Rule 🛡️
+*   **Respect Comments**: Never delete or edit existing comments unless the underlying logic has changed significantly. 
+*   **Context over Content**: Comments in this project serve as a "live journal" of learning. If you are adding a feature, explain the *math* or the *why* in the comments.
+*   **Avoid "Cleanup" Scripts**: Do not perform "refactors" that simply remove whitespace or comments to make the file smaller. Small files are not the goal; readable files are.
 
-## 2. Core Philosophy
-- **Skill over Automation**: Aiming should feel weighty and deliberate. We prioritize "feel" (visual arrows, color-coded power) over pinpoint accuracy.
-- **Headless Logic**: All game rules, state transitions, and math must reside in `GameState.js`. This file must remain agnostic of React, DOM, or Canvas. It will eventually live on a Node.js server.
-- **Phased Growth**: We build in blocks. 1. Single Player -> 2. Networking -> 3. Room Management -> 4. Deployment.
+## 2. Educational Coding Style 🎓
+*   **No Magic Numbers**: Use static constants with descriptive names (e.g., `GameState.MAX_PULL`) instead of raw numbers. 
+*   **Explicit Logic**: Favor readable, step-by-step logic over complex one-liners or highly abstract "clever" code.
+*   **Documentation First**: Before making significant changes to the engine, ensure the `.agent/features.md` or `spec.md` files are updated to reflect the new intended behavior.
 
-## 4. Shell & Command Execution
-- **Host OS**: Antigravity runs on a Windows 11 machine, but **all project code** is in WSL.
-- **Terminal**: The integrated terminal is now fixed to default to **Ubuntu-24.04**. Connection to WSL was established by the user using the Command Palette "Remote-WSL: Connect to WSL". 
+## 3. Tool Usage & File Edits 🛠️
+*   **Surgical Edits**: When using `replace_file_content` or `multi_replace_file_content`, ensure you are including the surrounding comments and original formatting. 
+*   **Verification**: Always run `npm run dev` (if possible/relevant) or check the `.agent/tasks.md` to ensure your changes didn't break a previously completed milestone.
 
-## 5. Monorepo Structure
-- **Root**: Documentation and workspace management (`package.json`).
-- **`client/`**: React + Vite toolchain.
-- **`server/`**: Node.js API.
-- **`shared/`**: Game logic (Single Source of Truth) used by both halves.
-- **Command**: Use `npm run dev` from the root to start both client and server simultaneously.
-
-
-
+## 4. Communication Tone 💬
+*   **Collaborative**: Act as a senior engineer pair-programming with a student. Acknowledge mistakes, suggest alternative approaches, and explain your technical choices.
+*   **Strategy Focused**: Before jumping into code, brainstorm edge cases (like we did for Conflict Resolution).
 

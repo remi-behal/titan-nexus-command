@@ -73,7 +73,7 @@ function tick() {
     }
 }
 
-function resolveTurn() {
+async function resolveTurn() {
     if (timerTimeout) {
         clearTimeout(timerTimeout);
         timerTimeout = null;
@@ -81,24 +81,45 @@ function resolveTurn() {
 
     console.log("--- Resolving Turn ---");
 
-    const actions = [];
-    if (turnActions.player1) actions.push(turnActions.player1);
-    if (turnActions.player2) actions.push(turnActions.player2);
+    const actionsMap = {
+        player1: turnActions.player1 || [],
+        player2: turnActions.player2 || []
+    };
 
+    let snapshots = [];
     try {
-        game.resolveTurn(actions);
+        snapshots = game.resolveTurn(actionsMap);
     } catch (err) {
         console.error("CRITICAL ERROR: resolveTurn failed:", err);
+        // Fallback to avoid hanging
+        snapshots = [{ type: 'FINAL', state: game.getState() }];
+    }
+
+    // Notify clients that resolution is starting
+    io.emit('resolutionStatus', { active: true, totalRounds: snapshots.length });
+
+    // Process snapshots with delays
+    for (const snap of snapshots) {
+        console.log(`[Resolution] Emitting snapshot type: ${snap.type}${snap.round ? ` (Round ${snap.round})` : ''}`);
+
+        io.emit('gameStateUpdate', snap.state);
+
+        if (snap.type === 'ROUND') {
+            io.emit('resolutionRound', snap.round);
+        }
+
+        // Wait 3 seconds per snapshot for animations/viewing
+        await new Promise(resolve => setTimeout(resolve, 3000));
     }
 
     // Reset for next turn
     lockedIn.player1 = false;
     lockedIn.player2 = false;
-    turnActions.player1 = null;
-    turnActions.player2 = null;
+    turnActions.player1 = [];
+    turnActions.player2 = [];
 
-    io.emit('gameStateUpdate', game.getState());
     io.emit('syncStatus', { lockedIn });
+    io.emit('resolutionStatus', { active: false });
 
     // Start timer for the next turn
     startTimer();
@@ -138,22 +159,38 @@ io.on('connection', (socket) => {
         socket.emit('syncStatus', { lockedIn });
     });
 
-    socket.on('submitAction', (action) => {
+    socket.on('submitActions', (actions) => {
         if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
 
-        console.log(`Action received from ${assignedPlayerId}:`, action);
+        console.log(`Actions received from ${assignedPlayerId}:`, actions);
 
-        // Ownership Guard
-        const sourceEntity = game.entities.find(e => e.id === action.sourceId);
-        if (!sourceEntity || sourceEntity.owner !== assignedPlayerId) {
-            console.warn(`Action REJECTED: Player ${assignedPlayerId} attempted to launch from unauthorized source ${action.sourceId}`);
-            return;
+        // Server-side Integrity Check
+        const validatedActions = [];
+        let totalCost = 0;
+        const player = game.players[assignedPlayerId];
+
+        for (const action of actions) {
+            // 1. Ownership Guard
+            const sourceEntity = game.entities.find(e => e.id === action.sourceId);
+            if (!sourceEntity || sourceEntity.owner !== assignedPlayerId) {
+                console.warn(`Action REJECTED: Player ${assignedPlayerId} unauthorized source ${action.sourceId}`);
+                continue;
+            }
+
+            // 2. Continuous Energy Check
+            const cost = GameState.COSTS[action.itemType] || 0;
+            if (player.energy < (totalCost + cost)) {
+                console.warn(`Action REJECTED: Player ${assignedPlayerId} insufficient energy for full combo`);
+                continue;
+            }
+
+            totalCost += cost;
+            validatedActions.push({ ...action, playerId: assignedPlayerId });
         }
 
-        turnActions[assignedPlayerId] = { ...action, playerId: assignedPlayerId };
+        turnActions[assignedPlayerId] = validatedActions;
         lockedIn[assignedPlayerId] = true;
 
-        // Notify everyone who is ready
         io.emit('syncStatus', { lockedIn });
 
         // Check if both players are locked in
@@ -168,7 +205,7 @@ io.on('connection', (socket) => {
         if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
 
         console.log(`${assignedPlayerId} passed turn`);
-        turnActions[assignedPlayerId] = null;
+        turnActions[assignedPlayerId] = []; // Empty array for no actions
         lockedIn[assignedPlayerId] = true;
 
         io.emit('syncStatus', { lockedIn });

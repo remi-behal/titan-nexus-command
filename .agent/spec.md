@@ -5,6 +5,10 @@
 *   **`/server`**: Node.js + Socket.io backend.
 *   **`/shared`**: **Canonical Game Engine.** All physics and state math live here in `GameState.js`. No browser/Node dependencies allowed here.
 
+## Technical Context
+*   **WSL Environment**: All execution happens in Ubuntu-24.04 via WSL. Connection to WSL was established by the user using the Command Palette "Remote-WSL: Connect to WSL". 
+*   **Host OS**: Antigravity runs on a Windows 11 machine, but **all project code** is in WSL.
+
 ## 📡 Networking Standard
 *   **Vite Proxy**: Port 5173 proxies `/socket.io` to Port 3000.
 *   **WSL Mode**: Mirrored networking should be enabled in `.wslconfig`.
