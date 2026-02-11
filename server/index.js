@@ -16,8 +16,8 @@ app.use((req, res, next) => {
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
+        origin: '*',
+        methods: ['GET', 'POST']
     },
     transports: ['websocket', 'polling']
 });
@@ -66,7 +66,7 @@ function tick() {
     io.emit('timerUpdate', timeRemaining);
 
     if (timeRemaining <= 0) {
-        console.log("[Timer] Time up! Auto-resolving turn...");
+        console.log('[Timer] Time up! Auto-resolving turn...');
         resolveTurn();
     } else {
         timerTimeout = setTimeout(tick, 1000);
@@ -79,18 +79,18 @@ async function resolveTurn() {
         timerTimeout = null;
     }
 
-    console.log("--- Resolving Turn ---");
+    console.log('--- Resolving Turn ---');
 
     const actionsMap = {
         player1: turnActions.player1 || [],
         player2: turnActions.player2 || []
     };
 
-    let snapshots = [];
+    let snapshots;
     try {
         snapshots = game.resolveTurn(actionsMap);
     } catch (err) {
-        console.error("CRITICAL ERROR: resolveTurn failed:", err);
+        console.error('CRITICAL ERROR: resolveTurn failed:', err);
         // Fallback to avoid hanging
         snapshots = [{ type: 'FINAL', state: game.getState() }];
     }
@@ -195,7 +195,7 @@ io.on('connection', (socket) => {
 
         // Check if both players are locked in
         if (lockedIn.player1 && lockedIn.player2) {
-            console.log("Both players locked in. Triggering resolution early...");
+            console.log('Both players locked in. Triggering resolution early...');
             resolveTurn();
         }
     });
@@ -211,7 +211,7 @@ io.on('connection', (socket) => {
         io.emit('syncStatus', { lockedIn });
 
         if (lockedIn.player1 && lockedIn.player2) {
-            console.log("Both players locked in (via Pass). Triggering resolution early...");
+            console.log('Both players locked in (via Pass). Triggering resolution early...');
             resolveTurn();
         }
     });

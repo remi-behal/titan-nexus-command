@@ -185,7 +185,6 @@ export class GameState {
         while (activeInProgress) {
             round++;
             const roundActions = [];
-            let anyPlayerHasActionsLeft = false;
 
             playerIds.forEach(pid => {
                 const actions = playerActionsMap[pid] || [];
@@ -202,15 +201,12 @@ export class GameState {
                         break;
                     } else {
                         // Source destroyed OR out of fuel!
-                        const reason = !source ? "destroyed" : "out of fuel";
+                        const reason = !source ? 'destroyed' : 'out of fuel';
                         console.log(`[Round ${round}] ${pid} action skipped (Source ${action.sourceId} ${reason}). Sliding...`);
                         actionPointers[pid]++;
                     }
                 }
 
-                if (actionPointers[pid] < actions.length) {
-                    anyPlayerHasActionsLeft = true;
-                }
             });
 
             if (roundActions.length > 0) {

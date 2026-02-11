@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 import { GameState } from '../../shared/GameState.js'
 import GameBoard from './components/GameBoard'
@@ -112,7 +112,7 @@ function App() {
     }
   }, [])
 
-  const handleAimStart = (x, y) => {
+  const handleAimStart = () => {
     // Check if selected structure has fuel
     const selectedEntity = playerState?.entities?.find(e => e.id === selectedHubId);
     const pendingFuelSpent = committedActions.filter(a => a.sourceId === selectedHubId).length;

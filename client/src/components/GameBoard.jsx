@@ -101,7 +101,6 @@ const GameBoard = ({
 
             // 3b. Draw Fuel Gauge (Green dots in top-right) - ONLY FOR OWNED STRUCTURES
             if (entity.fuel !== undefined && entity.owner === myPlayerId) {
-                const radius = entity.type === 'HUB' ? 20 : 10;
                 const dotYOffset = entity.type === 'HUB' ? -15 : -10;
                 const dotXOffset = entity.type === 'HUB' ? 18 : 12;
 
@@ -296,7 +295,7 @@ const GameBoard = ({
             }
         });
 
-    }, [gameState, selectedHubId, isAiming, mousePos, committedActions, showDebugPreview, maxPullDistance]);
+    }, [gameState, selectedHubId, isAiming, mousePos, committedActions, showDebugPreview, maxPullDistance, myPlayerId]);
 
     const handleMouseDown = (e) => {
         const rect = canvasRef.current.getBoundingClientRect();
