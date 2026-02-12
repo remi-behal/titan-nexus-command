@@ -108,8 +108,9 @@ async function resolveTurn() {
             io.emit('resolutionRound', snap.round);
         }
 
-        // Wait 3 seconds per snapshot for animations/viewing
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Dynamic Delay: Sub-ticks are fast, phase/round transitions are slow
+        const delay = (snap.type === 'ROUND_SUB') ? 60 : 2000;
+        await new Promise(resolve => setTimeout(resolve, delay));
     }
 
     // Reset for next turn

@@ -13,8 +13,8 @@ export class GameState {
         this.entities = []; // [ { id, type: 'HUB', owner, x, y, hp } ]
         this.links = []; // [ { fromId, toId } ]
         this.map = {
-            width: 2000,
-            height: 2000,
+            width: 1000,
+            height: 1000,
             resources: [], // Energy nodes on the map
             obstacles: [] // Rocks, walls, etc.
         };
@@ -45,6 +45,32 @@ export class GameState {
     }
 
     /**
+     * Map wrapping logic for Toroidal world
+     */
+    wrapX(x) {
+        const w = this.map.width;
+        return ((x % w) + w) % w;
+    }
+
+    wrapY(y) {
+        const h = this.map.height;
+        return ((y % h) + h) % h;
+    }
+
+    /**
+     * Shortest distance between two points on a torus
+     */
+    getToroidalDistance(x1, y1, x2, y2) {
+        let dx = Math.abs(x2 - x1);
+        let dy = Math.abs(y2 - y1);
+
+        if (dx > this.map.width / 2) dx = this.map.width - dx;
+        if (dy > this.map.height / 2) dy = this.map.height - dy;
+
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    /**
      * Initialize a new game for a set of players
      */
     initializeGame(playerIds) {
@@ -63,7 +89,7 @@ export class GameState {
             };
 
             // Create initial Hub for each player
-            const startX = 400 + (index * 400); // Rough spread for now
+            const startX = 250 + (index * 500); // Spread at 25% and 75% width
             const startY = 500;
 
             this.addEntity({
@@ -79,7 +105,8 @@ export class GameState {
         // Mock some resource nodes
         this.map.resources = [
             { id: 'res1', x: 500, y: 300, value: 10 },
-            { id: 'res2', x: 1000, y: 700, value: 10 }
+            { id: 'res2', x: 500, y: 700, value: 10 },
+            { id: 'res3', x: 500, y: 500, value: 20 }
         ];
     }
 
@@ -142,7 +169,8 @@ export class GameState {
             id,
             ...data,
             fuel: initialFuel,
-            maxFuel: initialFuel
+            maxFuel: initialFuel,
+            hp: data.hp || 50
         };
         this.entities.push(entity);
         return entity;
@@ -186,6 +214,7 @@ export class GameState {
             round++;
             const roundActions = [];
 
+            // a. Collection: Find the next valid action for this player
             playerIds.forEach(pid => {
                 const actions = playerActionsMap[pid] || [];
 
@@ -200,58 +229,131 @@ export class GameState {
                         actionPointers[pid]++;
                         break;
                     } else {
-                        // Source destroyed OR out of fuel!
-                        const reason = !source ? 'destroyed' : 'out of fuel';
-                        console.log(`[Round ${round}] ${pid} action skipped (Source ${action.sourceId} ${reason}). Sliding...`);
                         actionPointers[pid]++;
                     }
                 }
-
             });
 
             if (roundActions.length > 0) {
-                console.log(`[Round ${round}] Executing ${roundActions.length} simultaneous actions.`);
+                // b. Sub-tick Simulation
+                const tempProjectiles = [];
+                const pendingStructures = [];
+                const impacts = new Set(); // IDs of entities to be destroyed at turn end
 
-                // Simultaneous execution: All actions in this round succeed together (Revenge Logic)
+                // 1. Initialize launches
                 roundActions.forEach(action => {
                     const player = this.players[action.playerId];
                     const source = this.entities.find(e => e.id === action.sourceId);
                     const cost = GameState.COSTS[action.itemType] || 0;
 
-                    if (player.energy >= cost && source && (source.fuel === undefined || source.fuel > 0)) {
+                    if (player.energy >= cost && source) {
                         player.energy -= cost;
                         if (source.fuel !== undefined) source.fuel--;
 
                         const rad = (action.angle * Math.PI) / 180;
-                        // Use the authoritative non-linear math to find the target
                         const launchDistance = GameState.calculateLaunchDistance(action.distance);
-                        const targetX = action.sourceX + Math.cos(rad) * launchDistance;
-                        const targetY = action.sourceY + Math.sin(rad) * launchDistance;
+                        const targetX = this.wrapX(source.x + Math.cos(rad) * launchDistance);
+                        const targetY = this.wrapY(source.y + Math.sin(rad) * launchDistance);
 
-                        // Collision Logic
-                        const hitEnemyHub = this.entities.find(e => {
-                            if (e.type !== 'HUB' || e.owner === action.playerId) return false;
-                            const dist = Math.sqrt((e.x - targetX) ** 2 + (e.y - targetY) ** 2);
-                            return dist < 30; // Hit radius
+                        tempProjectiles.push({
+                            id: Math.random().toString(36).substring(2, 6),
+                            type: action.itemType,
+                            owner: action.playerId,
+                            startX: source.x,
+                            startY: source.y,
+                            currX: source.x,
+                            currY: source.y,
+                            targetX: targetX,
+                            targetY: targetY,
+                            totalDist: launchDistance,
+                            active: true
                         });
-
-                        if (hitEnemyHub) {
-                            console.log(`[Round ${round}] SUCCESS: ${action.playerId} hit ${hitEnemyHub.id}`);
-                            this.entities = this.entities.filter(e => e.id !== hitEnemyHub.id);
-                            // Also remove links to/from this hub
-                            this.links = this.links.filter(l => l.from !== hitEnemyHub.id && l.to !== hitEnemyHub.id);
-                        } else {
-                            // Add the new entity if we didn't hit and destroy something
-                            const newEntity = this.addEntity({
-                                type: action.itemType,
-                                owner: action.playerId,
-                                x: targetX,
-                                y: targetY,
-                                hp: 50
-                            });
-                            this.addLink(action.sourceId, newEntity.id);
-                        }
                     }
+                });
+
+                // 2. Simulation Loop
+                const subTicks = 120; // High internal resolution for smoothness
+                const snapshotStep = 4; // Capture ~30 frames per round
+
+                for (let t = 1; t <= subTicks; t++) {
+                    tempProjectiles.forEach(proj => {
+                        if (!proj.active) return;
+
+                        const progress = t / subTicks;
+
+                        // Toroidal Shortest Path Interpolation
+                        let dx = proj.targetX - proj.startX;
+                        if (Math.abs(dx) > this.map.width / 2) {
+                            dx = dx > 0 ? dx - this.map.width : dx + this.map.width;
+                        }
+
+                        let dy = proj.targetY - proj.startY;
+                        if (Math.abs(dy) > this.map.height / 2) {
+                            dy = dy > 0 ? dy - this.map.height : dy + this.map.height;
+                        }
+
+                        proj.currX = this.wrapX(proj.startX + dx * progress);
+                        proj.currY = this.wrapY(proj.startY + dy * progress);
+
+                        if (t === subTicks) {
+                            proj.active = false;
+                            if (proj.type === 'WEAPON') {
+                                // Terminal Collision Logic
+                                const hitEnemyHub = this.entities.find(e => {
+                                    if (e.type !== 'HUB' || e.owner === proj.owner) return false;
+                                    const dist = this.getToroidalDistance(e.x, e.y, proj.currX, proj.currY);
+                                    return dist < 30;
+                                });
+
+                                if (hitEnemyHub) {
+                                    console.log(`[Round ${round}] ${proj.owner} weapon hit ${hitEnemyHub.id}`);
+                                    impacts.add(hitEnemyHub.id);
+                                }
+                            } else {
+                                // Structure deployment
+                                pendingStructures.push({
+                                    type: proj.type,
+                                    owner: proj.owner,
+                                    x: proj.currX,
+                                    y: proj.currY,
+                                    sourceId: roundActions.find(a => a.playerId === proj.owner && a.itemType === proj.type)?.sourceId
+                                });
+                            }
+                        }
+                    });
+
+                    // Capture snapshot periodically
+                    if (t % snapshotStep === 0 || t === subTicks) {
+                        // We temporarily inject projectiles into entities for the snapshot
+                        const snapshotState = this.getState();
+                        snapshotState.entities = [
+                            ...snapshotState.entities,
+                            ...tempProjectiles.filter(p => p.active).map(p => ({
+                                id: `proj-${p.id}`,
+                                type: 'PROJECTILE',
+                                owner: p.owner,
+                                x: p.currX,
+                                y: p.currY
+                            }))
+                        ];
+                        snapshots.push({
+                            type: 'ROUND_SUB',
+                            round: round,
+                            subTick: t,
+                            state: snapshotState
+                        });
+                    }
+                }
+
+                // 3. Final Application of Round Results
+                if (impacts.size > 0) {
+                    this.entities = this.entities.filter(e => !impacts.has(e.id));
+                    this.links = this.links.filter(l => !impacts.has(l.from) && !impacts.has(l.to));
+                }
+
+                pendingStructures.forEach(data => {
+                    const newEnt = this.addEntity(data);
+                    if (data.sourceId) this.addLink(data.sourceId, newEnt.id);
                 });
 
                 // Link Decay check after every round
@@ -263,7 +365,6 @@ export class GameState {
                     state: this.getState()
                 });
             } else {
-                // No more valid actions could be found for anyone
                 activeInProgress = false;
             }
 

@@ -71,7 +71,10 @@ The game follows a strict state machine for actions:
 *   **Damage**: Damage is dealt by weapons and status effects.
 
 ### Weapons
-*   **Function**: Projectiles launched from Hubs to destroy enemy structures.
+*   **Function**: 
+    *   Projectiles launched from Hubs to destroy enemy structures. 
+    *   Weapons not part of link system and are not structures. 
+    *   Weapons only last for one round and then destroyed.
 *   **Types**: Kinetic, Guided, Status Effects, etc.
 *   **Collisions**:
     *   Weapons do not collide with each other.
@@ -145,7 +148,7 @@ Processed in sequential **Simultaneous Rounds**. The number of rounds is determi
 ### 4. Conflict Resolution (Work in Progress)
 *   **Structure Overlap**: If two players land structures in the same location in the same round, both are destroyed.
 *   **Interception of Structures**: Launched structures move through the air and can be intercepted. They have 1 HP while in flight, but normal HP once deployed.
-*   **Autonomous Projectiles**: Once launched, weapons and interceptions are autonomous; they persist even if their source Hub is destroyed in the same round.
+*   **Autonomous Projectiles**: Once launched, weapons and interceptions are autonomous; they persist for that round even if their source Hub is destroyed in the same round.
 *   **Post-Mortem Revenge**: If a player's last Hub is destroyed but they have projectiles "in flight," those projectiles finish their path before the player is eliminated.
 *   **Defensive Overkill**: Defenses fire immediately. If a weapon is destroyed, subsequent interceptions may reacquire targets if they have homing capabilities.
 *   **Link Decay**: Orphaned structures (lost link to Starter Hub) are destroyed at the end of the round. Scheduled launches from these structures still occur within that round.
@@ -157,6 +160,5 @@ Processed in sequential **Simultaneous Rounds**. The number of rounds is determi
 *   **Example**: Turn 1, Planning Phase -> Turn 1, Action Phase, Round 1 -> Turn 1, Action Phase, Round 2 -> Turn 2, Planning Phase.
 
 ## Important Conventions
-*   **Coordinates**: Large coordinate system (e.g., 2000x2000). Camera/Pan logic handled separately.
 *   **Colors**: Hubs and entities are colored by their `owner`.
 *   **Debug Mode**: Maintain the `showDebugPreview` toggle for testing math vs. visual skill.

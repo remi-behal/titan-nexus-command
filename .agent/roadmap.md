@@ -26,14 +26,14 @@ We have a working multiplayer monorepo where two players can connect, lock in tu
 - Turn Timers to auto-resolve rounds.
 - Player ownership enforcement.
 
-### 🌫️ Phase 4: Fog of War
+### 🚀 Phase 4: Topology (Toroidal World)
+- Implementation of the "Wrapping" map logic.
+- Tiled rendering for seamless boundary viewing.
+
+### 🌫️ Phase 5: Fog of War
 - Dynamic Line-of-Sight (LOS).
 - Persistent "Ghost" memory of enemy buildings.
 - Server-side data sharding for hidden units.
-
-### 🚀 Phase 5: Topology (Toroidal World)
-- Implementation of the "Wrapping" map logic.
-- Tiled rendering for seamless boundary viewing.
 
 ### 💅 Phase 6: Deployment
 - Dockerization.
