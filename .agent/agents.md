@@ -3,7 +3,7 @@
 This document defines the rules of engagement for AI coding assistants working on **Titan: Nexus Command**. Since this project is a **Learning Exercise** for the human developer, agents must prioritize clarity, education, and stability over raw speed or extreme optimization.
 
 ## 1. The Code "Preservation" Rule 🛡️
-*   **Respect Comments**: Never delete or edit existing comments unless the underlying logic has changed significantly. 
+*   **Respect Comments**: VERY IMPORTANT! Never delete or edit existing comments unless the underlying logic has changed significantly. 
 *   **Context over Content**: Comments in this project serve as a "live journal" of learning. If you are adding a feature, explain the *math* or the *why* in the comments.
 *   **Avoid "Cleanup" Scripts**: Do not perform "refactors" that simply remove whitespace or comments to make the file smaller. Small files are not the goal; readable files are.
 
