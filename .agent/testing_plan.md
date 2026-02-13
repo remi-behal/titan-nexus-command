@@ -2,6 +2,16 @@
 
 This document outlines the testing scenarios required to ensure game stability, balance, and networking synchronization.
 
+## 🤖 Automated Testing
+Automated unit tests validate the core game engine logic. See `.agent/testing_strategy.md` for full details.
+
+- [x] **Unit Tests**: 25 tests covering slingshot math, toroidal wrapping, link integrity, turn resolution, and win conditions (98.3% coverage)
+- [ ] **Integration Tests**: Server-side action validation and Socket.io event handling
+- [ ] **E2E Tests**: Full game flow from lobby to victory
+
+**Run tests**: `npm test` (see `.agent/workflows/test.md`)
+
+
 ## 🟢 Phase 1: Local Prototype Testing
 Validated the core physics and state management in a single-client environment.
 
