@@ -112,13 +112,16 @@ function App() {
     }
   }, [])
 
-  const handleAimStart = () => {
+  const handleAimStart = (overrideHubId) => {
+    const targetHubId = overrideHubId || selectedHubId;
+    if (!targetHubId) return;
+
     // Check if selected structure has fuel
-    const selectedEntity = playerState?.entities?.find(e => e.id === selectedHubId);
-    const pendingFuelSpent = committedActions.filter(a => a.sourceId === selectedHubId).length;
+    const selectedEntity = playerState?.entities?.find(e => e.id === targetHubId);
+    const pendingFuelSpent = committedActions.filter(a => a.sourceId === targetHubId).length;
     const hasFuel = selectedEntity ? (selectedEntity.fuel === undefined || (selectedEntity.fuel - pendingFuelSpent) > 0) : false;
 
-    if (launchMode && !isLocked && selectedHubId && hasFuel) {
+    if (launchMode && !isLocked && hasFuel) {
       setIsAiming(true)
     }
   }
@@ -140,7 +143,7 @@ function App() {
       distance = MAX_PULL_DISTANCE;
     }
 
-    const angle = Math.atan2(-dy, -dx) * (180 / Math.PI)
+    const angle = GameState.calculateLaunchAngle(dx, dy);
 
     const action = {
       playerId: myPlayerId,
@@ -324,6 +327,7 @@ function App() {
           gameState={playerState}
           myPlayerId={myPlayerId}
           selectedHubId={selectedHubId}
+          launchMode={launchMode}
           isAiming={isAiming}
           committedActions={committedActions}
           showDebugPreview={showDebugPreview}

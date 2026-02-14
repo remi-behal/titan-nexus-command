@@ -45,6 +45,15 @@ export class GameState {
     }
 
     /**
+     * Calculate launch angle in degrees given a dx, dy pull vector.
+     * Note: The launch direction is OPPOSITE to the pull direction.
+     */
+    static calculateLaunchAngle(dx, dy) {
+        // We pull away from target, so launch is opposite (-dx, -dy)
+        return Math.atan2(-dy, -dx) * (180 / Math.PI);
+    }
+
+    /**
      * Map wrapping logic for Toroidal world
      */
     wrapX(x) {
@@ -263,8 +272,8 @@ export class GameState {
                             startY: source.y,
                             currX: source.x,
                             currY: source.y,
-                            targetX: targetX,
-                            targetY: targetY,
+                            intendedDx: Math.cos(rad) * launchDistance,
+                            intendedDy: Math.sin(rad) * launchDistance,
                             totalDist: launchDistance,
                             active: true
                         });
@@ -281,19 +290,9 @@ export class GameState {
 
                         const progress = t / subTicks;
 
-                        // Toroidal Shortest Path Interpolation
-                        let dx = proj.targetX - proj.startX;
-                        if (Math.abs(dx) > this.map.width / 2) {
-                            dx = dx > 0 ? dx - this.map.width : dx + this.map.width;
-                        }
-
-                        let dy = proj.targetY - proj.startY;
-                        if (Math.abs(dy) > this.map.height / 2) {
-                            dy = dy > 0 ? dy - this.map.height : dy + this.map.height;
-                        }
-
-                        proj.currX = this.wrapX(proj.startX + dx * progress);
-                        proj.currY = this.wrapY(proj.startY + dy * progress);
+                        // Use explicit intended vector to avoid "Shortest Path" directional flips
+                        proj.currX = this.wrapX(proj.startX + proj.intendedDx * progress);
+                        proj.currY = this.wrapY(proj.startY + proj.intendedDy * progress);
 
                         if (t === subTicks) {
                             proj.active = false;

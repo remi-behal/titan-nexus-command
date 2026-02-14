@@ -34,6 +34,32 @@ describe('GameState - Slingshot Math', () => {
     });
 });
 
+describe('GameState - Launch Angle', () => {
+    it('should calculate correct angle for drag left (launch right)', () => {
+        // Dragging left means negative dx. Launch should be 0 degrees (Right)
+        const angle = GameState.calculateLaunchAngle(-100, 0);
+        expect(angle + 0).toBe(0);
+    });
+
+    it('should calculate correct angle for drag right (launch left)', () => {
+        // Dragging right means positive dx. Launch should be 180 degrees (Left)
+        const angle = GameState.calculateLaunchAngle(100, 0);
+        expect(Math.abs(angle)).toBe(180);
+    });
+
+    it('should calculate correct angle for drag up (launch down)', () => {
+        // Dragging up means negative dy. Launch should be 90 degrees (Down)
+        const angle = GameState.calculateLaunchAngle(0, -100);
+        expect(angle).toBe(90);
+    });
+
+    it('should calculate correct angle for drag down (launch up)', () => {
+        // Dragging down means positive dy. Launch should be -90 degrees (Up)
+        const angle = GameState.calculateLaunchAngle(0, 100);
+        expect(angle).toBe(-90);
+    });
+});
+
 describe('GameState - Toroidal Map', () => {
     let game;
 
@@ -317,5 +343,53 @@ describe('GameState - Collision Detection', () => {
         // p2Hub should be destroyed
         const p2HubAfter = game.entities.find(e => e.id === p2Hub.id);
         expect(p2HubAfter).toBeUndefined();
+    });
+});
+
+describe('GameState - Launch Direction Consistency', () => {
+    let game;
+
+    beforeEach(() => {
+        game = new GameState();
+        game.initializeGame(['player1', 'player2']);
+    });
+
+    it('should maintain direction for high-power launches (>50% map width)', () => {
+        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        p1Hub.x = 250;
+        p1Hub.y = 500;
+
+        // Launch RIGHT with 800 power (Map width is 1000)
+        // Target should wrap to 1050 -> 50.
+        // But it should travel RIGHT (250 -> 500 -> 750 -> 1000/0 -> 50)
+        // At 50% progress, it should be at 250 + 400 = 650.
+        // The "shortest path" would be 250 -> 150 -> 50 (traveling LEFT 200 units).
+
+        const pullDistance = Math.pow(800 / GameState.MAX_LAUNCH, 1 / GameState.POWER_EXPONENT) * GameState.MAX_PULL;
+
+        const actions = {
+            player1: [{
+                playerId: 'player1',
+                sourceId: p1Hub.id,
+                itemType: 'HUB',
+                angle: 0, // RIGHT
+                distance: pullDistance
+            }],
+            player2: []
+        };
+
+        const snapshots = game.resolveTurn(actions);
+
+        // Find a snapshot around the midpoint of the sub-round (subTicks = 120, capture every 4)
+        // SubTick 60 is exactly halfway.
+        const midSnapshot = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 60);
+        expect(midSnapshot).toBeDefined();
+
+        const projectile = midSnapshot.state.entities.find(e => e.type === 'PROJECTILE');
+        expect(projectile).toBeDefined();
+
+        // Expected X: 250 + 400 = 650
+        // If it flipped, it would be 250 - 100 = 150
+        expect(projectile.x).toBeCloseTo(650);
     });
 });

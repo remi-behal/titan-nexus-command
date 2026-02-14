@@ -11,6 +11,7 @@ const GameBoard = ({
     gameState,
     myPlayerId,
     selectedHubId,
+    launchMode,
     isAiming,
     onAimStart,
     onAimUpdate,
@@ -22,6 +23,10 @@ const GameBoard = ({
 }) => {
     const canvasRef = useRef(null);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+    const HUB_RADIUS = 40;
+    const SLING_RING_RADIUS = 80;
+    const RING_INTERACTION_BUFFER = 15;
 
     // visualEntities stores the smoothly-interpolated positions of all objects
     const visualEntities = useRef({});
@@ -176,15 +181,39 @@ const GameBoard = ({
                     ctx.restore();
                 } else {
                     ctx.beginPath();
-                    const radius = entity.type === 'HUB' ? 40 : 20;
+                    const radius = entity.type === 'HUB' ? HUB_RADIUS : 20;
                     ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
                     ctx.fill();
                 }
 
                 if (isSelected) {
+                    // Selection Highlight
                     ctx.strokeStyle = '#fff';
                     ctx.lineWidth = 3;
                     ctx.stroke();
+
+                    // SLING RING: Only draw if launchMode is active for a player's selected hub
+                    if (launchMode && entity.type === 'HUB' && entity.owner === myPlayerId) {
+                        ctx.save();
+                        ctx.setLineDash([8, 12]);
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                        ctx.lineWidth = 2;
+
+                        // Check if mouse is INSIDE the circle for highlighting
+                        const d = Math.sqrt((entity.x - mousePos.x) ** 2 + (entity.y - mousePos.y) ** 2);
+                        const isInsideRing = d < SLING_RING_RADIUS;
+
+                        if (isInsideRing) {
+                            ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                            ctx.shadowBlur = 10;
+                            ctx.shadowColor = '#fff';
+                        }
+
+                        ctx.beginPath();
+                        ctx.arc(entity.x, entity.y, SLING_RING_RADIUS, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
                 }
                 ctx.restore();
 
@@ -234,7 +263,7 @@ const GameBoard = ({
                     ctx.stroke();
                     ctx.setLineDash([]);
 
-                    const arrowLen = 40 * (1 + (ratio * 0.5));
+                    const arrowLen = HUB_RADIUS * (1 + (ratio * 0.5));
                     const arrowX = hub.x + Math.cos(launchAngle) * arrowLen;
                     const arrowY = hub.y + Math.sin(launchAngle) * arrowLen;
 
@@ -277,7 +306,7 @@ const GameBoard = ({
                     const angleRad = (action.angle * Math.PI) / 180;
                     const ratio = action.distance / maxPullDistance;
                     const strengthColor = getStrengthColor(ratio);
-                    const arrowLen = 40 * (1 + (ratio * 0.5));
+                    const arrowLen = HUB_RADIUS * (1 + (ratio * 0.5));
                     const ax = hub.x + Math.cos(angleRad) * arrowLen;
                     const ay = hub.y + Math.sin(angleRad) * arrowLen;
 
@@ -307,11 +336,12 @@ const GameBoard = ({
         return () => cancelAnimationFrame(animationFrameId);
     }, [gameState, isAiming, selectedHubId, mousePos, committedActions, showDebugPreview, maxPullDistance, myPlayerId]);
 
-    const handleMouseDown = (e) => {
+    // Helper: Calculate game coordinates from mouse event
+    const getGameCoords = (e) => {
         const canvas = canvasRef.current;
-        const rect = canvas.getBoundingClientRect();
+        if (!canvas) return { x: 0, y: 0 };
 
-        // Calculate scaling and offsets for 'objectFit: contain'
+        const rect = canvas.getBoundingClientRect();
         const cw = canvas.width;
         const ch = canvas.height;
         const rw = rect.width;
@@ -321,12 +351,10 @@ const GameBoard = ({
 
         let scale, offsetX, offsetY;
         if (rectRatio > canvasRatio) {
-            // Height is the limiting factor (black bars on left/right)
             scale = ch / rh;
             offsetX = (rw - (cw / scale)) / 2;
             offsetY = 0;
         } else {
-            // Width is the limiting factor (black bars on top/bottom)
             scale = cw / rw;
             offsetX = 0;
             offsetY = (rh - (ch / scale)) / 2;
@@ -334,55 +362,67 @@ const GameBoard = ({
 
         const x = ((e.clientX - rect.left) - offsetX) * scale;
         const y = ((e.clientY - rect.top) - offsetY) * scale;
+        return { x, y };
+    };
 
+    // Effect: Global Mouse Listeners for Aiming (Infinite Drag)
+    useEffect(() => {
+        if (!isAiming) return;
+
+        const handleGlobalMouseMove = (e) => {
+            const { x, y } = getGameCoords(e);
+            setMousePos({ x, y });
+            onAimUpdate(x, y);
+        };
+
+        const handleGlobalMouseUp = (e) => {
+            const { x, y } = getGameCoords(e);
+            console.log(`Launching from Hub at: (${x.toFixed(1)}, ${y.toFixed(1)})`);
+            onAimEnd(x, y);
+        };
+
+        window.addEventListener('mousemove', handleGlobalMouseMove);
+        window.addEventListener('mouseup', handleGlobalMouseUp);
+
+        return () => {
+            window.removeEventListener('mousemove', handleGlobalMouseMove);
+            window.removeEventListener('mouseup', handleGlobalMouseUp);
+        };
+    }, [isAiming]); // Re-binds when aiming state changes
+
+    const handleMouseDown = (e) => {
+        const { x, y } = getGameCoords(e);
+
+        // 1. Check for DIRECT click on any Hub (Selection + Aim)
         const clickedHub = gameState.entities.find(ent => {
             if (ent.type !== 'HUB') return false;
             const d = Math.sqrt((ent.x - x) ** 2 + (ent.y - y) ** 2);
-            return d < 40;
+            return d < HUB_RADIUS;
         });
 
         if (clickedHub && clickedHub.owner === myPlayerId) {
             onSelectHub(clickedHub.id);
             onAimStart(clickedHub.id, x, y);
-        } else {
-            // Clicked empty space or an enemy hub
-            onSelectHub(null);
-        }
-    };
-
-    const handleMouseMove = (e) => {
-        const canvas = canvasRef.current;
-        const rect = canvas.getBoundingClientRect();
-        const cw = canvas.width;
-        const ch = canvas.height;
-        const rw = rect.width;
-        const rh = rect.height;
-        const canvasRatio = cw / ch;
-        const rectRatio = rw / rh;
-
-        let scale, offsetX, offsetY;
-        if (rectRatio > canvasRatio) {
-            scale = ch / rh;
-            offsetX = (rw - (cw / scale)) / 2;
-            offsetY = 0;
-        } else {
-            scale = cw / rw;
-            offsetX = 0;
-            offsetY = (rh - (ch / scale)) / 2;
+            return;
         }
 
-        const x = ((e.clientX - rect.left) - offsetX) * scale;
-        const y = ((e.clientY - rect.top) - offsetY) * scale;
+        // 2. Check for click INSIDE the Sling Ring of the ALREADY selected hub
+        if (launchMode && selectedHubId) {
+            const currentHub = gameState.entities.find(e => e.id === selectedHubId);
+            if (currentHub && currentHub.owner === myPlayerId) {
+                const d = Math.sqrt((currentHub.x - x) ** 2 + (currentHub.y - y) ** 2);
+                const isInsideRing = d < SLING_RING_RADIUS;
 
-        setMousePos({ x, y });
-        if (isAiming) onAimUpdate(x, y);
-    };
-
-    const handleMouseUp = () => {
-        if (isAiming) {
-            console.log(`Launching from Hub at: (${mousePos.x.toFixed(1)}, ${mousePos.y.toFixed(1)})`);
-            onAimEnd(mousePos.x, mousePos.y);
+                if (isInsideRing) {
+                    // Start aiming for the already selected hub
+                    onAimStart(currentHub.id, x, y);
+                    return;
+                }
+            }
         }
+
+        // 3. Clicked empty space or an enemy hub
+        onSelectHub(null);
     };
 
     return (
@@ -392,9 +432,6 @@ const GameBoard = ({
                 width={gameState.map.width}
                 height={gameState.map.height}
                 onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
                 style={{ display: 'block', cursor: isAiming ? 'crosshair' : 'default', width: '100%', maxHeight: '80vh', objectFit: 'contain' }}
             />
         </div>
