@@ -73,6 +73,24 @@ function tick() {
     }
 }
 
+/**
+ * Helper to emit the game state to all players, 
+ * correctly filtered by their individual Fog of War.
+ */
+function emitFilteredState(state = null) {
+    const baseState = state || game.getState();
+
+    io.sockets.sockets.forEach(socket => {
+        const assignedId = Object.keys(playerAssignments).find(pid => playerAssignments[pid] === socket.id);
+        if (assignedId) {
+            socket.emit('gameStateUpdate', game.getVisibleState(assignedId, baseState));
+        } else {
+            // Spectators see everything
+            socket.emit('gameStateUpdate', baseState);
+        }
+    });
+}
+
 async function resolveTurn() {
     if (timerTimeout) {
         clearTimeout(timerTimeout);
@@ -102,7 +120,7 @@ async function resolveTurn() {
     for (const snap of snapshots) {
         console.log(`[Resolution] Emitting snapshot type: ${snap.type}${snap.round ? ` (Round ${snap.round})` : ''}`);
 
-        io.emit('gameStateUpdate', snap.state);
+        emitFilteredState(snap.state);
 
         if (snap.type === 'ROUND') {
             io.emit('resolutionRound', snap.round);
@@ -151,12 +169,12 @@ io.on('connection', (socket) => {
     }
 
     // Send current state
-    socket.emit('gameStateUpdate', game.getState());
+    socket.emit('gameStateUpdate', assignedPlayerId ? game.getVisibleState(assignedPlayerId) : game.getState());
     // Also send sync status
     io.emit('syncStatus', { lockedIn });
 
     socket.on('requestState', () => {
-        socket.emit('gameStateUpdate', game.getState());
+        socket.emit('gameStateUpdate', assignedPlayerId ? game.getVisibleState(assignedPlayerId) : game.getState());
         socket.emit('syncStatus', { lockedIn });
     });
 
@@ -223,8 +241,8 @@ io.on('connection', (socket) => {
         lockedIn.player2 = false;
         turnActions.player1 = null;
         turnActions.player2 = null;
-        io.emit('gameStateUpdate', game.getState());
-        io.emit('syncStatus', { lockedIn });
+        emitFilteredState();
+        socket.emit('syncStatus', { lockedIn });
         startTimer();
     });
 

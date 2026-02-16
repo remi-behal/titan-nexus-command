@@ -13,8 +13,8 @@ export class GameState {
         this.entities = []; // [ { id, type: 'HUB', owner, x, y, hp } ]
         this.links = []; // [ { fromId, toId } ]
         this.map = {
-            width: 1000,
-            height: 1000,
+            width: 2000,
+            height: 2000,
             resources: [], // Energy nodes on the map
             obstacles: [] // Rocks, walls, etc.
         };
@@ -26,6 +26,13 @@ export class GameState {
         'WEAPON': 15,
         'EXTRACTOR': 25,
         'DEFENSE': 30
+    };
+
+    static VISION_RADIUS = {
+        'HUB': 400,
+        'EXTRACTOR': 200,
+        'DEFENSE': 250,
+        'PROJECTILE': 100
     };
 
     // Slingshot Constants
@@ -90,6 +97,118 @@ export class GameState {
         if (dy > this.map.height / 2) dy = this.map.height - dy;
 
         return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    /**
+     * Checks if a specific coordinate is visible to a player.
+     * Accounts for toroidal wrapping.
+     */
+    isPositionVisible(playerId, x, y) {
+        if (!playerId || playerId === 'spectator') return true;
+
+        return this.entities.some(e => {
+            if (e.owner !== playerId) return false;
+            const radius = GameState.VISION_RADIUS[e.type] || 0;
+            if (radius === 0) return false;
+            return this.getToroidalDistance(e.x, e.y, x, y) <= radius;
+        });
+    }
+
+    /**
+     * Returns a list of vision circles { x, y, radius } for a given player.
+     */
+    getVisionCircles(playerId) {
+        if (!playerId || playerId === 'spectator') return [];
+
+        return this.entities
+            .filter(e => e.owner === playerId)
+            .map(e => ({
+                x: e.x,
+                y: e.y,
+                radius: GameState.VISION_RADIUS[e.type] || 0
+            }))
+            .filter(c => c.radius > 0);
+    }
+
+    /**
+     * Returns a filtered version of the state based on what a player can see.
+     * @param {string} playerId - The player requesting the state.
+     * @param {object} [baseState] - Optional state object to filter (defaults to current state).
+     */
+    getVisibleState(playerId, baseState = null) {
+        const state = baseState ? JSON.parse(JSON.stringify(baseState)) : this.getState();
+        if (!playerId || playerId === 'spectator') return state;
+
+        // Vision sources for this player in the provided state
+        const visionSources = state.entities
+            .filter(e => e.owner === playerId)
+            .map(e => ({
+                x: e.x,
+                y: e.y,
+                radius: GameState.VISION_RADIUS[e.type] || 0
+            }))
+            .filter(v => v.radius > 0);
+
+        const isVisible = (x, y) => {
+            return visionSources.some(v => this.getToroidalDistance(v.x, v.y, x, y) <= v.radius);
+        };
+
+        const entitiesRequiredByLinks = new Set();
+
+        // Filter links: visible if either end is visible, or if any segment is visible
+        state.links = state.links.filter(l => {
+            const fullFrom = (baseState || this).entities.find(e => e.id === l.from);
+            const fullTo = (baseState || this).entities.find(e => e.id === l.to);
+            if (!fullFrom || !fullTo) return false;
+
+            // Check endpoints
+            const fromVisible = fullFrom.owner === playerId || isVisible(fullFrom.x, fullFrom.y);
+            const toVisible = fullTo.owner === playerId || isVisible(fullTo.x, fullTo.y);
+
+            if (fromVisible || toVisible) {
+                entitiesRequiredByLinks.add(l.from);
+                entitiesRequiredByLinks.add(l.to);
+                return true;
+            }
+
+            // Check segments every 20 pixels
+            let dx, dy;
+            if (l.intendedDx !== null && l.intendedDx !== undefined) {
+                dx = l.intendedDx;
+                dy = l.intendedDy;
+            } else {
+                dx = fullTo.x - fullFrom.x;
+                dy = fullTo.y - fullFrom.y;
+                if (Math.abs(dx) > state.map.width / 2) dx = dx > 0 ? dx - state.map.width : dx + state.map.width;
+                if (Math.abs(dy) > state.map.height / 2) dy = dy > 0 ? dy - state.map.height : dy + state.map.height;
+            }
+
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const segments = Math.max(1, Math.ceil(distance / 20));
+
+            for (let i = 0; i <= segments; i++) {
+                const ratio = i / segments;
+                const sx = this.wrapX(fullFrom.x + dx * ratio);
+                const sy = this.wrapY(fullFrom.y + dy * ratio);
+                if (isVisible(sx, sy)) {
+                    entitiesRequiredByLinks.add(l.from);
+                    entitiesRequiredByLinks.add(l.to);
+                    return true;
+                }
+            }
+
+            return false;
+        });
+
+        // Filter entities: own entities always visible, others only if in vision OR required by a visible link
+        state.entities = (baseState || this).entities.filter(e => {
+            if (e.owner === playerId) return true;
+            if (isVisible(e.x, e.y)) return true;
+            if (entitiesRequiredByLinks.has(e.id)) return true;
+            return false;
+        });
+
+        return state;
     }
 
     /**
@@ -198,8 +317,14 @@ export class GameState {
         return entity;
     }
 
-    addLink(fromId, toId, intendedDx = null, intendedDy = null) {
-        this.links.push({ from: fromId, to: toId, intendedDx, intendedDy });
+    addLink(fromId, toId, owner, intendedDx = null, intendedDy = null) {
+        this.links.push({
+            from: fromId,
+            to: toId,
+            owner,
+            intendedDx,
+            intendedDy
+        });
     }
 
     /**
@@ -368,7 +493,7 @@ export class GameState {
                 pendingStructures.forEach(data => {
                     const newEnt = this.addEntity(data);
                     if (data.sourceId && data.intendedDx !== undefined && data.intendedDy !== undefined) {
-                        this.addLink(data.sourceId, newEnt.id, data.intendedDx, data.intendedDy);
+                        this.addLink(data.sourceId, newEnt.id, data.owner, data.intendedDx, data.intendedDy);
                     }
                 });
 

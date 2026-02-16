@@ -32,8 +32,8 @@
 - [x] Click,drag and release to scroll the map. <!-- id: 40 -->
 
 ### Fog of War (Phase 5)
-- [ ] Vision mask calculation. <!-- id: 31 -->
-- [ ] Server-side unit hiding. <!-- id: 32 -->
+- [x] Vision mask calculation. <!-- id: 31 -->
+- [x] Server-side unit hiding. <!-- id: 32 -->
 
 ---
 

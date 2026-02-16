@@ -33,6 +33,7 @@ const GameBoard = ({
 
     // visualEntities stores the smoothly-interpolated positions of all objects
     const visualEntities = useRef({});
+    const visualLinks = useRef({});
 
     const getStrengthColor = (ratio) => {
         // Linear transition: Green (0,255,0) -> Orange (255,165,0) -> Red (255,0,0)
@@ -99,13 +100,31 @@ const GameBoard = ({
         const mapH = gameState.map.height;
 
         const updateAndDraw = () => {
-            // 1. UPDATE VISUAL POSITIONS (Lerp)
+            // 1. UPDATE VISUAL POSITIONS (Lerp) & GHOST LOGIC
             // LERP_FACTOR targets how fast we reach the server's state.
             const LERP_FACTOR = 0.3;
 
+            // Define current vision circles for re-scouting check
+            const currentVisionCircles = gameState.entities
+                .filter(e => e.owner === myPlayerId)
+                .map(e => ({
+                    x: e.x,
+                    y: e.y,
+                    radius: GameState.VISION_RADIUS[e.type] || 0
+                }))
+                .filter(v => v.radius > 0);
+
+            const isInVision = (x, y) => {
+                if (!myPlayerId || myPlayerId === 'spectator') return true;
+                return currentVisionCircles.some(v => getToroidalDist(v.x, v.y, x, y, mapW, mapH) <= v.radius);
+            };
+
+            const serverIds = new Set(gameState.entities.map(e => e.id));
+
+            // Update existing entities and handle New ones
             gameState.entities.forEach(serverEnt => {
                 if (!visualEntities.current[serverEnt.id]) {
-                    visualEntities.current[serverEnt.id] = { ...serverEnt };
+                    visualEntities.current[serverEnt.id] = { ...serverEnt, isGhost: false, lastSeen: Date.now() };
                 } else {
                     const viz = visualEntities.current[serverEnt.id];
                     let dx = serverEnt.x - viz.x;
@@ -121,12 +140,70 @@ const GameBoard = ({
                     viz.hp = serverEnt.hp;
                     viz.fuel = serverEnt.fuel;
                     viz.maxFuel = serverEnt.maxFuel;
+                    viz.isGhost = false; // It's in the server update, so it's not a ghost
+                    viz.lastSeen = Date.now();
                 }
             });
 
-            const serverIds = new Set(gameState.entities.map(e => e.id));
+            // Handle Ghosts: entities in visualEntities NOT in serverIds
             Object.keys(visualEntities.current).forEach(id => {
-                if (!serverIds.has(id)) delete visualEntities.current[id];
+                if (!serverIds.has(id)) {
+                    const viz = visualEntities.current[id];
+
+                    // If it's a projectile OR if it was OUR structure, it disappears immediately
+                    // (We know it's gone because it's our own structure)
+                    if (viz.type === 'PROJECTILE' || viz.owner === myPlayerId) {
+                        delete visualEntities.current[id];
+                        return;
+                    }
+
+                    // For foreign structures, check if we SHOULD see it right now (Re-scouting)
+                    const currentlyInVision = isInVision(viz.x, viz.y);
+
+                    if (currentlyInVision) {
+                        // We are looking right at it and the server says it's not there -> It's gone!
+                        delete visualEntities.current[id];
+                    } else {
+                        // We can't see its last known position, so keep it as a ghost
+                        viz.isGhost = true;
+                    }
+                }
+            });
+
+            // Handle Links Ghosts
+            gameState.links.forEach(serverLink => {
+                const linkId = `${serverLink.from}-${serverLink.to}`;
+                if (!visualLinks.current[linkId]) {
+                    visualLinks.current[linkId] = { ...serverLink, isGhost: false };
+                } else {
+                    visualLinks.current[linkId].isGhost = false;
+                }
+            });
+
+            Object.keys(visualLinks.current).forEach(linkId => {
+                const viz = visualLinks.current[linkId];
+                const inServer = gameState.links.some(l => `${l.from}-${l.to}` === linkId);
+
+                if (!inServer) {
+                    // Check if either end of the link is currently in vision. 
+                    // If an end is in vision but the link is not in the server state, the link is gone.
+                    const from = visualEntities.current[viz.from];
+                    const to = visualEntities.current[viz.to];
+
+                    if (!from || !to) {
+                        delete visualLinks.current[linkId];
+                        return;
+                    }
+
+                    const fromVisible = isInVision(from.x, from.y);
+                    const toVisible = isInVision(to.x, to.y);
+
+                    if (fromVisible || toVisible) {
+                        delete visualLinks.current[linkId];
+                    } else {
+                        viz.isGhost = true;
+                    }
+                }
             });
 
             // 2. CLEAR CANVAS
@@ -156,25 +233,67 @@ const GameBoard = ({
                         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(mapW, y); ctx.stroke();
                     }
 
-                    // 3. DRAW LINKS
-                    ctx.strokeStyle = '#444';
-                    ctx.lineWidth = 2;
-                    gameState.links.forEach(link => {
+                    // 3. DRAW LINKS (Segmented for partial Fog of War)
+                    Object.values(visualLinks.current).forEach(link => {
                         const from = visualEntities.current[link.from];
                         const to = visualEntities.current[link.to];
-                        if (from && to) {
-                            if (link.intendedDx !== null && link.intendedDx !== undefined) {
-                                const targetX = from.x + link.intendedDx;
-                                const targetY = from.y + link.intendedDy;
-                                drawToroidalLine(ctx, from.x, from.y, targetX, targetY, mapW, mapH, link.intendedDx, link.intendedDy);
-                            } else {
-                                // Legacy shortest path
-                                let dx = to.x - from.x;
-                                let dy = to.y - from.y;
-                                if (Math.abs(dx) > mapW / 2) dx = dx > 0 ? dx - mapW : dx + mapW;
-                                if (Math.abs(dy) > mapH / 2) dy = dy > 0 ? dy - mapH : dy + mapH;
-                                drawToroidalLine(ctx, from.x, from.y, from.x + dx, from.y + dy, mapW, mapH);
-                            }
+                        if (!from || !to) return;
+
+                        const ownerId = link.owner || from.owner;
+                        const player = gameState.players[ownerId];
+                        const baseColor = player ? player.color : '#666';
+
+                        // Calculate desaturated color for ghost segments
+                        let ghostColor = '#444';
+                        if (baseColor.startsWith('hsl')) {
+                            ghostColor = baseColor.replace(/, 70%/, ', 10%');
+                        }
+
+                        // Determine path
+                        let dx, dy;
+                        if (link.intendedDx !== null && link.intendedDx !== undefined) {
+                            dx = link.intendedDx;
+                            dy = link.intendedDy;
+                        } else {
+                            dx = to.x - from.x;
+                            dy = to.y - from.y;
+                            if (Math.abs(dx) > mapW / 2) dx = dx > 0 ? dx - mapW : dx + mapW;
+                            if (Math.abs(dy) > mapH / 2) dy = dy > 0 ? dy - mapH : dy + mapH;
+                        }
+
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        const segmentLen = 20;
+                        const segmentCount = Math.max(1, Math.ceil(distance / segmentLen));
+
+                        for (let i = 0; i < segmentCount; i++) {
+                            const rStart = i / segmentCount;
+                            const rEnd = (i + 1) / segmentCount;
+
+                            const x1 = from.x + dx * rStart;
+                            const y1 = from.y + dy * rStart;
+                            const x2 = from.x + dx * rEnd;
+                            const y2 = from.y + dy * rEnd;
+
+                            // Sample middle of segment for visibility check
+                            const midX = ((from.x + dx * (rStart + rEnd) / 2 % mapW) + mapW) % mapW;
+                            const midY = ((from.y + dy * (rStart + rEnd) / 2 % mapH) + mapH) % mapH;
+
+                            const segmentInVision = isInVision(midX, midY);
+
+                            // A segment is a ghost if it's personally out of vision OR if the whole link is a ghost
+                            const isSegmentGhost = !segmentInVision || link.isGhost;
+
+                            ctx.save();
+                            ctx.strokeStyle = isSegmentGhost ? ghostColor : baseColor;
+                            ctx.lineWidth = isSegmentGhost ? 1 : 1.5;
+                            ctx.globalAlpha = isSegmentGhost ? 0.2 : 0.6;
+                            if (isSegmentGhost) ctx.setLineDash([4, 4]);
+
+                            ctx.beginPath();
+                            ctx.moveTo(x1, y1);
+                            ctx.lineTo(x2, y2);
+                            ctx.stroke();
+                            ctx.restore();
                         }
                     });
 
@@ -189,11 +308,24 @@ const GameBoard = ({
                     // 5. DRAW ENTITIES
                     Object.values(visualEntities.current).forEach(entity => {
                         const player = gameState.players[entity.owner];
-                        const color = player ? player.color : '#fff';
-                        const isSelected = entity.id === selectedHubId;
+                        let color = player ? player.color : '#fff';
+
+                        if (entity.isGhost) {
+                            // Desaturate the color for ghosts
+                            // Assuming HSL format for player colors or fallback
+                            if (color.startsWith('hsl')) {
+                                color = color.replace(/, 70%/, ', 10%'); // Drop saturation to 10%
+                            } else {
+                                color = '#666'; // Fallback gray
+                            }
+                        }
+
+                        const isSelected = entity.id === selectedHubId && !entity.isGhost;
 
                         ctx.save();
                         ctx.fillStyle = color;
+                        ctx.globalAlpha = entity.isGhost ? 0.4 : 1.0;
+
                         if (isSelected) {
                             ctx.shadowBlur = 15;
                             ctx.shadowColor = '#fff';
@@ -219,7 +351,7 @@ const GameBoard = ({
                             ctx.lineWidth = 3;
                             ctx.stroke();
 
-                            if (launchMode && entity.type === 'HUB' && entity.owner === myPlayerId) {
+                            if (launchMode && entity.type === 'HUB' && entity.owner === myPlayerId && !entity.isGhost) {
                                 ctx.save();
                                 ctx.setLineDash([8, 12]);
                                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
@@ -243,13 +375,17 @@ const GameBoard = ({
                         }
                         ctx.restore();
 
+                        // Draw label if not a projectile
                         if (entity.type !== 'PROJECTILE') {
+                            ctx.save();
+                            ctx.globalAlpha = entity.isGhost ? 0.3 : 0.8;
                             ctx.fillStyle = '#fff';
-                            ctx.font = '10px Arial';
+                            ctx.font = entity.isGhost ? 'italic 10px Arial' : '10px Arial';
                             ctx.textAlign = 'center';
-                            ctx.fillText(entity.type, entity.x, entity.y + 35);
+                            ctx.fillText(entity.isGhost ? `Ghost ${entity.type}` : entity.type, entity.x, entity.y + 35);
+                            ctx.restore();
 
-                            if (entity.fuel !== undefined && entity.owner === myPlayerId) {
+                            if (entity.fuel !== undefined && entity.owner === myPlayerId && !entity.isGhost) {
                                 const dotYOffset = entity.type === 'HUB' ? -15 : -10;
                                 const dotXOffset = entity.type === 'HUB' ? 18 : 12;
                                 for (let i = 0; i < entity.maxFuel; i++) {
@@ -363,6 +499,65 @@ const GameBoard = ({
                     ctx.restore();
                 }
             }
+
+            // -----------------------------------------------------------------
+            // 7. FOG OF WAR OVERLAY
+            // -----------------------------------------------------------------
+            if (myPlayerId && myPlayerId !== 'spectator') {
+                // Ensure we have a mask canvas
+                if (!window._fogMaskCanvas) {
+                    window._fogMaskCanvas = document.createElement('canvas');
+                }
+                const mCanvas = window._fogMaskCanvas;
+                mCanvas.width = canvas.width;
+                mCanvas.height = canvas.height;
+                const mctx = mCanvas.getContext('2d');
+
+                // 1. Fill mask with fog color
+                mctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                mctx.fillRect(0, 0, mCanvas.width, mCanvas.height);
+
+                // 2. Clear holes (using destination-out)
+                // This mode subtracts the new drawing from the existing content.
+                // Multiple overlapping circles will just clear the same area multiple times.
+                mctx.globalCompositeOperation = 'destination-out';
+
+                // Draw holes for all owned entities in all 9 tiled positions (for toroidal wrap)
+                gameState.entities.forEach(e => {
+                    const isOwnProjectile = e.type === 'PROJECTILE' && e.owner === myPlayerId;
+                    const isOwnEntity = e.owner === myPlayerId;
+
+                    if (isOwnEntity || isOwnProjectile) {
+                        const radius = GameState.VISION_RADIUS[e.type] || (e.type === 'PROJECTILE' ? 100 : 0);
+                        if (radius > 0) {
+                            // Holes must be drawn relative to the screen (accounting for camera)
+                            for (let ox = -mapW; ox <= mapW; ox += mapW) {
+                                for (let oy = -mapH; oy <= mapH; oy += mapH) {
+                                    const screenX = e.x + ox - cameraOffset.x;
+                                    const screenY = e.y + oy - cameraOffset.y;
+
+                                    // Optimization: Only draw if even remotely on screen
+                                    if (screenX + radius < 0 || screenX - radius > canvas.width ||
+                                        screenY + radius < 0 || screenY - radius > canvas.height) {
+                                        continue;
+                                    }
+
+                                    mctx.beginPath();
+                                    mctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
+                                    mctx.fill();
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // 3. Draw mask onto main canvas
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0); // Identity transform to draw full-screen overlay
+                ctx.drawImage(mCanvas, 0, 0);
+                ctx.restore();
+            }
+
             ctx.restore();
 
             animationFrameId = requestAnimationFrame(updateAndDraw);

@@ -68,24 +68,24 @@ describe('GameState - Toroidal Map', () => {
     });
 
     it('should wrap X coordinates beyond map width', () => {
-        const wrapped = game.wrapX(1200); // Map width is 1000
+        const wrapped = game.wrapX(2200); // Map width is 2000
         expect(wrapped).toBe(200);
     });
 
     it('should wrap negative X coordinates', () => {
         const wrapped = game.wrapX(-100);
-        expect(wrapped).toBe(900);
+        expect(wrapped).toBe(1900); // 2000 - 100
     });
 
     it('should wrap Y coordinates beyond map height', () => {
-        const wrapped = game.wrapY(1500); // Map height is 1000
+        const wrapped = game.wrapY(2500); // Map height is 2000
         expect(wrapped).toBe(500);
     });
 
     it('should calculate shortest toroidal distance', () => {
         // Points near opposite edges should have short distance via wrapping
-        const dist = game.getToroidalDistance(50, 500, 950, 500);
-        expect(dist).toBe(100); // Wraps around: 50 to 0 to 1000 to 950 = 100
+        const dist = game.getToroidalDistance(50, 500, 1950, 500);
+        expect(dist).toBe(100); // Wraps around: 50 to 0 to 2000 to 1950 = 100
     });
 
     it('should calculate shortest toroidal vector', () => {
@@ -167,7 +167,7 @@ describe('GameState - Link Integrity', () => {
     it('should preserve structures connected to starter hub', () => {
         const starter = game.entities.find(e => e.isStarter && e.owner === 'player1');
         const connected = game.addEntity({ type: 'HUB', owner: 'player1', x: 300, y: 300 });
-        game.addLink(starter.id, connected.id);
+        game.addLink(starter.id, connected.id, 'player1');
 
         game.checkLinkIntegrity();
 
@@ -187,8 +187,8 @@ describe('GameState - Link Integrity', () => {
         const middle = game.addEntity({ type: 'HUB', owner: 'player1', x: 300, y: 300 });
         const end = game.addEntity({ type: 'HUB', owner: 'player1', x: 400, y: 400 });
 
-        game.addLink(starter.id, middle.id);
-        game.addLink(middle.id, end.id);
+        game.addLink(starter.id, middle.id, 'player1');
+        game.addLink(middle.id, end.id, 'player1');
 
         // Remove the middle hub
         game.entities = game.entities.filter(e => e.id !== middle.id);
@@ -419,5 +419,77 @@ describe('GameState - Launch Direction Consistency', () => {
         // Expected X: 250 + 400 = 650
         // If it flipped, it would be 250 - 100 = 150
         expect(projectile.x).toBeCloseTo(650);
+    });
+});
+describe('GameState - Fog of War', () => {
+    let game;
+
+    beforeEach(() => {
+        game = new GameState();
+        game.initializeGame(['player1', 'player2']);
+    });
+
+    it('should show own entities as visible', () => {
+        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        expect(game.isPositionVisible('player1', p1Hub.x, p1Hub.y)).toBe(true);
+    });
+
+    it('should hide enemy entities out of vision', () => {
+        const p2Hub = game.entities.find(e => e.owner === 'player2' && e.type === 'HUB');
+
+        // p2Hub is at 750, p1Hub is at 250. Vision radius of HUB is 400.
+        // Distance is 500, so it should be hidden.
+        expect(game.isPositionVisible('player1', p2Hub.x, p2Hub.y)).toBe(false);
+    });
+
+    it('should show enemy entities within vision', () => {
+        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        // Place an enemy hub near player 1
+        const enemyNear = game.addEntity({ type: 'HUB', owner: 'player2', x: p1Hub.x + 100, y: p1Hub.y });
+
+        expect(game.isPositionVisible('player1', enemyNear.x, enemyNear.y)).toBe(true);
+    });
+
+    it('should filter getVisibleState for specific player', () => {
+        const p2Hub = game.entities.find(e => e.owner === 'player2' && e.type === 'HUB');
+
+        const visibleState = game.getVisibleState('player1');
+
+        // Player 2's remote hub should be filtered out
+        const p2HubInState = visibleState.entities.find(e => e.id === p2Hub.id);
+        expect(p2HubInState).toBeUndefined();
+    });
+
+    it('should always show map resources', () => {
+        const visibleState = game.getVisibleState('player1');
+        expect(visibleState.map.resources.length).toBeGreaterThan(0);
+    });
+
+    it('should support filtering passed snapshots', () => {
+        const dummyState = game.getState();
+        dummyState.entities.push({ id: 'dummy', owner: 'player2', x: 0, y: 0, type: 'HUB' });
+
+        const filtered = game.getVisibleState('player1', dummyState);
+        expect(filtered.entities.find(e => e.id === 'dummy')).toBeUndefined();
+    });
+
+    it('should show link even if endpoints are hidden but midpoint is visible', () => {
+        const p1Hub = game.entities.find(e => e.owner === 'player1');
+        // Player 1 at (250, 500). Vision radius 400 covers y range [100, 900].
+        p1Hub.x = 250; p1Hub.y = 500;
+
+        // Two enemy hubs outside vision
+        const enemyA = game.addEntity({ type: 'HUB', owner: 'player2', x: 250, y: 0 });    // 500 away
+        const enemyB = game.addEntity({ type: 'HUB', owner: 'player2', x: 250, y: 1000 }); // 500 away
+        game.addLink(enemyA.id, enemyB.id, 'player2');
+
+        const visibleState = game.getVisibleState('player1');
+
+        // Endpoints should now be visible because the link itself passes through vision
+        expect(visibleState.entities.find(e => e.id === enemyA.id)).toBeDefined();
+        expect(visibleState.entities.find(e => e.id === enemyB.id)).toBeDefined();
+
+        // Link should be visible due to midpoint at (250, 500)
+        expect(visibleState.links.length).toBe(1);
     });
 });
