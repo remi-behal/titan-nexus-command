@@ -134,8 +134,8 @@ function App() {
     if (!hub) return
 
     // Calculate Slingshot (Opposite of drag)
-    const dx = x - hub.x
-    const dy = y - hub.y
+    // Use toroidal-aware vector subtraction so dragging across edges works correctly
+    const { dx, dy } = GameState.getToroidalVector(hub.x, hub.y, x, y, playerState.map.width, playerState.map.height);
     let distance = Math.sqrt(dx * dx + dy * dy)
 
     // Clamp distance

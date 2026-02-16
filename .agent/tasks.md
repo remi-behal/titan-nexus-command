@@ -27,8 +27,9 @@
 ## ⏳ Backlog
 
 ### Toroidal Map (Phase 4)
-- [ ] Modular coordinate math (`%`). <!-- id: 29 -->
-- [ ] 3x3 tiled rendering in Canvas. <!-- id: 30 -->
+- [x] Modular coordinate math (`%`). <!-- id: 29 -->
+- [x] 3x3 tiled rendering in Canvas. <!-- id: 30 -->
+- [x] Click,drag and release to scroll the map. <!-- id: 40 -->
 
 ### Fog of War (Phase 5)
 - [ ] Vision mask calculation. <!-- id: 31 -->

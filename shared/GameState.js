@@ -54,6 +54,19 @@ export class GameState {
     }
 
     /**
+     * Helper to get the shortest distance vector (dx, dy) between two points on a torus.
+     */
+    static getToroidalVector(x1, y1, x2, y2, w, h) {
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        if (dx > w / 2) dx -= w;
+        if (dx < -w / 2) dx += w;
+        if (dy > h / 2) dy -= h;
+        if (dy < -h / 2) dy += h;
+        return { dx, dy };
+    }
+
+    /**
      * Map wrapping logic for Toroidal world
      */
     wrapX(x) {
@@ -185,8 +198,8 @@ export class GameState {
         return entity;
     }
 
-    addLink(fromId, toId) {
-        this.links.push({ from: fromId, to: toId });
+    addLink(fromId, toId, intendedDx = null, intendedDy = null) {
+        this.links.push({ from: fromId, to: toId, intendedDx, intendedDy });
     }
 
     /**
@@ -315,7 +328,9 @@ export class GameState {
                                     owner: proj.owner,
                                     x: proj.currX,
                                     y: proj.currY,
-                                    sourceId: roundActions.find(a => a.playerId === proj.owner && a.itemType === proj.type)?.sourceId
+                                    sourceId: roundActions.find(a => a.playerId === proj.owner && a.itemType === proj.type)?.sourceId,
+                                    intendedDx: proj.intendedDx,
+                                    intendedDy: proj.intendedDy
                                 });
                             }
                         }
@@ -352,7 +367,9 @@ export class GameState {
 
                 pendingStructures.forEach(data => {
                     const newEnt = this.addEntity(data);
-                    if (data.sourceId) this.addLink(data.sourceId, newEnt.id);
+                    if (data.sourceId && data.intendedDx !== undefined && data.intendedDy !== undefined) {
+                        this.addLink(data.sourceId, newEnt.id, data.intendedDx, data.intendedDy);
+                    }
                 });
 
                 // Link Decay check after every round

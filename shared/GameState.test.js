@@ -88,6 +88,34 @@ describe('GameState - Toroidal Map', () => {
         expect(dist).toBe(100); // Wraps around: 50 to 0 to 1000 to 950 = 100
     });
 
+    it('should calculate shortest toroidal vector', () => {
+        // From 50 to 950: Shortest path is LEFT 100 units
+        const vector = GameState.getToroidalVector(50, 500, 950, 500, 1000, 1000);
+        expect(vector.dx).toBe(-100);
+        expect(vector.dy).toBe(0);
+
+        // From 950 to 50: Shortest path is RIGHT 100 units
+        const vector2 = GameState.getToroidalVector(950, 500, 50, 500, 1000, 1000);
+        expect(vector2.dx).toBe(100);
+        expect(vector2.dy).toBe(0);
+    });
+
+    it('should handle camera-aware coordinate wrapping (id:40)', () => {
+        // Simulate a camera panned to x=900.
+        // A "screen click" at relative 200 should land at game x=100 (900 + 200 = 1100 -> 100)
+        const cameraX = 900;
+        const clickX = 200;
+        const mapW = 1000;
+
+        const gameCoord = ((cameraX + clickX) % mapW + mapW) % mapW;
+        expect(gameCoord).toBe(100);
+
+        // Simulate camera panned to x=-100 (which is 900)
+        const cameraX2 = -100;
+        const gameCoord2 = ((cameraX2 + clickX) % mapW + mapW) % mapW;
+        expect(gameCoord2).toBe(100);
+    });
+
     it('should handle same-point distance', () => {
         const dist = game.getToroidalDistance(500, 500, 500, 500);
         expect(dist).toBe(0);
