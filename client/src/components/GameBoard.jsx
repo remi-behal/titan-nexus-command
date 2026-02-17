@@ -124,7 +124,12 @@ const GameBoard = ({
             // Update existing entities and handle New ones
             gameState.entities.forEach(serverEnt => {
                 if (!visualEntities.current[serverEnt.id]) {
-                    visualEntities.current[serverEnt.id] = { ...serverEnt, isGhost: false, lastSeen: Date.now() };
+                    visualEntities.current[serverEnt.id] = {
+                        ...serverEnt,
+                        isGhost: false,
+                        lastSeen: Date.now(),
+                        scouted: serverEnt.scouted // server should provide this
+                    };
                 } else {
                     const viz = visualEntities.current[serverEnt.id];
                     let dx = serverEnt.x - viz.x;
@@ -140,8 +145,9 @@ const GameBoard = ({
                     viz.hp = serverEnt.hp;
                     viz.fuel = serverEnt.fuel;
                     viz.maxFuel = serverEnt.maxFuel;
-                    viz.isGhost = false; // It's in the server update, so it's not a ghost
+                    viz.isGhost = false;
                     viz.lastSeen = Date.now();
+                    viz.scouted = viz.scouted || serverEnt.scouted; // Once scouted, always scouted for ghosting purposes
                 }
             });
 
@@ -151,7 +157,6 @@ const GameBoard = ({
                     const viz = visualEntities.current[id];
 
                     // If it's a projectile OR if it was OUR structure, it disappears immediately
-                    // (We know it's gone because it's our own structure)
                     if (viz.type === 'PROJECTILE' || viz.owner === myPlayerId) {
                         delete visualEntities.current[id];
                         return;
@@ -163,9 +168,12 @@ const GameBoard = ({
                     if (currentlyInVision) {
                         // We are looking right at it and the server says it's not there -> It's gone!
                         delete visualEntities.current[id];
-                    } else {
+                    } else if (viz.scouted) {
                         // We can't see its last known position, so keep it as a ghost
                         viz.isGhost = true;
+                    } else {
+                        // It was never properly scouted, just seen via link endpoint
+                        delete visualEntities.current[id];
                     }
                 }
             });
@@ -513,20 +521,14 @@ const GameBoard = ({
                 mCanvas.height = canvas.height;
                 const mctx = mCanvas.getContext('2d');
 
-                // 1. Fill mask with fog color
-                mctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                mctx.fillRect(0, 0, mCanvas.width, mCanvas.height);
-
-                // 2. Clear holes (using destination-out)
-                // This mode subtracts the new drawing from the existing content.
-                // Multiple overlapping circles will just clear the same area multiple times.
-                mctx.globalCompositeOperation = 'destination-out';
-
-                // Draw holes for all owned entities in all 9 tiled positions (for toroidal wrap)
+                // 1. Draw holes first (source-over)
+                mctx.clearRect(0, 0, mCanvas.width, mCanvas.height);
+                mctx.fillStyle = '#ffffff'; // Solid white circles
+                
                 gameState.entities.forEach(e => {
                     const isOwnProjectile = e.type === 'PROJECTILE' && e.owner === myPlayerId;
                     const isOwnEntity = e.owner === myPlayerId;
-
+                    
                     if (isOwnEntity || isOwnProjectile) {
                         const radius = GameState.VISION_RADIUS[e.type] || (e.type === 'PROJECTILE' ? 100 : 0);
                         if (radius > 0) {
@@ -535,7 +537,7 @@ const GameBoard = ({
                                 for (let oy = -mapH; oy <= mapH; oy += mapH) {
                                     const screenX = e.x + ox - cameraOffset.x;
                                     const screenY = e.y + oy - cameraOffset.y;
-
+                                    
                                     // Optimization: Only draw if even remotely on screen
                                     if (screenX + radius < 0 || screenX - radius > canvas.width ||
                                         screenY + radius < 0 || screenY - radius > canvas.height) {
@@ -550,6 +552,12 @@ const GameBoard = ({
                         }
                     }
                 });
+
+                // 2. Fill with fog color everywhere EXCEPT holes using 'source-out'
+                // This ensures anti-aliased edges and overlaps merge perfectly without artifacts.
+                mctx.globalCompositeOperation = 'source-out';
+                mctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                mctx.fillRect(0, 0, mCanvas.width, mCanvas.height);
 
                 // 3. Draw mask onto main canvas
                 ctx.save();

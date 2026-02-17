@@ -201,12 +201,19 @@ export class GameState {
         });
 
         // Filter entities: own entities always visible, others only if in vision OR required by a visible link
-        state.entities = (baseState || this).entities.filter(e => {
-            if (e.owner === playerId) return true;
-            if (isVisible(e.x, e.y)) return true;
-            if (entitiesRequiredByLinks.has(e.id)) return true;
-            return false;
-        });
+        state.entities = (baseState || this).entities.map(e => {
+            const isOwn = e.owner === playerId;
+            const inVision = isVisible(e.x, e.y);
+            const isLinkEndpoint = entitiesRequiredByLinks.has(e.id);
+
+            if (isOwn || inVision || isLinkEndpoint) {
+                return {
+                    ...e,
+                    scouted: isOwn || inVision // Only true if actively seen or owned
+                };
+            }
+            return null;
+        }).filter(e => e !== null);
 
         return state;
     }

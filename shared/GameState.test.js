@@ -492,4 +492,22 @@ describe('GameState - Fog of War', () => {
         // Link should be visible due to midpoint at (250, 500)
         expect(visibleState.links.length).toBe(1);
     });
+
+    it('should mark entities as scouted only if in active vision', () => {
+        const p1Hub = game.entities.find(e => e.owner === 'player1');
+        p1Hub.x = 250; p1Hub.y = 500; // Vision covers y in [100, 900]
+
+        // Enemy hubs outside vision
+        const enemyA = game.addEntity({ type: 'HUB', owner: 'player2', x: 250, y: 0 });    // y=0 is outside
+        const enemyB = game.addEntity({ type: 'HUB', owner: 'player2', x: 250, y: 450 });  // y=450 is INSIDE
+        game.addLink(enemyA.id, enemyB.id, 'player2');
+
+        const visibleState = game.getVisibleState('player1');
+
+        const entA = visibleState.entities.find(e => e.id === enemyA.id);
+        const entB = visibleState.entities.find(e => e.id === enemyB.id);
+
+        expect(entA.scouted).toBe(false); // Only seen because of link to B
+        expect(entB.scouted).toBe(true);  // Seen via active vision
+    });
 });
