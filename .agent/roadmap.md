@@ -3,8 +3,8 @@
 ## 🎯 Global Goal
 Build a browser-based, simultaneous turn-based strategy game for 2-8 players set on Titan. Use a physics-based "Slingshot" mechanic for expansion and combat.
 
-## 📍 Current Status: Phase 3
-We have a working multiplayer monorepo where two players can connect, lock in turns, and sync state.
+## 📍 Current Status: Phase 7
+We have a fully functional barebones prototype with multiplayer, toroidal wrapping, and fog of war. We are now expanding game features.
 
 ---
 
@@ -21,29 +21,29 @@ We have a working multiplayer monorepo where two players can connect, lock in tu
 - "Lock In" synchronization for simultaneous turns.
 - Vite bridge/proxy for networking stability.
 
-### 🏗️ Phase 3: Authority & Rules (Current)
+### ✅ Phase 3: Authority & Rules
 - Server-side validation of moves and energy.
 - Turn Timers to auto-resolve rounds.
 - Player ownership enforcement.
 
-### 🚀 Phase 4: Topology (Toroidal World)
+### ✅ Phase 4: Topology (Toroidal World)
 - Implementation of the "Wrapping" map logic.
 - Tiled rendering for seamless boundary viewing.
 
-### 🌫️ Phase 5: Fog of War
+### ✅ Phase 5: Fog of War
 - Dynamic Line-of-Sight (LOS).
 - Persistent "Ghost" memory of enemy buildings.
 - Server-side data sharding for hidden units.
 
-### 💅 Phase 6: Deployment
-- Dockerization.
-- Production UI/UX pass.
-- OpenMediaVault hosting.
-
-### Phase 7: Game feature expansion
-- Adding game features (TBD)
+### 🚀 Phase 7: Game feature expansion (Current)
+- Adding game features (Interceptions, Extractors, Map features).
 
 ### Phase 8: Artwork, UI/UX, Music
 - Adding artwork, UI/UX, music, and sound effects.
-- Adding lore, world building
-- Map design (TBD)
+- Adding lore, world building.
+- Map design.
+
+### 🏗️ Phase 9: Deployment 
+- Dockerization.
+- Production UI/UX pass.
+- OpenMediaVault hosting.

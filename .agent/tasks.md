@@ -1,39 +1,30 @@
 # Task Tracking: Titan: Nexus Command
 
-## 🎯 Active Phase: Phase 3 (Authority & Rules)
+## 🎯 Active Phase: Phase 7 (Game Feature Expansion)
 
 ### 📂 To Do
-- [x] **Turn Timer**: <!-- id: 18 -->
-    - [x] Server: Implement a 30s countdown that auto-resolves turns. <!-- id: 19 -->
-    - [x] Client: Display the countdown in the header. <!-- id: 20 -->
-- [x] **Energy Enforcement**: <!-- id: 21 -->
-    - [x] Server: Verify energy costs before allowing a launch. <!-- id: 22 -->
-    - [x] Client: Grey out structure types if energy is too low. Do not allow launch if energy is too low. <!-- id: 23 -->
-- [x] **Fix Sling Launch Direction Bug**: <!-- id: 37 -->
-    - [x] Shared: Centralize angle math in `GameState` <!-- id: 38 -->
-    - [x] Client: Implement global mouse drag handling <!-- id: 39 -->
-- [x] **Ownership Guard**: <!-- id: 24 -->
-    - [x] Server: Verify that the `sourceId` for an action belongs to the requesting `playerId`. <!-- id: 25 -->
- - [x] **Simultaneous Turn Logic** (Collision Handling) <!-- id: 26 -->
-    - [x] Brainstorm issues/conflicts that might arise from simultaneous actions <!-- id: 27 -->
-    - [x] In the event of conflict, decicision tree/priority order of actions (NO CONFLICTS ACTED ON, REDO TASK LATER) <!-- id: 28 -->
- - [x] **Iterative Round Resolution**: <!-- id: 33 -->
-    - [x] Server: Implement sub-round loop in `resolveTurn` <!-- id: 34 -->
-    - [x] Server: Implement "Link Decay" check at end of each sub-round <!-- id: 35 -->
-    - [x] Server: Handle Revenge logic <!-- id: 36 -->
+
+#### Phase 6 (Deployment)
+- [ ] **Dockerization**: <!-- id: 41 -->
+- [ ] **Production UI/UX Pass**: <!-- id: 42 -->
+- [ ] **Host on OMV**: <!-- id: 43 -->
+
+#### Phase 7 (Game Feature Expansion)
+- [ ] **Intercept System**: Implement logic for Defense structures to target and destroy incoming weapons. <!-- id: 44 -->
+- [ ] **Economy Expansion**: Implement Extractor logic for additional energy generation. <!-- id: 45 -->
+- [ ] **Map Features**: <!-- id: 46 -->
+    - [ ] Lakes (Non-buildable, Link-blocking)
+    - [ ] Energy Nodes (Static locations for Extractors)
+- [ ] **Multiplayer Enhancements**: <!-- id: 47 -->
+    - [ ] Chat system.
+    - [ ] Lobby management / Player slotting.
 
 ---
 
 ## ⏳ Backlog
-
-### Toroidal Map (Phase 4)
-- [x] Modular coordinate math (`%`). <!-- id: 29 -->
-- [x] 3x3 tiled rendering in Canvas. <!-- id: 30 -->
-- [x] Click,drag and release to scroll the map. <!-- id: 40 -->
-
-### Fog of War (Phase 5)
-- [x] Vision mask calculation. <!-- id: 31 -->
-- [x] Server-side unit hiding. <!-- id: 32 -->
+- [ ] **Team Play**: Shared energy and hubs. <!-- id: 48 -->
+- [ ] **Dynamic Weather**: Methane rain and high winds. <!-- id: 49 -->
+- [ ] **Spectator Mode**: Ability to watch without a player slot. <!-- id: 50 -->
 
 ---
 
@@ -61,3 +52,29 @@
 ### Phase 3 (Authority & Rules)
 - [x] Implement "Lock In" mechanism <!-- id: 16 -->
 - [x] Implement Server-side Resolution (processing all moves at once) <!-- id: 17 -->
+- [x] **Turn Timer**: <!-- id: 18 -->
+    - [x] Server: Implement a 30s countdown that auto-resolves turns. <!-- id: 19 -->
+    - [x] Client: Display the countdown in the header. <!-- id: 20 -->
+- [x] **Energy Enforcement**: <!-- id: 21 -->
+    - [x] Server: Verify energy costs before allowing a launch. <!-- id: 22 -->
+    - [x] Client: Grey out structure types if energy is too low. <!-- id: 23 -->
+- [x] **Ownership Guard**: <!-- id: 24 -->
+    - [x] Server: Verify that the `sourceId` for an action belongs to the requesting `playerId`. <!-- id: 25 -->
+- [x] **Simultaneous Turn Logic** (Collision Handling) <!-- id: 26 -->
+    - [x] Brainstorm issues/conflicts that might arise from simultaneous actions <!-- id: 27 -->
+- [x] **Iterative Round Resolution**: <!-- id: 33 -->
+    - [x] Server: Implement sub-round loop in `resolveTurn` <!-- id: 34 -->
+    - [x] Server: Implement "Link Decay" check at end of each sub-round <!-- id: 35 -->
+- [x] **Fix Sling Launch Direction Bug**: <!-- id: 37 -->
+    - [x] Shared: Centralize angle math in `GameState` <!-- id: 38 -->
+    - [x] Client: Implement global mouse drag handling <!-- id: 39 -->
+
+### Phase 4 (Topology)
+- [x] Modular coordinate math (`%`). <!-- id: 29 -->
+- [x] 3x3 tiled rendering in Canvas. <!-- id: 30 -->
+- [x] Click, drag and release to scroll the map. <!-- id: 40 -->
+
+### Phase 5 (Fog of War)
+- [x] Vision mask calculation. <!-- id: 31 -->
+- [x] Server-side unit hiding (State Sharding). <!-- id: 32 -->
+- [x] Ghost Layer implementation (Persistence in UI). <!-- id: 51 -->

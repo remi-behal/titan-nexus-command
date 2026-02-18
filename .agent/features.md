@@ -2,7 +2,7 @@
 
 This document details the mechanics and vision for the game components of Titan Nexus Command.
 
-## The Slingshot
+## The Slingshot [Implemented]
 *   **Direction**: Pull back *away* from the target. The further the pull, the higher the power.
 *   **Non-Linear Tension**: Launch distance is non-linear relative to pull distance (e.g. exponential or power curve). This ensures that low-power launches are precise, while high-power launches are significantly more sensitive and difficult to master.
 *   **Decoupled HUD**: The launch vector is an abstract **Power Gauge**, not a landing preview.
@@ -11,23 +11,24 @@ This document details the mechanics and vision for the game components of Titan 
     *   **Visual Feedback**: Power level is communicated through the arrow's **Color** (Green to Orange to Red gradient) and a subtle **Scaling** effect.
 *   **Goal**: Physics should feel weighty and deliberate. Accuracy is a learned skill and a matter of intuition, rather than a calculated certainty provided by the UI.
 
-### Interaction Model
+### Interaction Model [Implemented]
 The game follows a strict state machine for actions:
 1. **Selection**: User clicks a Hub they own.
 2. **Item Pick**: User selects an item type (Hub, Weapon, etc.) from a menu.
 3. **Launch Mode**: User clicks "Launch".
-4. **The Sling**: Click and drag *away* from the Hub.
+4. **The Sling**: Click and drag on the **Sling Ring** around the Hub. 
     *   **Visuals**: A dotted line to the mouse and a color-coded "Power Arrow" in the opposite direction.
     *   **Clamping**: Maximum pull distance is enforced.
 5. **Commit**: Releasing the mouse locks the action. The moment the mouse is released, the color-coded arrow is replaced by a frozen version colored with the release color and a small number (e.g., 1st action, 2nd action).
     *   **Landing Preview**: If the **show landing** toggle is active, "Greyed Out" actions are visible on the map.
 
-## The Toroidal (Wrap) Map
-*   **Topology**: The world is a finite rectangle (e.g., 2000x2000) but without edges.
-*   **Wrapping**: Moving off one edge brings you to the opposite side (Right/Left, Top/Bottom).
-*   **Visualization**: The client renders 3x3 tiles of the map to ensure that when looking at a corner, the "other side" fills the space.
+## The Toroidal (Wrap) Map [Implemented]
+*   **Topology**: The world is a finite rectangle (2000x2000) but without edges.
+*   **Wrapping**: Moving off one edge brings you to the opposite side.
+*   **Visualization**: The client renders 3x3 tiles of the map for seamless boundary viewing.
+*   **Math**: Shortest-path aware coordinate systems are used for vision, distances, and targeting.
 
-## Fog of War
+## Fog of War [Implemented]
 *   **Active Vision**: Your structures provide a circular radius of visibility.
 *   **Map Knowledge**: Static features (terrain, mining nodes) are permanently visible from the start of the game.
 *   **The "Ghost" Layer**: If an enemy structure or link leaves your vision, its last known position remains visible as a desaturated "ghost." It only disappears or updates if a unit is sent to re-scout that area.
@@ -46,7 +47,7 @@ The game follows a strict state machine for actions:
     *   Players start with a single "Starter Hub" which has more health and a unique appearance.
 *   **Extractors**:
     *   Extractors generate energy every turn and can be launched from Hubs.
-*   **Links**:
+*   **Links**: 
     *   Links are created by launching structures from Hubs.
     *   All links must eventually connect back to the Starter Hub. If a structure cannot be reached via a link from the Starter Hub, it is destroyed.
     *   This can create chain reactions where losing a single Hub destroys a large portion of a network.
@@ -100,6 +101,11 @@ The game follows a strict state machine for actions:
     3.  Impact animations
     4.  Deployment animations
 *   Additional animations **TBD**.
+*   **Sub-tick Simulation [Implemented]**: Resolution processes actions in 120 sub-ticks for smooth, frame-by-frame animation snapshots.
+
+### Animations [Implemented]
+*   **Lerp**: Client-side interpolation ensures smooth movement between server snapshots.
+*   **Sequence**: Energy phase -> Action rounds -> Final state.
 
 ### Visuals, Audio, and UI
 *   Visuals: **TBD**
