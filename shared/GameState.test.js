@@ -473,33 +473,41 @@ describe('GameState - Fog of War', () => {
         expect(filtered.entities.find(e => e.id === 'dummy')).toBeUndefined();
     });
 
-    it('should show link even if endpoints are hidden but midpoint is visible', () => {
+    it('should show link even if endpoints are hidden but link segment is visible', () => {
         const p1Hub = game.entities.find(e => e.owner === 'player1');
-        // Player 1 at (250, 500). Vision radius 400 covers y range [100, 900].
+        // Player 1 at (250, 500). Vision radius 400.
         p1Hub.x = 250; p1Hub.y = 500;
 
-        // Two enemy hubs outside vision
+        // Two enemy hubs outside vision (at y=0 and y=1000)
+        // Link between them passes through (250, 500) which is in vision
         const enemyA = game.addEntity({ type: 'HUB', owner: 'player2', x: 250, y: 0 });    // 500 away
         const enemyB = game.addEntity({ type: 'HUB', owner: 'player2', x: 250, y: 1000 }); // 500 away
         game.addLink(enemyA.id, enemyB.id, 'player2');
 
         const visibleState = game.getVisibleState('player1');
 
-        // Endpoints should now be visible because the link itself passes through vision
-        expect(visibleState.entities.find(e => e.id === enemyA.id)).toBeDefined();
-        expect(visibleState.entities.find(e => e.id === enemyB.id)).toBeDefined();
-
-        // Link should be visible due to midpoint at (250, 500)
+        // Link should be visible because at least one segment is in vision
         expect(visibleState.links.length).toBe(1);
+
+        // Endpoints MUST be included in the entities list so the link can be drawn...
+        const entA = visibleState.entities.find(e => e.id === enemyA.id);
+        const entB = visibleState.entities.find(e => e.id === enemyB.id);
+        expect(entA).toBeDefined();
+        expect(entB).toBeDefined();
+
+        // ...BUT they must be marked as NOT scouted because they are in the dark
+        expect(entA.scouted).toBe(false);
+        expect(entB.scouted).toBe(false);
     });
 
-    it('should mark entities as scouted only if in active vision', () => {
+    it('should mark entities as scouted ONLY if they are in active vision radius', () => {
         const p1Hub = game.entities.find(e => e.owner === 'player1');
         p1Hub.x = 250; p1Hub.y = 500; // Vision covers y in [100, 900]
 
-        // Enemy hubs outside vision
-        const enemyA = game.addEntity({ type: 'HUB', owner: 'player2', x: 250, y: 0 });    // y=0 is outside
-        const enemyB = game.addEntity({ type: 'HUB', owner: 'player2', x: 250, y: 450 });  // y=450 is INSIDE
+        // Enemy Hub A: Just outside vision (y=50)
+        // Enemy Hub B: Well inside vision (y=500)
+        const enemyA = game.addEntity({ type: 'HUB', owner: 'player2', x: 250, y: 50 });
+        const enemyB = game.addEntity({ type: 'HUB', owner: 'player2', x: 250, y: 500 });
         game.addLink(enemyA.id, enemyB.id, 'player2');
 
         const visibleState = game.getVisibleState('player1');
@@ -507,7 +515,7 @@ describe('GameState - Fog of War', () => {
         const entA = visibleState.entities.find(e => e.id === enemyA.id);
         const entB = visibleState.entities.find(e => e.id === enemyB.id);
 
-        expect(entA.scouted).toBe(false); // Only seen because of link to B
-        expect(entB.scouted).toBe(true);  // Seen via active vision
+        expect(entA.scouted).toBe(false); // Inside the dark, only seen via link
+        expect(entB.scouted).toBe(true);  // Actively seen
     });
 });

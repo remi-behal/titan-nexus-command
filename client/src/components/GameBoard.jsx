@@ -330,6 +330,11 @@ const GameBoard = ({
 
                         const isSelected = entity.id === selectedHubId && !entity.isGhost;
 
+                        // DRAWING GUARD: Only render the entity if it is scouted (active vision/owned) 
+                        // or if it's a ghost (previously scouted).
+                        // This prevents enemy hubs at link endpoints from being visible in the dark.
+                        if (!entity.scouted && !entity.isGhost) return;
+
                         ctx.save();
                         ctx.fillStyle = color;
                         ctx.globalAlpha = entity.isGhost ? 0.4 : 1.0;
@@ -523,12 +528,13 @@ const GameBoard = ({
 
                 // 1. Draw holes first (source-over)
                 mctx.clearRect(0, 0, mCanvas.width, mCanvas.height);
+                mctx.globalCompositeOperation = 'source-over';
                 mctx.fillStyle = '#ffffff'; // Solid white circles
-                
+
                 gameState.entities.forEach(e => {
                     const isOwnProjectile = e.type === 'PROJECTILE' && e.owner === myPlayerId;
                     const isOwnEntity = e.owner === myPlayerId;
-                    
+
                     if (isOwnEntity || isOwnProjectile) {
                         const radius = GameState.VISION_RADIUS[e.type] || (e.type === 'PROJECTILE' ? 100 : 0);
                         if (radius > 0) {
@@ -537,7 +543,7 @@ const GameBoard = ({
                                 for (let oy = -mapH; oy <= mapH; oy += mapH) {
                                     const screenX = e.x + ox - cameraOffset.x;
                                     const screenY = e.y + oy - cameraOffset.y;
-                                    
+
                                     // Optimization: Only draw if even remotely on screen
                                     if (screenX + radius < 0 || screenX - radius > canvas.width ||
                                         screenY + radius < 0 || screenY - radius > canvas.height) {

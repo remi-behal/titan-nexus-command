@@ -171,7 +171,7 @@ export class GameState {
                 return true;
             }
 
-            // Check segments every 20 pixels
+            // Check segments every 20 pixels to ensure visibility even if nodes are hidden
             let dx, dy;
             if (l.intendedDx !== null && l.intendedDx !== undefined) {
                 dx = l.intendedDx;
