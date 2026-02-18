@@ -1,6 +1,7 @@
 # Game Features Deep Dive
 
 This document details the mechanics and vision for the game components of Titan Nexus Command.
+**IMPORTANT**: Agent edits to this file should be minimal
 
 ## The Slingshot [Implemented]
 *   **Direction**: Pull back *away* from the target. The further the pull, the higher the power.
@@ -55,6 +56,7 @@ The game follows a strict state machine for actions:
 *   **Defenses**:
     *   Defenses are launched from Hubs and protect against incoming projectiles via interceptions.
     *   Some defenses may act passively in an offensive role against enemy structures (**TBD**).
+    *   See `defenses.md` for more details
 
 ## Map Features
 *   **Lakes**: Bodies of methane that cannot be built on; links cannot cross them.

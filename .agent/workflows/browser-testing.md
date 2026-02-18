@@ -8,7 +8,7 @@ When visual verification or console debugging is required, follow these steps:
 
 1. **Start the Bridge**:
 // turbo
-Run `npx @dbalabka/chrome-wsl` in the terminal. Wait for the green "✅ DevTools reachable" check.
+Run `yes y | npx @dbalabka/chrome-wsl` in the terminal. Wait for the green "✅ DevTools reachable" check.
 
 2. **Conduct Testing**:
 Use the `browser_subagent` or `read_browser_page` tools. They will automatically detect the bridge at `http://127.0.0.1:9222`.

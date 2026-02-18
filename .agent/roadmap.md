@@ -3,8 +3,8 @@
 ## 🎯 Global Goal
 Build a browser-based, simultaneous turn-based strategy game for 2-8 players set on Titan. Use a physics-based "Slingshot" mechanic for expansion and combat.
 
-## 📍 Current Status: Phase 7
-We have a fully functional barebones prototype with multiplayer, toroidal wrapping, and fog of war. We are now expanding game features.
+## 📍 Current Status: Phase 6
+We have a functional barebones prototype with multiplayer, toroidal wrapping, and fog of war. We are now expanding game features.
 
 ---
 
@@ -35,15 +35,15 @@ We have a fully functional barebones prototype with multiplayer, toroidal wrappi
 - Persistent "Ghost" memory of enemy buildings.
 - Server-side data sharding for hidden units.
 
-### 🚀 Phase 7: Game feature expansion (Current)
+### 🚀 Phase 6: Game feature expansion (Current)
 - Adding game features (Interceptions, Extractors, Map features).
 
-### Phase 8: Artwork, UI/UX, Music
+### Phase 7: Artwork, UI/UX, Music
 - Adding artwork, UI/UX, music, and sound effects.
 - Adding lore, world building.
 - Map design.
 
-### 🏗️ Phase 9: Deployment 
+### 🏗️ Phase 8: Deployment 
 - Dockerization.
 - Production UI/UX pass.
 - OpenMediaVault hosting.

@@ -352,10 +352,34 @@ const GameBoard = ({
                             ctx.arc(entity.x, entity.y, 8, 0, Math.PI * 2);
                             ctx.fill();
                             ctx.restore();
+                        } else if (entity.type === 'LASER_BEAM') {
+                            // Draw Laser Beam
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.moveTo(entity.x, entity.y);
+                            ctx.lineTo(entity.targetX, entity.targetY);
+                            ctx.strokeStyle = '#f0f'; // Magenta laser
+                            ctx.lineWidth = 3;
+                            ctx.shadowBlur = 10;
+                            ctx.shadowColor = '#f0f';
+                            ctx.stroke();
+
+                            // Add a glow effect
+                            ctx.globalAlpha = 0.5;
+                            ctx.lineWidth = 6;
+                            ctx.stroke();
+                            ctx.restore();
                         } else {
                             ctx.beginPath();
-                            const radius = entity.type === 'HUB' ? HUB_RADIUS : 20;
-                            ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
+                            const radius = entity.type === 'HUB' ? HUB_RADIUS :
+                                entity.type === 'DEFENSE' ? 15 : 20;
+
+                            if (entity.type === 'DEFENSE') {
+                                // Draw Defense as a square/diamond
+                                ctx.rect(entity.x - 15, entity.y - 15, 30, 30);
+                            } else {
+                                ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
+                            }
                             ctx.fill();
                         }
 
@@ -388,8 +412,8 @@ const GameBoard = ({
                         }
                         ctx.restore();
 
-                        // Draw label if not a projectile
-                        if (entity.type !== 'PROJECTILE') {
+                        // Draw label if not a projectile or beam
+                        if (entity.type !== 'PROJECTILE' && entity.type !== 'LASER_BEAM') {
                             ctx.save();
                             ctx.globalAlpha = entity.isGhost ? 0.3 : 0.8;
                             ctx.fillStyle = '#fff';

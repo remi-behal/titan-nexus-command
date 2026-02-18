@@ -1,16 +1,12 @@
 # Task Tracking: Titan: Nexus Command
 
-## 🎯 Active Phase: Phase 7 (Game Feature Expansion)
+## 🎯 Active Phase: Phase 6 (Game Feature Expansion)
 
 ### 📂 To Do
 
-#### Phase 6 (Deployment)
-- [ ] **Dockerization**: <!-- id: 41 -->
-- [ ] **Production UI/UX Pass**: <!-- id: 42 -->
-- [ ] **Host on OMV**: <!-- id: 43 -->
-
-#### Phase 7 (Game Feature Expansion)
-- [ ] **Intercept System**: Implement logic for Defense structures to target and destroy incoming weapons. <!-- id: 44 -->
+#### Phase 6 (Game Feature Expansion)
+- [x] **Intercept System**: Implement logic for Defense structures to target and destroy incoming weapons. <!-- id: 44 -->
+    - [x] Add Laser Defense to the game. <!-- id: 51 -->
 - [ ] **Economy Expansion**: Implement Extractor logic for additional energy generation. <!-- id: 45 -->
 - [ ] **Map Features**: <!-- id: 46 -->
     - [ ] Lakes (Non-buildable, Link-blocking)
@@ -19,6 +15,15 @@
     - [ ] Chat system.
     - [ ] Lobby management / Player slotting.
 
+#### Phase 7: Artwork, UI/UX, Music
+- [ ] Adding artwork, UI/UX, music, and sound effects.
+- [ ] Adding lore, world building.
+- [ ] Map design.
+
+#### Phase 8 (Deployment)
+- [ ] **Dockerization**: <!-- id: 41 -->
+- [ ] **Production UI/UX Pass**: <!-- id: 42 -->
+- [ ] **Host on OMV**: <!-- id: 43 -->
 ---
 
 ## ⏳ Backlog

@@ -25,7 +25,7 @@ export class GameState {
         'HUB': 20,
         'WEAPON': 15,
         'EXTRACTOR': 25,
-        'DEFENSE': 30
+        'DEFENSE': 25
     };
 
     static VISION_RADIUS = {
@@ -34,6 +34,9 @@ export class GameState {
         'DEFENSE': 250,
         'PROJECTILE': 100
     };
+
+    static DEFENSE_RANGE = 100;
+    static DEFENSE_COOLDOWN = 1; // Unused if using fuel, but good for reference
 
     // Slingshot Constants
     static MAX_PULL = 300;
@@ -311,13 +314,15 @@ export class GameState {
 
         // Default Fuel Logic: HUBs and DEFENSE structures start with 3 fuel
         const fuelTypes = ['HUB', 'DEFENSE'];
-        const initialFuel = fuelTypes.includes(data.type) ? 3 : undefined;
+        const defaultFuel = fuelTypes.includes(data.type) ? 3 : undefined;
+        const finalFuel = data.fuel !== undefined ? data.fuel : defaultFuel;
+        const finalMaxFuel = data.maxFuel !== undefined ? data.maxFuel : defaultFuel;
 
         const entity = {
             id,
             ...data,
-            fuel: initialFuel,
-            maxFuel: initialFuel,
+            fuel: finalFuel,
+            maxFuel: finalMaxFuel,
             hp: data.hp || 50
         };
         this.entities.push(entity);
@@ -393,6 +398,7 @@ export class GameState {
                 const tempProjectiles = [];
                 const pendingStructures = [];
                 const impacts = new Set(); // IDs of entities to be destroyed at turn end
+                const tempVisuals = []; // Visual effects for this round (beams, explosions)
 
                 // 1. Initialize launches
                 roundActions.forEach(action => {
@@ -430,6 +436,44 @@ export class GameState {
                 const snapshotStep = 4; // Capture ~30 frames per round
 
                 for (let t = 1; t <= subTicks; t++) {
+                    const progress = t / subTicks;
+
+                    // --- Interception Logic ---
+                    this.entities.forEach(def => {
+                        if (def.type === 'DEFENSE' && def.fuel > 0) {
+                            // Find closest active enemy projectile in range
+                            let closestProj = null;
+                            let minDist = GameState.DEFENSE_RANGE;
+
+                            tempProjectiles.forEach(proj => {
+                                if (!proj.active || proj.owner === def.owner) return;
+                                const dist = this.getToroidalDistance(def.x, def.y, proj.currX, proj.currY);
+                                if (dist <= minDist) {
+                                    minDist = dist;
+                                    closestProj = proj;
+                                }
+                            });
+
+                            if (closestProj) {
+                                // Intercept!
+                                closestProj.active = false;
+                                def.fuel--;
+
+                                // Create visual beam
+                                tempVisuals.push({
+                                    type: 'LASER_BEAM',
+                                    x: def.x,
+                                    y: def.y,
+                                    targetX: closestProj.currX,
+                                    targetY: closestProj.currY,
+                                    duration: 15 // Lasts for ~15 subticks (approx 4 snapshots)
+                                });
+
+                                console.log(`[Intercept] ${def.id} blocked projectile from ${closestProj.owner}`);
+                            }
+                        }
+                    });
+
                     tempProjectiles.forEach(proj => {
                         if (!proj.active) return;
 
@@ -469,6 +513,16 @@ export class GameState {
                     });
 
                     // Capture snapshot periodically
+                    if (tempVisuals.length > 0) {
+                        // Decay visuals
+                        for (let i = tempVisuals.length - 1; i >= 0; i--) {
+                            tempVisuals[i].duration--;
+                            if (tempVisuals[i].duration <= 0) {
+                                tempVisuals.splice(i, 1);
+                            }
+                        }
+                    }
+
                     if (t % snapshotStep === 0 || t === subTicks) {
                         // We temporarily inject projectiles into entities for the snapshot
                         const snapshotState = this.getState();
@@ -480,6 +534,14 @@ export class GameState {
                                 owner: p.owner,
                                 x: p.currX,
                                 y: p.currY
+                            })),
+                            ...tempVisuals.map(v => ({
+                                id: `viz-${Math.random()}`, // Ephemeral ID
+                                type: v.type, // 'LASER_BEAM'
+                                x: v.x,
+                                y: v.y,
+                                targetX: v.targetX,
+                                targetY: v.targetY
                             }))
                         ];
                         snapshots.push({
@@ -506,6 +568,13 @@ export class GameState {
 
                 // Link Decay check after every round
                 this.checkLinkIntegrity();
+
+                // REFUEL DEFENSES (1/Round mechanic)
+                this.entities.forEach(e => {
+                    if (e.type === 'DEFENSE') {
+                        e.fuel = e.maxFuel;
+                    }
+                });
 
                 snapshots.push({
                     type: 'ROUND',
