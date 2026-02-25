@@ -312,9 +312,12 @@ export class GameState {
     addEntity(data) {
         const id = Math.random().toString(36).substring(2, 10); // Node-friendly unique ID
 
-        // Default Fuel Logic: HUBs and DEFENSE structures start with 3 fuel
+        // Default Fuel Logic: HUBs start with 3 fuel, DEFENSE with 1
         const fuelTypes = ['HUB', 'DEFENSE'];
-        const defaultFuel = fuelTypes.includes(data.type) ? 3 : undefined;
+        let defaultFuel = undefined;
+        if (data.type === 'HUB') defaultFuel = 3;
+        if (data.type === 'DEFENSE') defaultFuel = 1;
+
         const finalFuel = data.fuel !== undefined ? data.fuel : defaultFuel;
         const finalMaxFuel = data.maxFuel !== undefined ? data.maxFuel : defaultFuel;
 
@@ -396,7 +399,6 @@ export class GameState {
             if (roundActions.length > 0) {
                 // b. Sub-tick Simulation
                 const tempProjectiles = [];
-                const pendingStructures = [];
                 const impacts = new Set(); // IDs of entities to be destroyed at turn end
                 const tempVisuals = []; // Visual effects for this round (beams, explosions)
 
@@ -428,6 +430,7 @@ export class GameState {
                             totalDist: launchDistance,
                             active: true
                         });
+                        console.log(`[Launch] ${action.playerId} fired ${action.itemType} from ${source.id}`);
                     }
                 });
 
@@ -455,6 +458,11 @@ export class GameState {
                             });
 
                             if (closestProj) {
+                                if (def.deployed === false) {
+                                    console.log(`[Dormant] ${def.id} (DEFENSE) is undeployed; skipping interception.`);
+                                    return;
+                                }
+
                                 // Intercept!
                                 closestProj.active = false;
                                 def.fuel--;
@@ -485,29 +493,49 @@ export class GameState {
 
                         if (t === subTicks) {
                             proj.active = false;
-                            if (proj.type === 'WEAPON') {
-                                // Terminal Collision Logic
-                                const hitEnemyHub = this.entities.find(e => {
-                                    if (e.type !== 'HUB' || e.owner === proj.owner) return false;
-                                    const dist = this.getToroidalDistance(e.x, e.y, proj.currX, proj.currY);
-                                    return dist < 30;
-                                });
-
-                                if (hitEnemyHub) {
-                                    console.log(`[Round ${round}] ${proj.owner} weapon hit ${hitEnemyHub.id}`);
-                                    impacts.add(hitEnemyHub.id);
-                                }
-                            } else {
-                                // Structure deployment
-                                pendingStructures.push({
+                            if (proj.type !== 'WEAPON') {
+                                // Structure landing (mid-round) - MOVE THIS BEFORE WEAPON CHECK
+                                const data = {
                                     type: proj.type,
                                     owner: proj.owner,
                                     x: proj.currX,
                                     y: proj.currY,
                                     sourceId: roundActions.find(a => a.playerId === proj.owner && a.itemType === proj.type)?.sourceId,
                                     intendedDx: proj.intendedDx,
-                                    intendedDy: proj.intendedDy
-                                });
+                                    intendedDy: proj.intendedDy,
+                                    deployed: false,
+                                    hp: 1 // Vulnerable until round end
+                                };
+                                const newEnt = this.addEntity(data);
+                                if (data.sourceId && data.intendedDx !== undefined && data.intendedDy !== undefined) {
+                                    this.addLink(data.sourceId, newEnt.id, data.owner, data.intendedDx, data.intendedDy);
+                                }
+                                console.log(`[Round ${round}] ${proj.owner} ${proj.type} landed at sub-tick ${t}`);
+                            }
+                        }
+                    });
+
+                    // Second pass for Weapons to catch anything that landed this tick
+                    tempProjectiles.forEach(proj => {
+                        if (proj.type === 'WEAPON' && !proj.active && t === subTicks) {
+                            // Terminal Collision Logic
+                            const hitEnemyEntity = this.entities.find(e => {
+                                if (e.owner === proj.owner) return false;
+                                const dist = this.getToroidalDistance(e.x, e.y, proj.currX, proj.currY);
+                                return dist < 30;
+                            });
+
+                            if (hitEnemyEntity) {
+                                const damage = 100; // Instant destruction for now
+                                hitEnemyEntity.hp -= damage;
+                                const status = hitEnemyEntity.deployed === false ? 'UNDEPLOYED' : 'DEPLOYED';
+                                console.log(`[Round ${round}] ${proj.owner} weapon hit ${hitEnemyEntity.id} (${hitEnemyEntity.type}) [${status}]`);
+                                if (hitEnemyEntity.hp <= 0) {
+                                    if (hitEnemyEntity.deployed === false) {
+                                        console.log(`[Combat] ${hitEnemyEntity.id} (${hitEnemyEntity.type}) was DESTROYED before it could deploy!`);
+                                    }
+                                    impacts.add(hitEnemyEntity.id);
+                                }
                             }
                         }
                     });
@@ -553,28 +581,24 @@ export class GameState {
                     }
                 }
 
-                // 3. Final Application of Round Results
                 if (impacts.size > 0) {
                     this.entities = this.entities.filter(e => !impacts.has(e.id));
                     this.links = this.links.filter(l => !impacts.has(l.from) && !impacts.has(l.to));
                 }
 
-                pendingStructures.forEach(data => {
-                    const newEnt = this.addEntity(data);
-                    if (data.sourceId && data.intendedDx !== undefined && data.intendedDy !== undefined) {
-                        this.addLink(data.sourceId, newEnt.id, data.owner, data.intendedDx, data.intendedDy);
+                // Final Deployment Phase: Restore HP and enable surviving structures
+                this.entities.forEach(e => {
+                    if (e.deployed === false) {
+                        e.deployed = true;
+                        e.hp = (e.type === 'HUB' ? 100 : 50); // Restore full HP
+                        console.log(`[Round ${round}] ${e.type} ${e.id} fully deployed.`);
                     }
                 });
 
                 // Link Decay check after every round
                 this.checkLinkIntegrity();
 
-                // REFUEL DEFENSES (1/Round mechanic)
-                this.entities.forEach(e => {
-                    if (e.type === 'DEFENSE') {
-                        e.fuel = e.maxFuel;
-                    }
-                });
+                // REFUEL DEFENSES removed to allow 1/Turn mechanic
 
                 snapshots.push({
                     type: 'ROUND',
@@ -621,9 +645,9 @@ export class GameState {
     getState() {
         return {
             turn: this.turn,
-            players: { ...this.players },
-            entities: [...this.entities],
-            links: [...this.links],
+            players: JSON.parse(JSON.stringify(this.players)),
+            entities: this.entities.map(e => ({ ...e })),
+            links: this.links.map(l => ({ ...l })),
             map: this.map,
             winner: this.winner
         };

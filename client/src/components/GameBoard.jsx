@@ -145,6 +145,7 @@ const GameBoard = ({
                     viz.hp = serverEnt.hp;
                     viz.fuel = serverEnt.fuel;
                     viz.maxFuel = serverEnt.maxFuel;
+                    viz.deployed = serverEnt.deployed;
                     viz.isGhost = false;
                     viz.lastSeen = Date.now();
                     viz.scouted = viz.scouted || serverEnt.scouted; // Once scouted, always scouted for ghosting purposes
@@ -329,6 +330,7 @@ const GameBoard = ({
                         }
 
                         const isSelected = entity.id === selectedHubId && !entity.isGhost;
+                        const isUndeployed = entity.deployed === false;
 
                         // DRAWING GUARD: Only render the entity if it is scouted (active vision/owned) 
                         // or if it's a ghost (previously scouted).
@@ -337,11 +339,17 @@ const GameBoard = ({
 
                         ctx.save();
                         ctx.fillStyle = color;
-                        ctx.globalAlpha = entity.isGhost ? 0.4 : 1.0;
+                        ctx.globalAlpha = entity.isGhost ? 0.4 : (isUndeployed ? 0.5 : 1.0);
 
                         if (isSelected) {
                             ctx.shadowBlur = 15;
-                            ctx.shadowColor = '#fff';
+                            ctx.shadowColor = isUndeployed ? '#aaa' : '#fff';
+                        }
+
+                        if (isUndeployed) {
+                            ctx.setLineDash([2, 2]);
+                            ctx.strokeStyle = '#fff';
+                            ctx.lineWidth = 1;
                         }
 
                         if (entity.type === 'PROJECTILE') {
@@ -381,6 +389,9 @@ const GameBoard = ({
                                 ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
                             }
                             ctx.fill();
+                            if (isUndeployed) {
+                                ctx.stroke();
+                            }
                         }
 
                         if (isSelected) {

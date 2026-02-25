@@ -29,7 +29,7 @@ This workflow is used when starting a new conversation or when a new agent joins
 4. **Codebase Exploration**
    List the files in the key directories to understand the current file structure.
    ```bash
-   ls -R client/src server/ shared/
+   find client/src server/ shared/ -maxdepth 2
    ```
 
 5. **Recent Context**

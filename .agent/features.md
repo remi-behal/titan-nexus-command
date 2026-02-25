@@ -105,6 +105,16 @@ The game follows a strict state machine for actions:
 *   Additional animations **TBD**.
 *   **Sub-tick Simulation [Implemented]**: Resolution processes actions in 120 sub-ticks for smooth, frame-by-frame animation snapshots.
 
+### Structure Lifecycle & Deployment
+*   **Three-State Lifecycle**: To facilitate variable flight speeds and visual weight, structures follow a distinct lifecycle:
+    1.  **Launch Projectile**: The entity exists purely as a moving projectile with no functionality other than its vector.
+    2.  **Undeployed Solid**: Upon "landing" at its destination (regardless of how much of the simulation round remains), the projectile is replaced by an undeployed version of the structure.
+    3.  **Completed Structure**: Only after the action round enters its final **Deployment Phase** does the structure transition to its functional, high-HP form.
+*   **Vulnerability Window**:
+    *   **Low Integrity**: An undeployed structure has only **1 HP**. If hit by a weapon or intercepted before the round ends, it is destroyed instantly.
+    *   **Dormant Logic**: Undeployed structures cannot perform actions (e.g., a Laser Defense cannot intercept while undeployed).
+*   **Simultaneous Finalization**: All structures that survived the Action Phase "deploy" at the exact same time, ensuring a fair transition to the next turn's planning phase.
+
 ### Animations [Implemented]
 *   **Lerp**: Client-side interpolation ensures smooth movement between server snapshots.
 *   **Sequence**: Energy phase -> Action rounds -> Final state.

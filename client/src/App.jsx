@@ -60,7 +60,6 @@ function App() {
     };
 
     const onTimerUpdate = (timeLeft) => {
-      console.log('Timer update:', timeLeft);
       setTimeRemaining(timeLeft);
     };
 

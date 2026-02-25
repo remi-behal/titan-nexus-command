@@ -54,7 +54,7 @@ function startTimer() {
         timerTimeout = null;
     }
     timeRemaining = TURN_DURATION;
-    console.log(`[Timer] Starting new turn timer: ${timeRemaining}s`);
+    // console.log(`[Timer] Starting new turn timer: ${timeRemaining}s`);
     io.emit('timerUpdate', timeRemaining);
 
     timerTimeout = setTimeout(tick, 1000);
@@ -66,7 +66,7 @@ function tick() {
     io.emit('timerUpdate', timeRemaining);
 
     if (timeRemaining <= 0) {
-        console.log('[Timer] Time up! Auto-resolving turn...');
+        // console.log('[Timer] Time up! Auto-resolving turn...');
         resolveTurn();
     } else {
         timerTimeout = setTimeout(tick, 1000);

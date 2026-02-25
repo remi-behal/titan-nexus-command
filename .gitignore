@@ -73,3 +73,6 @@ dist-ssr
 # Test coverage
 coverage
 *.lcov
+
+# Temp file
+ag_output.txt
