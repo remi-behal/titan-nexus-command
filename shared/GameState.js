@@ -468,7 +468,7 @@ export class GameState {
                         if (t === subTicks) {
                             proj.active = false;
                             if (proj.type !== 'WEAPON') {
-                                // Structure landing (mid-round) - MOVE THIS BEFORE WEAPON CHECK
+                                // Structure landing (mid-round)
                                 const data = {
                                     type: proj.type,
                                     owner: proj.owner,
@@ -499,24 +499,20 @@ export class GameState {
                                 type: 'EXPLOSION',
                                 x: proj.currX,
                                 y: proj.currY,
-                                duration: 20 // Lasts slightly longer than a laser
+                                duration: 20
                             });
 
-                            // AOE Stats from ENTITY_STATS.WEAPON:
                             const FULL_RADIUS = ENTITY_STATS.WEAPON.radiusFull;
                             const HALF_RADIUS = ENTITY_STATS.WEAPON.radiusHalf;
 
                             this.entities.forEach(entity => {
-                                // Skip own entities? (weapons.md says "Friendly Fire: Projectiles can damage any structure they collide with")
-                                // So we apply damage to everything except perhaps the projectile source if it were still there (it's not).
-
                                 const dist = this.getToroidalDistance(entity.x, entity.y, proj.currX, proj.currY);
                                 let damage = 0;
 
                                 if (dist <= FULL_RADIUS) {
-                                    damage = ENTITY_STATS.WEAPON.damageFull; // Full damage
+                                    damage = ENTITY_STATS.WEAPON.damageFull;
                                 } else if (dist <= HALF_RADIUS) {
-                                    damage = ENTITY_STATS.WEAPON.damageHalf; // Half damage
+                                    damage = ENTITY_STATS.WEAPON.damageHalf;
                                 }
 
                                 if (damage > 0) {
@@ -533,9 +529,8 @@ export class GameState {
                         }
                     });
 
-                    // Capture snapshot periodically
+                    // Decay visuals
                     if (tempVisuals.length > 0) {
-                        // Decay visuals
                         for (let i = tempVisuals.length - 1; i >= 0; i--) {
                             tempVisuals[i].duration--;
                             if (tempVisuals[i].duration <= 0) {
@@ -545,7 +540,6 @@ export class GameState {
                     }
 
                     if (t % snapshotStep === 0 || t === subTicks) {
-                        // We temporarily inject projectiles into entities for the snapshot
                         const snapshotState = this.getState();
                         snapshotState.entities = [
                             ...snapshotState.entities,
@@ -557,8 +551,8 @@ export class GameState {
                                 y: p.currY
                             })),
                             ...tempVisuals.map(v => ({
-                                id: `viz-${Math.random()}`, // Ephemeral ID
-                                type: v.type, // 'LASER_BEAM'
+                                id: `viz-${Math.random()}`,
+                                type: v.type,
                                 x: v.x,
                                 y: v.y,
                                 targetX: v.targetX,
@@ -572,7 +566,7 @@ export class GameState {
                             state: snapshotState
                         });
                     }
-                }
+                } // End Simulation loop (t)
 
                 if (impacts.size > 0) {
                     this.entities = this.entities.filter(e => !impacts.has(e.id));
@@ -590,8 +584,6 @@ export class GameState {
 
                 // Link Decay check after every round
                 this.checkLinkIntegrity();
-
-                // REFUEL DEFENSES removed to allow 1/Turn mechanic
 
                 snapshots.push({
                     type: 'ROUND',
