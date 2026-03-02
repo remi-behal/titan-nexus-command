@@ -76,4 +76,4 @@ coverage
 
 # Temp file
 ag_output.txt
-.agent/tmp/
+.agents/tmp/
