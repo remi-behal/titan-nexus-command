@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 import { GameState } from '../../shared/GameState.js'
+import { ENTITY_STATS, GLOBAL_STATS } from '../../shared/EntityStats.js'
 import GameBoard from './components/GameBoard'
 import { io } from 'socket.io-client'
 
@@ -9,7 +10,7 @@ const socket = io('/', {
   autoConnect: true
 })
 
-const MAX_PULL_DISTANCE = 300;
+const MAX_PULL_DISTANCE = GLOBAL_STATS.MAX_PULL;
 
 function App() {
   const [playerState, setPlayerState] = useState(null)
@@ -60,7 +61,6 @@ function App() {
     };
 
     const onTimerUpdate = (timeLeft) => {
-      console.log('Timer update:', timeLeft);
       setTimeRemaining(timeLeft);
     };
 
@@ -187,7 +187,7 @@ function App() {
     : { energy: 0, color: '#fff', alive: true };
 
   // Calculate energy after local (but not yet sent) commitments
-  const pendingCost = committedActions.reduce((sum, act) => sum + (GameState.COSTS[act.itemType] || 0), 0);
+  const pendingCost = committedActions.reduce((sum, act) => sum + (ENTITY_STATS[act.itemType]?.cost || 0), 0);
   const pCurrent = {
     ...pBase,
     energy: Math.max(0, pBase.energy - pendingCost)
@@ -229,17 +229,17 @@ function App() {
           onChange={(e) => setSelectedItemType(e.target.value)}
           disabled={isLocked}
         >
-          <option value="HUB" disabled={pCurrent.energy < GameState.COSTS.HUB}>
-            New Hub ({GameState.COSTS.HUB} E)
+          <option value="HUB" disabled={pCurrent.energy < ENTITY_STATS.HUB.cost}>
+            New Hub ({ENTITY_STATS.HUB.cost} E)
           </option>
-          <option value="WEAPON" disabled={pCurrent.energy < GameState.COSTS.WEAPON}>
-            Weapon ({GameState.COSTS.WEAPON} E)
+          <option value="WEAPON" disabled={pCurrent.energy < ENTITY_STATS.WEAPON.cost}>
+            Weapon ({ENTITY_STATS.WEAPON.cost} E)
           </option>
-          <option value="EXTRACTOR" disabled={pCurrent.energy < GameState.COSTS.EXTRACTOR}>
-            Extractor ({GameState.COSTS.EXTRACTOR} E)
+          <option value="EXTRACTOR" disabled={pCurrent.energy < ENTITY_STATS.EXTRACTOR.cost}>
+            Extractor ({ENTITY_STATS.EXTRACTOR.cost} E)
           </option>
-          <option value="DEFENSE" disabled={pCurrent.energy < GameState.COSTS.DEFENSE}>
-            Static Defense ({GameState.COSTS.DEFENSE} E)
+          <option value="DEFENSE" disabled={pCurrent.energy < ENTITY_STATS.DEFENSE.cost}>
+            Static Defense ({ENTITY_STATS.DEFENSE.cost} E)
           </option>
         </select>
 
@@ -254,14 +254,14 @@ function App() {
             <button
               className={`launch-btn ${launchMode ? 'active' : ''}`}
               onClick={() => setLaunchMode(active => !active)}
-              disabled={!selectedHubId || isLocked || pCurrent.energy < (GameState.COSTS[selectedItemType] || 0) || !hasFuel}
+              disabled={!selectedHubId || isLocked || pCurrent.energy < (ENTITY_STATS[selectedItemType]?.cost || 0) || !hasFuel}
             >
               {isLocked
                 ? 'Mission Locked'
                 : fuelCostWarning
                   ? fuelCostWarning
-                  : pCurrent.energy < (GameState.COSTS[selectedItemType] || 0)
-                    ? `Insufficient Energy (${GameState.COSTS[selectedItemType]} E)`
+                  : pCurrent.energy < (ENTITY_STATS[selectedItemType]?.cost || 0)
+                    ? `Insufficient Energy (${ENTITY_STATS[selectedItemType]?.cost} E)`
                     : launchMode ? 'Cancel Aiming' : 'Launch New Structure'}
             </button>
           );

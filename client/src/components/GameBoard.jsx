@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { GameState } from '../../../shared/GameState.js';
+import { ENTITY_STATS, GLOBAL_STATS } from '../../../shared/EntityStats.js';
 
 /**
  * GameBoard Component
@@ -27,9 +28,9 @@ const GameBoard = ({
     const [isPanning, setIsPanning] = useState(false);
     const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
-    const HUB_RADIUS = 40;
-    const SLING_RING_RADIUS = 80;
-    const RING_INTERACTION_BUFFER = 15;
+    const HUB_RADIUS = ENTITY_STATS.HUB.size;
+    const SLING_RING_RADIUS = GLOBAL_STATS.SLING_RING_RADIUS;
+    const RING_INTERACTION_BUFFER = GLOBAL_STATS.RING_INTERACTION_BUFFER;
 
     // visualEntities stores the smoothly-interpolated positions of all objects
     const visualEntities = useRef({});
@@ -110,7 +111,7 @@ const GameBoard = ({
                 .map(e => ({
                     x: e.x,
                     y: e.y,
-                    radius: GameState.VISION_RADIUS[e.type] || 0
+                    radius: ENTITY_STATS[e.type]?.vision || (e.type === 'PROJECTILE' ? ENTITY_STATS.WEAPON.vision : 0)
                 }))
                 .filter(v => v.radius > 0);
 
@@ -145,6 +146,7 @@ const GameBoard = ({
                     viz.hp = serverEnt.hp;
                     viz.fuel = serverEnt.fuel;
                     viz.maxFuel = serverEnt.maxFuel;
+                    viz.deployed = serverEnt.deployed;
                     viz.isGhost = false;
                     viz.lastSeen = Date.now();
                     viz.scouted = viz.scouted || serverEnt.scouted; // Once scouted, always scouted for ghosting purposes
@@ -309,7 +311,7 @@ const GameBoard = ({
                     gameState.map.resources.forEach(res => {
                         ctx.fillStyle = '#00ffcc';
                         ctx.beginPath();
-                        ctx.arc(res.x, res.y, 8, 0, Math.PI * 2);
+                        ctx.arc(res.x, res.y, GLOBAL_STATS.RESOURCE_SIZE, 0, Math.PI * 2);
                         ctx.fill();
                     });
 
@@ -329,6 +331,7 @@ const GameBoard = ({
                         }
 
                         const isSelected = entity.id === selectedHubId && !entity.isGhost;
+                        const isUndeployed = entity.deployed === false;
 
                         // DRAWING GUARD: Only render the entity if it is scouted (active vision/owned) 
                         // or if it's a ghost (previously scouted).
@@ -337,19 +340,25 @@ const GameBoard = ({
 
                         ctx.save();
                         ctx.fillStyle = color;
-                        ctx.globalAlpha = entity.isGhost ? 0.4 : 1.0;
+                        ctx.globalAlpha = entity.isGhost ? 0.4 : (isUndeployed ? 0.5 : 1.0);
 
                         if (isSelected) {
                             ctx.shadowBlur = 15;
-                            ctx.shadowColor = '#fff';
+                            ctx.shadowColor = isUndeployed ? '#aaa' : '#fff';
                         }
 
-                        if (entity.type === 'PROJECTILE') {
+                        if (isUndeployed) {
+                            ctx.setLineDash([2, 2]);
+                            ctx.strokeStyle = '#fff';
+                            ctx.lineWidth = 1;
+                        }
+
+                        if (entity.type === 'PROJECTILE' || entity.type === 'WEAPON') {
                             ctx.save();
                             ctx.shadowBlur = 10;
                             ctx.shadowColor = color;
                             ctx.beginPath();
-                            ctx.arc(entity.x, entity.y, 8, 0, Math.PI * 2);
+                            ctx.arc(entity.x, entity.y, GLOBAL_STATS.PROJECTILE_RADIUS, 0, Math.PI * 2);
                             ctx.fill();
                             ctx.restore();
                         } else if (entity.type === 'LASER_BEAM') {
@@ -359,7 +368,7 @@ const GameBoard = ({
                             ctx.moveTo(entity.x, entity.y);
                             ctx.lineTo(entity.targetX, entity.targetY);
                             ctx.strokeStyle = '#f0f'; // Magenta laser
-                            ctx.lineWidth = 3;
+                            ctx.lineWidth = GLOBAL_STATS.LASER_BEAM_WIDTH;
                             ctx.shadowBlur = 10;
                             ctx.shadowColor = '#f0f';
                             ctx.stroke();
@@ -371,16 +380,18 @@ const GameBoard = ({
                             ctx.restore();
                         } else {
                             ctx.beginPath();
-                            const radius = entity.type === 'HUB' ? HUB_RADIUS :
-                                entity.type === 'DEFENSE' ? 15 : 20;
+                            const radius = ENTITY_STATS[entity.type]?.size || 20;
 
                             if (entity.type === 'DEFENSE') {
-                                // Draw Defense as a square/diamond
-                                ctx.rect(entity.x - 15, entity.y - 15, 30, 30);
+                                // Draw Defense as a square/diamond (radius is half-width)
+                                ctx.rect(entity.x - radius, entity.y - radius, radius * 2, radius * 2);
                             } else {
                                 ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
                             }
                             ctx.fill();
+                            if (isUndeployed) {
+                                ctx.stroke();
+                            }
                         }
 
                         if (isSelected) {
@@ -419,7 +430,8 @@ const GameBoard = ({
                             ctx.fillStyle = '#fff';
                             ctx.font = entity.isGhost ? 'italic 10px Arial' : '10px Arial';
                             ctx.textAlign = 'center';
-                            ctx.fillText(entity.isGhost ? `Ghost ${entity.type}` : entity.type, entity.x, entity.y + 35);
+                            const labelOffset = ENTITY_STATS[entity.type]?.labelOffset || 35;
+                            ctx.fillText(entity.isGhost ? `Ghost ${entity.type}` : entity.type, entity.x, entity.y + labelOffset);
                             ctx.restore();
 
                             if (entity.fuel !== undefined && entity.owner === myPlayerId && !entity.isGhost) {
@@ -560,7 +572,7 @@ const GameBoard = ({
                     const isOwnEntity = e.owner === myPlayerId;
 
                     if (isOwnEntity || isOwnProjectile) {
-                        const radius = GameState.VISION_RADIUS[e.type] || (e.type === 'PROJECTILE' ? 100 : 0);
+                        const radius = ENTITY_STATS[e.type]?.vision || (e.type === 'PROJECTILE' ? ENTITY_STATS.WEAPON.vision : 0);
                         if (radius > 0) {
                             // Holes must be drawn relative to the screen (accounting for camera)
                             for (let ox = -mapW; ox <= mapW; ox += mapW) {

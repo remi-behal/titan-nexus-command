@@ -6,6 +6,8 @@
  * or UI. This makes it easy to move to the server later!
  */
 
+import { ENTITY_STATS, GLOBAL_STATS } from './EntityStats.js';
+
 export class GameState {
     constructor() {
         this.turn = 1;
@@ -13,45 +15,23 @@ export class GameState {
         this.entities = []; // [ { id, type: 'HUB', owner, x, y, hp } ]
         this.links = []; // [ { fromId, toId } ]
         this.map = {
-            width: 2000,
-            height: 2000,
+            width: GLOBAL_STATS.MAP_WIDTH,
+            height: GLOBAL_STATS.MAP_HEIGHT,
             resources: [], // Energy nodes on the map
             obstacles: [] // Rocks, walls, etc.
         };
         this.winner = null;
     }
 
-    static COSTS = {
-        'HUB': 20,
-        'WEAPON': 15,
-        'EXTRACTOR': 25,
-        'DEFENSE': 25
-    };
-
-    static VISION_RADIUS = {
-        'HUB': 400,
-        'EXTRACTOR': 200,
-        'DEFENSE': 250,
-        'PROJECTILE': 100
-    };
-
-    static DEFENSE_RANGE = 100;
-    static DEFENSE_COOLDOWN = 1; // Unused if using fuel, but good for reference
-
-    // Slingshot Constants
-    static MAX_PULL = 300;
-    static MAX_LAUNCH = 800; // The maximum distance a projectile can travel
-    static POWER_EXPONENT = 1.6; // Higher = steeper difficulty curve at high power
-
     /**
      * Non-linear power curve math
      * Given a raw pull distance, returns the tactical launch distance.
      */
     static calculateLaunchDistance(pullDistance) {
-        const clampedPull = Math.min(pullDistance, GameState.MAX_PULL);
-        const ratio = clampedPull / GameState.MAX_PULL;
+        const clampedPull = Math.min(pullDistance, GLOBAL_STATS.MAX_PULL);
+        const ratio = clampedPull / GLOBAL_STATS.MAX_PULL;
         // Exponential curve: precision at low power, high sensitivity at high power
-        return Math.pow(ratio, GameState.POWER_EXPONENT) * GameState.MAX_LAUNCH;
+        return Math.pow(ratio, GLOBAL_STATS.POWER_EXPONENT) * GLOBAL_STATS.MAX_LAUNCH;
     }
 
     /**
@@ -111,7 +91,7 @@ export class GameState {
 
         return this.entities.some(e => {
             if (e.owner !== playerId) return false;
-            const radius = GameState.VISION_RADIUS[e.type] || 0;
+            const radius = ENTITY_STATS[e.type]?.vision || 0;
             if (radius === 0) return false;
             return this.getToroidalDistance(e.x, e.y, x, y) <= radius;
         });
@@ -128,7 +108,7 @@ export class GameState {
             .map(e => ({
                 x: e.x,
                 y: e.y,
-                radius: GameState.VISION_RADIUS[e.type] || 0
+                radius: ENTITY_STATS[e.type]?.vision || 0
             }))
             .filter(c => c.radius > 0);
     }
@@ -148,7 +128,7 @@ export class GameState {
             .map(e => ({
                 x: e.x,
                 y: e.y,
-                radius: GameState.VISION_RADIUS[e.type] || 0
+                radius: ENTITY_STATS[e.type]?.vision || 0
             }))
             .filter(v => v.radius > 0);
 
@@ -234,7 +214,7 @@ export class GameState {
         playerIds.forEach((id, index) => {
             // Create Player data
             this.players[id] = {
-                energy: 50, // Starting energy
+                energy: GLOBAL_STATS.STARTING_ENERGY, // Starting energy
                 color: `hsl(${index * 60}, 70%, 50%)`,
                 alive: true
             };
@@ -248,7 +228,7 @@ export class GameState {
                 owner: id,
                 x: startX,
                 y: startY,
-                hp: 100,
+                hp: ENTITY_STATS.HUB.hp,
                 isStarter: true
             });
         });
@@ -312,9 +292,10 @@ export class GameState {
     addEntity(data) {
         const id = Math.random().toString(36).substring(2, 10); // Node-friendly unique ID
 
-        // Default Fuel Logic: HUBs and DEFENSE structures start with 3 fuel
-        const fuelTypes = ['HUB', 'DEFENSE'];
-        const defaultFuel = fuelTypes.includes(data.type) ? 3 : undefined;
+        // Centralized Stat Lookups
+        const stats = ENTITY_STATS[data.type] || {};
+        const defaultFuel = stats.fuel;
+
         const finalFuel = data.fuel !== undefined ? data.fuel : defaultFuel;
         const finalMaxFuel = data.maxFuel !== undefined ? data.maxFuel : defaultFuel;
 
@@ -323,7 +304,7 @@ export class GameState {
             ...data,
             fuel: finalFuel,
             maxFuel: finalMaxFuel,
-            hp: data.hp || 50
+            hp: data.hp || stats.hp || GLOBAL_STATS.DEFAULT_HP
         };
         this.entities.push(entity);
         return entity;
@@ -357,7 +338,7 @@ export class GameState {
         // 1. Generate Energy for all active players
         Object.keys(this.players).forEach(pid => {
             if (!this.players[pid].alive) return;
-            this.players[pid].energy += 10;
+            this.players[pid].energy += GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
         });
         snapshots.push({ type: 'ENERGY', state: this.getState() });
 
@@ -396,7 +377,6 @@ export class GameState {
             if (roundActions.length > 0) {
                 // b. Sub-tick Simulation
                 const tempProjectiles = [];
-                const pendingStructures = [];
                 const impacts = new Set(); // IDs of entities to be destroyed at turn end
                 const tempVisuals = []; // Visual effects for this round (beams, explosions)
 
@@ -404,7 +384,7 @@ export class GameState {
                 roundActions.forEach(action => {
                     const player = this.players[action.playerId];
                     const source = this.entities.find(e => e.id === action.sourceId);
-                    const cost = GameState.COSTS[action.itemType] || 0;
+                    const cost = ENTITY_STATS[action.itemType]?.cost || 0;
 
                     if (player.energy >= cost && source) {
                         player.energy -= cost;
@@ -412,8 +392,6 @@ export class GameState {
 
                         const rad = (action.angle * Math.PI) / 180;
                         const launchDistance = GameState.calculateLaunchDistance(action.distance);
-                        const targetX = this.wrapX(source.x + Math.cos(rad) * launchDistance);
-                        const targetY = this.wrapY(source.y + Math.sin(rad) * launchDistance);
 
                         tempProjectiles.push({
                             id: Math.random().toString(36).substring(2, 6),
@@ -428,6 +406,7 @@ export class GameState {
                             totalDist: launchDistance,
                             active: true
                         });
+                        console.log(`[Launch] ${action.playerId} fired ${action.itemType} from ${source.id}`);
                     }
                 });
 
@@ -443,7 +422,7 @@ export class GameState {
                         if (def.type === 'DEFENSE' && def.fuel > 0) {
                             // Find closest active enemy projectile in range
                             let closestProj = null;
-                            let minDist = GameState.DEFENSE_RANGE;
+                            let minDist = ENTITY_STATS.DEFENSE.range;
 
                             tempProjectiles.forEach(proj => {
                                 if (!proj.active || proj.owner === def.owner) return;
@@ -455,6 +434,11 @@ export class GameState {
                             });
 
                             if (closestProj) {
+                                if (def.deployed === false) {
+                                    console.log(`[Dormant] ${def.id} (DEFENSE) is undeployed; skipping interception.`);
+                                    return;
+                                }
+
                                 // Intercept!
                                 closestProj.active = false;
                                 def.fuel--;
@@ -477,38 +461,75 @@ export class GameState {
                     tempProjectiles.forEach(proj => {
                         if (!proj.active) return;
 
-                        const progress = t / subTicks;
-
                         // Use explicit intended vector to avoid "Shortest Path" directional flips
                         proj.currX = this.wrapX(proj.startX + proj.intendedDx * progress);
                         proj.currY = this.wrapY(proj.startY + proj.intendedDy * progress);
 
                         if (t === subTicks) {
                             proj.active = false;
-                            if (proj.type === 'WEAPON') {
-                                // Terminal Collision Logic
-                                const hitEnemyHub = this.entities.find(e => {
-                                    if (e.type !== 'HUB' || e.owner === proj.owner) return false;
-                                    const dist = this.getToroidalDistance(e.x, e.y, proj.currX, proj.currY);
-                                    return dist < 30;
-                                });
-
-                                if (hitEnemyHub) {
-                                    console.log(`[Round ${round}] ${proj.owner} weapon hit ${hitEnemyHub.id}`);
-                                    impacts.add(hitEnemyHub.id);
-                                }
-                            } else {
-                                // Structure deployment
-                                pendingStructures.push({
+                            if (proj.type !== 'WEAPON') {
+                                // Structure landing (mid-round) - MOVE THIS BEFORE WEAPON CHECK
+                                const data = {
                                     type: proj.type,
                                     owner: proj.owner,
                                     x: proj.currX,
                                     y: proj.currY,
                                     sourceId: roundActions.find(a => a.playerId === proj.owner && a.itemType === proj.type)?.sourceId,
                                     intendedDx: proj.intendedDx,
-                                    intendedDy: proj.intendedDy
-                                });
+                                    intendedDy: proj.intendedDy,
+                                    deployed: false,
+                                    hp: GLOBAL_STATS.UNDEPLOYED_HP // Vulnerable until round end
+                                };
+                                const newEnt = this.addEntity(data);
+                                if (data.sourceId && data.intendedDx !== undefined && data.intendedDy !== undefined) {
+                                    this.addLink(data.sourceId, newEnt.id, data.owner, data.intendedDx, data.intendedDy);
+                                }
+                                console.log(`[Round ${round}] ${proj.owner} ${proj.type} landed at sub-tick ${t}`);
                             }
+                        }
+                    });
+
+                    // Second pass for Weapons to catch anything that landed this tick (AOE Damage)
+                    tempProjectiles.forEach(proj => {
+                        if (proj.type === 'WEAPON' && !proj.active && t === subTicks) {
+                            console.log(`[Explosion] ${proj.owner} weapon detonated at (${Math.round(proj.currX)}, ${Math.round(proj.currY)})`);
+
+                            // Create visual explosion
+                            tempVisuals.push({
+                                type: 'EXPLOSION',
+                                x: proj.currX,
+                                y: proj.currY,
+                                duration: 20 // Lasts slightly longer than a laser
+                            });
+
+                            // AOE Stats from ENTITY_STATS.WEAPON:
+                            const FULL_RADIUS = ENTITY_STATS.WEAPON.radiusFull;
+                            const HALF_RADIUS = ENTITY_STATS.WEAPON.radiusHalf;
+
+                            this.entities.forEach(entity => {
+                                // Skip own entities? (weapons.md says "Friendly Fire: Projectiles can damage any structure they collide with")
+                                // So we apply damage to everything except perhaps the projectile source if it were still there (it's not).
+
+                                const dist = this.getToroidalDistance(entity.x, entity.y, proj.currX, proj.currY);
+                                let damage = 0;
+
+                                if (dist <= FULL_RADIUS) {
+                                    damage = ENTITY_STATS.WEAPON.damageFull; // Full damage
+                                } else if (dist <= HALF_RADIUS) {
+                                    damage = ENTITY_STATS.WEAPON.damageHalf; // Half damage
+                                }
+
+                                if (damage > 0) {
+                                    entity.hp -= damage;
+                                    const status = entity.deployed === false ? 'UNDEPLOYED' : 'DEPLOYED';
+                                    console.log(`[AOE Damage] ${entity.id} (${entity.type}) [${status}] took ${damage} damage. Current HP: ${entity.hp}`);
+
+                                    if (entity.hp <= 0) {
+                                        impacts.add(entity.id);
+                                        console.log(`[Combat] ${entity.id} (${entity.type}) was DESTROYED by explosion!`);
+                                    }
+                                }
+                            });
                         }
                     });
 
@@ -553,28 +574,24 @@ export class GameState {
                     }
                 }
 
-                // 3. Final Application of Round Results
                 if (impacts.size > 0) {
                     this.entities = this.entities.filter(e => !impacts.has(e.id));
                     this.links = this.links.filter(l => !impacts.has(l.from) && !impacts.has(l.to));
                 }
 
-                pendingStructures.forEach(data => {
-                    const newEnt = this.addEntity(data);
-                    if (data.sourceId && data.intendedDx !== undefined && data.intendedDy !== undefined) {
-                        this.addLink(data.sourceId, newEnt.id, data.owner, data.intendedDx, data.intendedDy);
+                // Final Deployment Phase: Restore HP and enable surviving structures
+                this.entities.forEach(e => {
+                    if (e.deployed === false) {
+                        e.deployed = true;
+                        e.hp = ENTITY_STATS[e.type]?.hp || GLOBAL_STATS.DEFAULT_HP; // Restore full HP
+                        console.log(`[Round ${round}] ${e.type} ${e.id} fully deployed.`);
                     }
                 });
 
                 // Link Decay check after every round
                 this.checkLinkIntegrity();
 
-                // REFUEL DEFENSES (1/Round mechanic)
-                this.entities.forEach(e => {
-                    if (e.type === 'DEFENSE') {
-                        e.fuel = e.maxFuel;
-                    }
-                });
+                // REFUEL DEFENSES removed to allow 1/Turn mechanic
 
                 snapshots.push({
                     type: 'ROUND',
@@ -609,7 +626,8 @@ export class GameState {
         // Replenish Fuel for the next turn's planning phase
         this.entities.forEach(e => {
             if (e.fuel !== undefined) {
-                e.fuel = e.maxFuel;
+                const regen = ENTITY_STATS[e.type]?.fuelRegen || 0;
+                e.fuel = Math.min(e.maxFuel, e.fuel + regen);
             }
         });
 
@@ -621,9 +639,9 @@ export class GameState {
     getState() {
         return {
             turn: this.turn,
-            players: { ...this.players },
-            entities: [...this.entities],
-            links: [...this.links],
+            players: JSON.parse(JSON.stringify(this.players)),
+            entities: this.entities.map(e => ({ ...e })),
+            links: this.links.map(l => ({ ...l })),
             map: this.map,
             winner: this.winner
         };

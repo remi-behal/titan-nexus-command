@@ -3,6 +3,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { GameState } from '../shared/GameState.js';
+import { ENTITY_STATS } from '../shared/EntityStats.js';
 
 const app = express();
 app.use(cors());
@@ -54,7 +55,7 @@ function startTimer() {
         timerTimeout = null;
     }
     timeRemaining = TURN_DURATION;
-    console.log(`[Timer] Starting new turn timer: ${timeRemaining}s`);
+    // console.log(`[Timer] Starting new turn timer: ${timeRemaining}s`);
     io.emit('timerUpdate', timeRemaining);
 
     timerTimeout = setTimeout(tick, 1000);
@@ -66,7 +67,7 @@ function tick() {
     io.emit('timerUpdate', timeRemaining);
 
     if (timeRemaining <= 0) {
-        console.log('[Timer] Time up! Auto-resolving turn...');
+        // console.log('[Timer] Time up! Auto-resolving turn...');
         resolveTurn();
     } else {
         timerTimeout = setTimeout(tick, 1000);
@@ -197,7 +198,7 @@ io.on('connection', (socket) => {
             }
 
             // 2. Continuous Energy Check
-            const cost = GameState.COSTS[action.itemType] || 0;
+            const cost = ENTITY_STATS[action.itemType]?.cost || 0;
             if (player.energy < (totalCost + cost)) {
                 console.warn(`Action REJECTED: Player ${assignedPlayerId} insufficient energy for full combo`);
                 continue;

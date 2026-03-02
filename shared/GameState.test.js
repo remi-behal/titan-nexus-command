@@ -7,11 +7,12 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { GameState } from './GameState.js';
+import { ENTITY_STATS, GLOBAL_STATS } from './EntityStats.js';
 
 describe('GameState - Slingshot Math', () => {
     it('should clamp pull distance to MAX_PULL', () => {
         const result = GameState.calculateLaunchDistance(500); // Over the limit
-        const expected = GameState.calculateLaunchDistance(GameState.MAX_PULL);
+        const expected = GameState.calculateLaunchDistance(GLOBAL_STATS.MAX_PULL);
         expect(result).toBe(expected);
     });
 
@@ -21,16 +22,16 @@ describe('GameState - Slingshot Math', () => {
     });
 
     it('should apply non-linear power curve', () => {
-        const halfPull = GameState.calculateLaunchDistance(GameState.MAX_PULL / 2);
-        const fullPull = GameState.calculateLaunchDistance(GameState.MAX_PULL);
+        const halfPull = GameState.calculateLaunchDistance(GLOBAL_STATS.MAX_PULL / 2);
+        const fullPull = GameState.calculateLaunchDistance(GLOBAL_STATS.MAX_PULL);
 
         // With exponent > 1, half pull should give less than half distance
         expect(halfPull).toBeLessThan(fullPull / 2);
     });
 
     it('should never exceed MAX_LAUNCH distance', () => {
-        const result = GameState.calculateLaunchDistance(GameState.MAX_PULL);
-        expect(result).toBeLessThanOrEqual(GameState.MAX_LAUNCH);
+        const result = GameState.calculateLaunchDistance(GLOBAL_STATS.MAX_PULL);
+        expect(result).toBeLessThanOrEqual(GLOBAL_STATS.MAX_LAUNCH);
     });
 });
 
@@ -133,7 +134,7 @@ describe('GameState - Game Initialization', () => {
         game.initializeGame(['player1', 'player2']);
 
         expect(game.players['player1']).toBeDefined();
-        expect(game.players['player1'].energy).toBe(50);
+        expect(game.players['player1'].energy).toBe(GLOBAL_STATS.STARTING_ENERGY);
         expect(game.players['player1'].alive).toBe(true);
     });
 
@@ -212,13 +213,13 @@ describe('GameState - Turn Resolution', () => {
 
         game.resolveTurn({ player1: [], player2: [] });
 
-        expect(game.players['player1'].energy).toBe(initialEnergy + 10);
+        expect(game.players['player1'].energy).toBe(initialEnergy + GLOBAL_STATS.ENERGY_INCOME_PER_TURN);
     });
 
     it('should deduct energy for launches', () => {
         const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
         const initialEnergy = game.players['player1'].energy;
-        const cost = GameState.COSTS['WEAPON'];
+        const cost = ENTITY_STATS['WEAPON'].cost;
 
         const actions = {
             player1: [{
@@ -233,12 +234,11 @@ describe('GameState - Turn Resolution', () => {
 
         game.resolveTurn(actions);
 
-        expect(game.players['player1'].energy).toBe(initialEnergy + 10 - cost);
+        expect(game.players['player1'].energy).toBe(initialEnergy + GLOBAL_STATS.ENERGY_INCOME_PER_TURN - cost);
     });
 
     it('should consume fuel when launching from hub', () => {
         const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
-        const initialFuel = p1Hub.fuel;
 
         const actions = {
             player1: [{
@@ -353,7 +353,7 @@ describe('GameState - Collision Detection', () => {
 
         // Find the pull distance that gives us the needed launch distance
         // We'll use a distance that should hit (accounting for the power curve)
-        const pullDistance = Math.pow(distance / GameState.MAX_LAUNCH, 1 / GameState.POWER_EXPONENT) * GameState.MAX_PULL;
+        const pullDistance = Math.pow(distance / GLOBAL_STATS.MAX_LAUNCH, 1 / GLOBAL_STATS.POWER_EXPONENT) * GLOBAL_STATS.MAX_PULL;
 
         const actions = {
             player1: [{
@@ -368,9 +368,15 @@ describe('GameState - Collision Detection', () => {
 
         game.resolveTurn(actions);
 
-        // p2Hub should be destroyed
+        // p2Hub should NOT be destroyed (it has 5 HP, weapon deals 2 AOE damage)
         const p2HubAfter = game.entities.find(e => e.id === p2Hub.id);
-        expect(p2HubAfter).toBeUndefined();
+        expect(p2HubAfter).toBeDefined();
+        expect(p2HubAfter.hp).toBe(3);
+
+        // However, if we hit an UNDEPLOYED entity (1 HP), it should be destroyed
+        const undeployed = game.addEntity({ type: 'HUB', owner: 'player2', x: p2Hub.x, y: p2Hub.y, deployed: false, hp: 1 });
+        game.resolveTurn(actions);
+        expect(game.entities.find(e => e.id === undeployed.id)).toBeUndefined();
     });
 });
 
@@ -393,7 +399,7 @@ describe('GameState - Launch Direction Consistency', () => {
         // At 50% progress, it should be at 250 + 400 = 650.
         // The "shortest path" would be 250 -> 150 -> 50 (traveling LEFT 200 units).
 
-        const pullDistance = Math.pow(800 / GameState.MAX_LAUNCH, 1 / GameState.POWER_EXPONENT) * GameState.MAX_PULL;
+        const pullDistance = Math.pow(800 / GLOBAL_STATS.MAX_LAUNCH, 1 / GLOBAL_STATS.POWER_EXPONENT) * GLOBAL_STATS.MAX_PULL;
 
         const actions = {
             player1: [{

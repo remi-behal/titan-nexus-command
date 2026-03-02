@@ -42,21 +42,7 @@ The game follows a strict state machine for actions:
     *   **Refueling**: If a structure runs out of fuel, it cannot launch until it is refueled to maximum capacity at the start of the next turn.
     *   **Visibility**: Fuel is only viewable on owned or allied structures.
 
-## Structures and Link System
-*   **Hubs**:
-    *   Hubs are the only structures that can create links by launching other structures.
-    *   Players start with a single "Starter Hub" which has more health and a unique appearance.
-*   **Extractors**:
-    *   Extractors generate energy every turn and can be launched from Hubs.
-*   **Links**: 
-    *   Links are created by launching structures from Hubs.
-    *   All links must eventually connect back to the Starter Hub. If a structure cannot be reached via a link from the Starter Hub, it is destroyed.
-    *   This can create chain reactions where losing a single Hub destroys a large portion of a network.
-    *   Links currently feature an arrow indicating the direction back to the source Hub.
-*   **Defenses**:
-    *   Defenses are launched from Hubs and protect against incoming projectiles via interceptions.
-    *   Some defenses may act passively in an offensive role against enemy structures (**TBD**).
-    *   See `defenses.md` for more details
+## Structures and Link System - see `structures.md`
 
 ## Map Features
 *   **Lakes**: Bodies of methane that cannot be built on; links cannot cross them.
@@ -104,6 +90,16 @@ The game follows a strict state machine for actions:
     4.  Deployment animations
 *   Additional animations **TBD**.
 *   **Sub-tick Simulation [Implemented]**: Resolution processes actions in 120 sub-ticks for smooth, frame-by-frame animation snapshots.
+
+### Structure Lifecycle & Deployment
+*   **Three-State Lifecycle**: To facilitate variable flight speeds and visual weight, structures follow a distinct lifecycle:
+    1.  **Launch Projectile**: The entity exists purely as a moving projectile with no functionality other than its vector.
+    2.  **Undeployed Solid**: Upon "landing" at its destination (regardless of how much of the simulation round remains), the projectile is replaced by an undeployed version of the structure.
+    3.  **Completed Structure**: Only after the action round enters its final **Deployment Phase** does the structure transition to its functional, high-HP form.
+*   **Vulnerability Window**:
+    *   **Low Integrity**: An undeployed structure has only **1 HP**. If hit by a weapon or intercepted before the round ends, it is destroyed instantly.
+    *   **Dormant Logic**: Undeployed structures cannot perform actions (e.g., a Laser Defense cannot intercept while undeployed).
+*   **Simultaneous Finalization**: All structures that survived the Action Phase "deploy" at the exact same time, ensuring a fair transition to the next turn's planning phase.
 
 ### Animations [Implemented]
 *   **Lerp**: Client-side interpolation ensures smooth movement between server snapshots.
