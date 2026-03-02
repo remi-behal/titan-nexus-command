@@ -7,13 +7,15 @@
 #### Phase 6 (Game Feature Expansion)
 - [x] **Intercept System**: Implement logic for Defense structures to target and destroy incoming weapons. <!-- id: 44 -->
     - [x] Add Laser Defense to the game. <!-- id: 51 -->
-- [ ] **Economy Expansion**: Implement Extractor logic for additional energy generation. <!-- id: 45 -->
+- [x] **Economy Expansion**: Implement Extractor logic for additional energy generation. <!-- id: 45 -->
 - [ ] **Map Features**: <!-- id: 46 -->
     - [ ] Lakes (Non-buildable, Link-blocking)
-    - [ ] Energy Nodes (Static locations for Extractors)
+    - [x] Energy Nodes (Static locations for Extractors) <!-- id: 13 -->
 - [ ] **Multiplayer Enhancements**: <!-- id: 47 -->
     - [ ] Chat system.
     - [ ] Lobby management / Player slotting.
+- [ ] **Testing & Refinement**: <!-- id: 52 -->
+    - [ ] Expand test coverage to `server/` and `client/` (Excluded because we haven't written the specific integration tests (for sockets) or component tests (for React) needed to cover them.)
 
 #### Phase 7: Artwork, UI/UX, Music
 - [ ] Adding artwork, UI/UX, music, and sound effects.

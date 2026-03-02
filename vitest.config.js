@@ -8,7 +8,11 @@ export default defineConfig({
             provider: 'v8',
             reporter: ['text', 'html', 'lcov'],
             include: ['shared/**/*.js'],
-            exclude: ['**/*.test.js', '**/*.spec.js']
+            exclude: [
+                '**/*.test.js',
+                '**/*.spec.js',
+                'shared/EntityStats.js' // Exclude constants from logic coverage
+            ]
         }
     }
 });

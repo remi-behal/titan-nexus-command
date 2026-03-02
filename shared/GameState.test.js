@@ -210,16 +210,20 @@ describe('GameState - Turn Resolution', () => {
 
     it('should generate energy at start of turn', () => {
         const initialEnergy = game.players['player1'].energy;
+        const hubIncome = ENTITY_STATS.HUB.energyGen;
+        const ubi = GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
 
         game.resolveTurn({ player1: [], player2: [] });
 
-        expect(game.players['player1'].energy).toBe(initialEnergy + GLOBAL_STATS.ENERGY_INCOME_PER_TURN);
+        expect(game.players['player1'].energy).toBe(initialEnergy + hubIncome + ubi);
     });
 
     it('should deduct energy for launches', () => {
         const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
         const initialEnergy = game.players['player1'].energy;
         const cost = ENTITY_STATS['WEAPON'].cost;
+        const hubIncome = ENTITY_STATS.HUB.energyGen;
+        const ubi = GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
 
         const actions = {
             player1: [{
@@ -234,7 +238,7 @@ describe('GameState - Turn Resolution', () => {
 
         game.resolveTurn(actions);
 
-        expect(game.players['player1'].energy).toBe(initialEnergy + GLOBAL_STATS.ENERGY_INCOME_PER_TURN - cost);
+        expect(game.players['player1'].energy).toBe(initialEnergy + hubIncome + ubi - cost);
     });
 
     it('should consume fuel when launching from hub', () => {

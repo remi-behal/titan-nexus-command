@@ -233,11 +233,12 @@ export class GameState {
             });
         });
 
-        // Mock some resource nodes
+        // Mock resource nodes (Standard: 5 bonus, Super: 15 bonus)
         this.map.resources = [
-            { id: 'res1', x: 500, y: 300, value: 10 },
-            { id: 'res2', x: 500, y: 700, value: 10 },
-            { id: 'res3', x: 500, y: 500, value: 20 }
+            { id: 'res1', x: 500, y: 250, value: 5 },   // Top quadrant
+            { id: 'res2', x: 1500, y: 750, value: 5 },  // Bottom quadrant
+            { id: 'res3', x: 1000, y: 500, value: 15 }, // Super node (Center)
+            { id: 'res4', x: 1000, y: 1500, value: 5 }  // Far side
         ];
     }
 
@@ -338,7 +339,37 @@ export class GameState {
         // 1. Generate Energy for all active players
         Object.keys(this.players).forEach(pid => {
             if (!this.players[pid].alive) return;
-            this.players[pid].energy += GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
+
+            let turnIncome = GLOBAL_STATS.ENERGY_INCOME_PER_TURN; // Base UBI
+
+            // Add income from entities (Hubs and Extractors)
+            this.entities.forEach(entity => {
+                if (entity.owner === pid) {
+                    const stats = ENTITY_STATS[entity.type];
+                    if (stats && stats.energyGen) {
+                        let entityIncome = stats.energyGen;
+
+                        // Extractor-specific node bonus
+                        // We check if the extractor is within the capture radius of any resource node.
+                        if (entity.type === 'EXTRACTOR') {
+                            // Find the closest node in range (toroidal-aware)
+                            const node = this.map.resources.find(res =>
+                                this.getToroidalDistance(entity.x, entity.y, res.x, res.y) <= GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS
+                            );
+                            if (node) {
+                                // The node's 'value' acts as a multiplier or flat bonus to energy production
+                                entityIncome += node.value || 0;
+                                console.log(`[Economy] Extractor ${entity.id} on node ${node.id} generated ${entityIncome} total.`);
+                            }
+                        }
+
+                        turnIncome += entityIncome;
+                    }
+                }
+            });
+
+            this.players[pid].energy += turnIncome;
+            console.log(`[Economy] ${pid} total turn income: ${turnIncome}`);
         });
         snapshots.push({ type: 'ENERGY', state: this.getState() });
 

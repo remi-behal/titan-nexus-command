@@ -385,6 +385,13 @@ const GameBoard = ({
                             if (entity.type === 'DEFENSE') {
                                 // Draw Defense as a square/diamond (radius is half-width)
                                 ctx.rect(entity.x - radius, entity.y - radius, radius * 2, radius * 2);
+                            } else if (entity.type === 'EXTRACTOR') {
+                                // Draw Extractor as a triangle
+                                ctx.beginPath();
+                                ctx.moveTo(entity.x, entity.y - radius);
+                                ctx.lineTo(entity.x + radius, entity.y + radius / 2);
+                                ctx.lineTo(entity.x - radius, entity.y + radius / 2);
+                                ctx.closePath();
                             } else {
                                 ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
                             }

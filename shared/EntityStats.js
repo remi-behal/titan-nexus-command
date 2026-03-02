@@ -11,6 +11,7 @@ export const ENTITY_STATS = {
         fuel: 3,
         fuelRegen: 3,
         vision: 400,
+        energyGen: 0,
         cost: 20,
         size: 40, // Base radius for rendering and selection
         labelOffset: 35
@@ -28,6 +29,7 @@ export const ENTITY_STATS = {
     EXTRACTOR: {
         hp: 2,
         vision: 200,
+        energyGen: 5,
         cost: 25,
         size: 20,
         labelOffset: 35
@@ -48,7 +50,8 @@ export const ENTITY_STATS = {
 export const GLOBAL_STATS = {
     // Economy
     STARTING_ENERGY: 50,
-    ENERGY_INCOME_PER_TURN: 10,
+    ENERGY_INCOME_PER_TURN: 10, // Switched to entity-based generation
+    RESOURCE_CAPTURE_RADIUS: 30, // Distance to lock onto a node
 
     // Launch Physics
     MAX_PULL: 300,

@@ -202,6 +202,31 @@ function App() {
         <div className="status-bars">
           <span className="badge">You: {myPlayerId || 'Pending'}</span>
           <span className="energy">Energy: {pCurrent.energy}</span>
+          {(() => {
+            // Calculate projected turn income
+            let projectedIncome = GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
+            playerState?.entities?.forEach(entity => {
+              if (entity.owner === myPlayerId) {
+                const stats = ENTITY_STATS[entity.type];
+                if (stats && stats.energyGen) {
+                  projectedIncome += stats.energyGen;
+                  if (entity.type === 'EXTRACTOR') {
+                    const node = playerState.map.resources.find(res => {
+                      // Basic dist calculation (ignoring wrap for UI preview is usually fine, but let's be accurate)
+                      let dx = Math.abs(res.x - entity.x);
+                      let dy = Math.abs(res.y - entity.y);
+                      if (dx > playerState.map.width / 2) dx = playerState.map.width - dx;
+                      if (dy > playerState.map.height / 2) dy = playerState.map.height - dy;
+                      const dist = Math.sqrt(dx * dx + dy * dy);
+                      return dist <= GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS;
+                    });
+                    if (node) projectedIncome += node.value;
+                  }
+                }
+              }
+            });
+            return <span className="income" title="Projected income next turn"> (+{projectedIncome})</span>;
+          })()}
           <span className="turn">Turn: {playerState?.turn || 1}</span>
           <span className={`timer ${timeRemaining <= 10 ? 'low' : ''}`}>Time: {timeRemaining}s</span>
         </div>
