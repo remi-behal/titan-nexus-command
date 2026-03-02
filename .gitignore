@@ -77,3 +77,4 @@ coverage
 # Temp file
 ag_output.txt
 .agents/tmp/
+docs/plans/
