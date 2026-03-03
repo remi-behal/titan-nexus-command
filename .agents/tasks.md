@@ -14,8 +14,8 @@
 - [ ] **Multiplayer Enhancements**: <!-- id: 47 -->
     - [ ] Chat system.
     - [ ] Lobby management / Player slotting.
-- [ ] **Link Enhancement**: Add direction arrows to links indicating the source Hub. <!-- id: 53 -->
-- [ ] **Link Collision**: Destroy structures if their link crosses an existing link. <!-- id: 54 -->
+- [x] **Link Enhancement**: Add direction arrows to links indicating the source Hub. <!-- id: 53 -->
+- [x] **Link Collision**: Destroy structures if their link crosses an existing link. <!-- id: 54 -->
 
 #### Phase 7: Artwork, UI/UX, Music
 - [ ] Adding artwork, UI/UX, music, and sound effects.
