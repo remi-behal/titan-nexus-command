@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import './App.css'
 import { GameState } from '../../shared/GameState.js'
 import { ENTITY_STATS, GLOBAL_STATS } from '../../shared/EntityStats.js'
@@ -160,13 +160,13 @@ function App() {
     setLaunchMode(false)
   }
 
-  const handleExecuteTurn = () => {
+  const handleExecuteTurn = useCallback(() => {
     if (committedActions.length > 0) {
       socket.emit('submitActions', committedActions)
     } else {
       socket.emit('passTurn')
     }
-  }
+  }, [committedActions])
 
   const handleClearActions = () => {
     setCommittedActions([]);
@@ -303,7 +303,7 @@ function App() {
           onClick={handleExecuteTurn}
           disabled={isLocked}
         >
-          {isLocked ? 'Waiting for others...' : (committedActions.length > 0 ? `Lock In ${committedActions.length} Actions` : 'Pass Turn')}
+          {isLocked ? 'Waiting for others...' : (committedActions.length > 0 ? `Complete Turn (${committedActions.length})` : 'Complete Turn')}
         </button>
       </div>
     </header>
