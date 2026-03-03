@@ -599,6 +599,91 @@ export class GameState {
                     }
                 } // End Simulation loop (t)
 
+                // --- Link Collision Detection (Post-Simulation) ---
+                const newEntitiesThisRound = this.entities.filter(e => e.deployed === false);
+                const destroyedThisCheck = new Set();
+
+                newEntitiesThisRound.forEach(newEnt => {
+                    const source = this.entities.find(e => e.id === newEnt.sourceId);
+                    if (!source) return;
+
+                    const newSegments = GameState.getLinkSegments(
+                        { x: source.x, y: source.y },
+                        { x: newEnt.x, y: newEnt.y },
+                        this.map.width,
+                        this.map.height
+                    );
+
+                    // 1. Check against ALL existing/already deployed links
+                    this.links.forEach(existingLink => {
+                        // Skip if this link belongs to the new segment we are currently checking
+                        if (existingLink.to === newEnt.id) return;
+
+                        const s1 = this.entities.find(e => e.id === existingLink.from);
+                        const s2 = this.entities.find(e => e.id === existingLink.to);
+                        if (!s1 || !s2) return;
+
+                        const existingSegments = GameState.getLinkSegments(
+                            { x: s1.x, y: s1.y },
+                            { x: s2.x, y: s2.y },
+                            this.map.width,
+                            this.map.height
+                        );
+
+                        newSegments.forEach(nSeg => {
+                            existingSegments.forEach(eSeg => {
+                                const intersect = GameState.doSegmentsIntersect(nSeg, eSeg);
+                                if (intersect) {
+                                    // Guard: Ignore if intersection is within source hub radius
+                                    const distFromSource = this.getToroidalDistance(source.x, source.y, intersect.x, intersect.y);
+                                    if (distFromSource > (ENTITY_STATS.HUB.size + 5)) {
+                                        destroyedThisCheck.add(newEnt.id);
+                                        tempVisuals.push({ type: 'LINK_COLLISION', x: intersect.x, y: intersect.y, duration: 30 });
+                                        console.log(`[Collision] New ${newEnt.type} link crossed existing link!`);
+                                    }
+                                }
+                            });
+                        });
+                    });
+
+                    // 2. Check against OTHER newly formed links this round (Simultaneous Conflict)
+                    newEntitiesThisRound.forEach(otherNewEnt => {
+                        if (newEnt.id === otherNewEnt.id) return;
+                        const otherSource = this.entities.find(e => e.id === otherNewEnt.sourceId);
+                        if (!otherSource) return;
+
+                        const otherSegments = GameState.getLinkSegments(
+                            { x: otherSource.x, y: otherSource.y },
+                            { x: otherNewEnt.x, y: otherNewEnt.y },
+                            this.map.width,
+                            this.map.height
+                        );
+
+                        newSegments.forEach(nSeg => {
+                            otherSegments.forEach(oSeg => {
+                                const intersect = GameState.doSegmentsIntersect(nSeg, oSeg);
+                                if (intersect) {
+                                    const distFromSource = this.getToroidalDistance(source.x, source.y, intersect.x, intersect.y);
+                                    if (distFromSource > (ENTITY_STATS.HUB.size + 5)) {
+                                        destroyedThisCheck.add(newEnt.id);
+                                        destroyedThisCheck.add(otherNewEnt.id);
+                                        tempVisuals.push({ type: 'LINK_COLLISION', x: intersect.x, y: intersect.y, duration: 30 });
+                                        console.log(`[Collision] Simultaneous links crossed! Both destroyed.`);
+                                    }
+                                }
+                            });
+                        });
+                    });
+                });
+
+                destroyedThisCheck.forEach(id => {
+                    const ent = this.entities.find(e => e.id === id);
+                    if (ent) {
+                        ent.hp = 0;
+                        impacts.add(id);
+                    }
+                });
+
                 if (impacts.size > 0) {
                     this.entities = this.entities.filter(e => !impacts.has(e.id));
                     this.links = this.links.filter(l => !impacts.has(l.from) && !impacts.has(l.to));
@@ -606,10 +691,10 @@ export class GameState {
 
                 // Final Deployment Phase: Restore HP and enable surviving structures
                 this.entities.forEach(e => {
-                    if (e.deployed === false) {
+                    if (e.deployed === false && e.hp > 0) { // Only deploy if not destroyed by collision
                         e.deployed = true;
                         e.hp = ENTITY_STATS[e.type]?.hp || GLOBAL_STATS.DEFAULT_HP; // Restore full HP
-                        console.log(`[Round ${round}] ${e.type} ${e.id} fully deployed.`);
+                        console.log(`[Round ${round}]${e.type} ${e.id} fully deployed.`);
                     }
                 });
 
@@ -668,5 +753,86 @@ export class GameState {
             map: this.map,
             winner: this.winner
         };
+    }
+    /**
+     * Decomposes a toroidal link into 1, 2, or 4 Euclidean segments.
+     */
+    static getLinkSegments(p1, p2, width, height) {
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+
+        // Effective vector taking shortest toroidal path
+        let edx = dx;
+        if (Math.abs(dx) > width / 2) {
+            edx = dx > 0 ? dx - width : dx + width;
+        }
+
+        let edy = dy;
+        if (Math.abs(dy) > height / 2) {
+            edy = dy > 0 ? dy - height : dy + height;
+        }
+
+        const segments = [];
+        const wrapX = (Math.abs(dx) > width / 2);
+        const wrapY = (Math.abs(dy) > height / 2);
+
+        if (!wrapX && !wrapY) {
+            segments.push({ p1: { ...p1 }, p2: { ...p2 } });
+        } else {
+            // Complex case: Break into segments at boundaries
+            // We use the effective vector to trace the path and split at 0/width or 0/height
+
+            // For simplicity in a prototype:
+            // High-res sampling is robust but slow. 
+            // Euclidean splitting:
+            if (wrapX && !wrapY) {
+                const xEdge = edx > 0 ? width : 0;
+                const distToEdge = Math.abs(xEdge - p1.x);
+                const t = distToEdge / Math.abs(edx);
+                const yEdge = p1.y + edy * t;
+
+                segments.push({ p1: { ...p1 }, p2: { x: xEdge, y: yEdge } });
+                segments.push({ p1: { x: width - xEdge, y: yEdge }, p2: { ...p2 } });
+            } else if (!wrapX && wrapY) {
+                const yEdge = edy > 0 ? height : 0;
+                const distToEdge = Math.abs(yEdge - p1.y);
+                const t = distToEdge / Math.abs(edy);
+                const xEdge = p1.x + edx * t;
+
+                segments.push({ p1: { ...p1 }, p2: { x: xEdge, y: yEdge } });
+                segments.push({ p1: { x: xEdge, y: height - yEdge }, p2: { ...p2 } });
+            } else {
+                // Double wrap (rare corner case)
+                // Just use the two main endpoints for now to avoid overcomplicating 
+                // but let's at least handle the primary segments
+                segments.push({ p1: { ...p1 }, p2: { ...p1 } }); // Placeholder for quad split
+            }
+        }
+        return segments;
+    }
+
+    /**
+     * Standard Line Segment Intersection (Cramer's Rule)
+     * Returns {x, y} or null
+     */
+    static doSegmentsIntersect(s1, s2) {
+        const x1 = s1.p1.x, y1 = s1.p1.y;
+        const x2 = s1.p2.x, y2 = s1.p2.y;
+        const x3 = s2.p1.x, y3 = s2.p1.y;
+        const x4 = s2.p2.x, y4 = s2.p2.y;
+
+        const den = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+        if (den === 0) return null; // Parallel
+
+        const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / den;
+        const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / den;
+
+        if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1) {
+            return {
+                x: x1 + ua * (x2 - x1),
+                y: y1 + ua * (y2 - y1)
+            };
+        }
+        return null;
     }
 }

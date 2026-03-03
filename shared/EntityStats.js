@@ -52,6 +52,8 @@ export const GLOBAL_STATS = {
     STARTING_ENERGY: 50,
     ENERGY_INCOME_PER_TURN: 10, // Switched to entity-based generation
     RESOURCE_CAPTURE_RADIUS: 30, // Distance to lock onto a node
+    LINK_WIDTH: 5,               // Visual thickness of tethers
+    LINK_ARROW_SIZE: 10,         // Size of direction indicator
 
     // Launch Physics
     MAX_PULL: 300,

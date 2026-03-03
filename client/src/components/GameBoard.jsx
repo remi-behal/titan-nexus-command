@@ -295,7 +295,7 @@ const GameBoard = ({
 
                             ctx.save();
                             ctx.strokeStyle = isSegmentGhost ? ghostColor : baseColor;
-                            ctx.lineWidth = isSegmentGhost ? 1 : 1.5;
+                            ctx.lineWidth = isSegmentGhost ? 1 : (GLOBAL_STATS.LINK_WIDTH || 2);
                             ctx.globalAlpha = isSegmentGhost ? 0.2 : 0.6;
                             if (isSegmentGhost) ctx.setLineDash([4, 4]);
 
@@ -303,6 +303,27 @@ const GameBoard = ({
                             ctx.moveTo(x1, y1);
                             ctx.lineTo(x2, y2);
                             ctx.stroke();
+
+                            // Draw directional arrow pointing back (only once per link at the overall midpoint)
+                            // We check if this segment contains the midpoint (ratio 0.5)
+                            if (!isSegmentGhost && rStart <= 0.5 && rEnd > 0.5) {
+                                const arrowX = (x1 + x2) / 2;
+                                const arrowY = (y1 + y2) / 2;
+                                const angle = Math.atan2(dy, dx) + Math.PI; // Point BACK
+                                const size = GLOBAL_STATS.LINK_ARROW_SIZE || 10;
+
+                                ctx.save();
+                                ctx.translate(arrowX, arrowY);
+                                ctx.rotate(angle);
+                                ctx.fillStyle = baseColor;
+                                ctx.beginPath();
+                                ctx.moveTo(-size, -size / 2);
+                                ctx.lineTo(0, 0);
+                                ctx.lineTo(-size, size / 2);
+                                ctx.fill();
+                                ctx.restore();
+                            }
+
                             ctx.restore();
                         }
                     });
@@ -377,6 +398,33 @@ const GameBoard = ({
                             ctx.globalAlpha = 0.5;
                             ctx.lineWidth = 6;
                             ctx.stroke();
+                            ctx.restore();
+                        } else if (entity.type === 'EXPLOSION') {
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.arc(entity.x, entity.y, 40, 0, Math.PI * 2);
+                            ctx.fillStyle = '#ff6600';
+                            ctx.shadowBlur = 20;
+                            ctx.shadowColor = '#ff3300';
+                            ctx.fill();
+                            ctx.restore();
+                        } else if (entity.type === 'LINK_COLLISION') {
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.arc(entity.x, entity.y, 15, 0, Math.PI * 2);
+                            ctx.fillStyle = '#fff';
+                            ctx.shadowBlur = 15;
+                            ctx.shadowColor = '#00ffff';
+                            ctx.fill();
+                            // Static spark lines
+                            ctx.strokeStyle = '#00ffff';
+                            ctx.lineWidth = 2;
+                            for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+                                ctx.beginPath();
+                                ctx.moveTo(entity.x, entity.y);
+                                ctx.lineTo(entity.x + Math.cos(a) * 25, entity.y + Math.sin(a) * 25);
+                                ctx.stroke();
+                            }
                             ctx.restore();
                         } else {
                             ctx.beginPath();
