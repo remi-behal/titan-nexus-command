@@ -257,11 +257,11 @@ const GameBoard = ({
                         const player = gameState.players[ownerId];
                         const baseColor = player ? player.color : '#666';
 
-                        // Calculate desaturated color for ghost segments
-                        let ghostColor = '#444';
-                        if (baseColor.startsWith('hsl')) {
-                            ghostColor = baseColor.replace(/, 70%/, ', 10%');
-                        }
+                        // Calculate desaturated color for ghost segments (Bug 1 fix)
+                        // We use a more robust regex to replace the saturation (%) in HSL colors.
+                        let ghostColor = baseColor.startsWith('hsl')
+                            ? baseColor.replace(/(\d+)%/, '10%')
+                            : '#888';
 
                         // Determine path
                         let dx, dy;
@@ -345,17 +345,21 @@ const GameBoard = ({
                         const player = gameState.players[entity.owner];
                         let color = player ? player.color : '#fff';
 
-                        if (entity.isGhost) {
-                            // Desaturate the color for ghosts
-                            // Assuming HSL format for player colors or fallback
+                        // Bug 2 fix: An entity should display as a "ghost" (desaturated) if it's 
+                        // NOT in active vision, even if it's still in the server state (e.g. as a link endpoint).
+                        const currentlyInVision = isInVision(entity.x, entity.y);
+                        const displayAsGhost = entity.isGhost || !currentlyInVision;
+
+                        if (displayAsGhost) {
+                            // Desaturate the color for ghosts (Bug 1 fix)
                             if (color.startsWith('hsl')) {
-                                color = color.replace(/, 70%/, ', 10%'); // Drop saturation to 10%
+                                color = color.replace(/(\d+)%/, '10%'); // Drop saturation to 10%
                             } else {
-                                color = '#666'; // Fallback gray
+                                color = '#888'; // Fallback gray
                             }
                         }
 
-                        const isSelected = entity.id === selectedHubId && !entity.isGhost;
+                        const isSelected = entity.id === selectedHubId && !displayAsGhost;
                         const isUndeployed = entity.deployed === false;
 
                         // DRAWING GUARD: Only render the entity if it is scouted (active vision/owned) 
@@ -365,7 +369,7 @@ const GameBoard = ({
 
                         ctx.save();
                         ctx.fillStyle = color;
-                        ctx.globalAlpha = entity.isGhost ? 0.4 : (isUndeployed ? 0.5 : 1.0);
+                        ctx.globalAlpha = displayAsGhost ? 0.4 : (isUndeployed ? 0.5 : 1.0);
 
                         if (isSelected) {
                             ctx.shadowBlur = 15;
@@ -458,7 +462,7 @@ const GameBoard = ({
                             ctx.lineWidth = 3;
                             ctx.stroke();
 
-                            if (launchMode && entity.type === 'HUB' && entity.owner === myPlayerId && !entity.isGhost) {
+                            if (launchMode && entity.type === 'HUB' && entity.owner === myPlayerId && !displayAsGhost) {
                                 ctx.save();
                                 ctx.setLineDash([8, 12]);
                                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
@@ -485,15 +489,15 @@ const GameBoard = ({
                         // Draw label if not a projectile or beam
                         if (entity.type !== 'PROJECTILE' && entity.type !== 'LASER_BEAM') {
                             ctx.save();
-                            ctx.globalAlpha = entity.isGhost ? 0.3 : 0.8;
+                            ctx.globalAlpha = displayAsGhost ? 0.3 : 0.8;
                             ctx.fillStyle = '#fff';
-                            ctx.font = entity.isGhost ? 'italic 10px Arial' : '10px Arial';
+                            ctx.font = displayAsGhost ? 'italic 10px Arial' : '10px Arial';
                             ctx.textAlign = 'center';
                             const labelOffset = ENTITY_STATS[entity.type]?.labelOffset || 35;
-                            ctx.fillText(entity.isGhost ? `Ghost ${entity.type}` : entity.type, entity.x, entity.y + labelOffset);
+                            ctx.fillText(displayAsGhost ? `Ghost ${entity.type}` : entity.type, entity.x, entity.y + labelOffset);
                             ctx.restore();
 
-                            if (entity.fuel !== undefined && entity.owner === myPlayerId && !entity.isGhost) {
+                            if (entity.fuel !== undefined && entity.owner === myPlayerId && !displayAsGhost) {
                                 const dotYOffset = entity.type === 'HUB' ? -15 : -10;
                                 const dotXOffset = entity.type === 'HUB' ? 18 : 12;
                                 for (let i = 0; i < entity.maxFuel; i++) {
