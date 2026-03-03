@@ -14,8 +14,8 @@
 - [ ] **Multiplayer Enhancements**: <!-- id: 47 -->
     - [ ] Chat system.
     - [ ] Lobby management / Player slotting.
-- [ ] **Testing & Refinement**: <!-- id: 52 -->
-    - [ ] Expand test coverage to `server/` and `client/` (Excluded because we haven't written the specific integration tests (for sockets) or component tests (for React) needed to cover them.)
+- [ ] **Link Enhancement**: Add direction arrows to links indicating the source Hub. <!-- id: 53 -->
+- [ ] **Link Collision**: Destroy structures if their link crosses an existing link. <!-- id: 54 -->
 
 #### Phase 7: Artwork, UI/UX, Music
 - [ ] Adding artwork, UI/UX, music, and sound effects.
@@ -32,6 +32,8 @@
 - [ ] **Team Play**: Shared energy and hubs. <!-- id: 48 -->
 - [ ] **Dynamic Weather**: Methane rain and high winds. <!-- id: 49 -->
 - [ ] **Spectator Mode**: Ability to watch without a player slot. <!-- id: 50 -->
+- [ ] **Testing & Refinement**: <!-- id: 52 -->
+    - [ ] Expand test coverage to `server/` and `client/` (Excluded because we haven't written the specific integration tests (for sockets) or component tests (for React) needed to cover them.)
 
 ---
 

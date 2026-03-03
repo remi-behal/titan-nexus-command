@@ -16,6 +16,7 @@
 *   All links must eventually connect back to the Starter Hub. If a structure cannot be reached via a link from the Starter Hub, it is destroyed.
     *   This can create chain reactions where losing a single Hub destroys a large portion of a network.
     *   Links currently feature an arrow indicating the direction back to the source Hub.
+    *   Links can not cross eachother. After a structure lands, a check is performed before the structure deploys to see if it touches any other links, if it does the structure is destroyed.
 ### Defenses
 *   Defenses are launched from Hubs and protect against incoming projectiles via interceptions.
 *   Some defenses may act passively in an offensive role against enemy structures (**TBD**).
