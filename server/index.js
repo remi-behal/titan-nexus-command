@@ -179,6 +179,31 @@ io.on('connection', (socket) => {
         socket.emit('syncStatus', { lockedIn });
     });
 
+    socket.on('syncActions', (actions) => {
+        if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
+        if (lockedIn[assignedPlayerId]) return; // Cannot update after lock-in
+
+        console.log(`Syncing actions from ${assignedPlayerId}:`, actions.length);
+
+        const validatedActions = [];
+        let totalCost = 0;
+        const player = game.players[assignedPlayerId];
+
+        for (const action of actions) {
+            const sourceEntity = game.entities.find(e => e.id === action.sourceId);
+            if (!sourceEntity || sourceEntity.owner !== assignedPlayerId) continue;
+
+            const cost = ENTITY_STATS[action.itemType]?.cost || 0;
+            if (player.energy < (totalCost + cost)) continue;
+
+            totalCost += cost;
+            validatedActions.push({ ...action, playerId: assignedPlayerId });
+        }
+
+        turnActions[assignedPlayerId] = validatedActions;
+        // Note: No lockedIn = true here
+    });
+
     socket.on('submitActions', (actions) => {
         if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
 

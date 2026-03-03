@@ -529,3 +529,56 @@ describe('GameState - Fog of War', () => {
         expect(entB.scouted).toBe(true);  // Actively seen
     });
 });
+
+describe('GameState - Multi-Action Turns', () => {
+    let game;
+
+    beforeEach(() => {
+        game = new GameState();
+        game.initializeGame(['player1', 'player2']);
+    });
+
+    it('should process multiple actions for the same player in one resolution', () => {
+        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+
+        // Define two legal actions
+        const actions = {
+            player1: [
+                {
+                    playerId: 'player1',
+                    sourceId: p1Hub.id,
+                    itemType: 'HUB',
+                    angle: 45,
+                    distance: 100
+                },
+                {
+                    playerId: 'player1',
+                    sourceId: p1Hub.id,
+                    itemType: 'WEAPON',
+                    angle: -45,
+                    distance: 100
+                }
+            ],
+            player2: []
+        };
+
+        const snapshots = game.resolveTurn(actions);
+
+        // Track all unique projectiles seen across the entire resolution
+        const allProjectiles = new Set();
+        snapshots.forEach(s => {
+            s.state.entities.forEach(e => {
+                if (e.type === 'PROJECTILE') allProjectiles.add(e.id);
+            });
+        });
+
+        expect(allProjectiles.size).toBe(2);
+
+        // Verify energy deduction for BOTH
+        const finalSnap = snapshots[snapshots.length - 1];
+        const cost = ENTITY_STATS.HUB.cost + ENTITY_STATS.WEAPON.cost;
+        const income = ENTITY_STATS.HUB.energyGen + GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
+
+        expect(finalSnap.state.players.player1.energy).toBe(GLOBAL_STATS.STARTING_ENERGY + income - cost);
+    });
+});

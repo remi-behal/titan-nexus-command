@@ -182,6 +182,13 @@ function App() {
     }
   }, [])
 
+  // Sync actions to server as they are created locally
+  useEffect(() => {
+    if (!isLocked && !isResolving && committedActions.length >= 0) {
+      socket.emit('syncActions', committedActions);
+    }
+  }, [committedActions, isLocked, isResolving]);
+
   // Auto-submit turn when timer hits 0
   useEffect(() => {
     if (timeRemaining === 0 && !isLocked && !isResolving) {
