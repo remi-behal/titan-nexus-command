@@ -27,6 +27,8 @@ const GameBoard = ({
     const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 });
     const [isPanning, setIsPanning] = useState(false);
     const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+    const ZOOM_LEVEL = 2; // 50% zoom in
+
 
     const HUB_RADIUS = ENTITY_STATS.HUB.size;
     const SLING_RING_RADIUS = GLOBAL_STATS.SLING_RING_RADIUS;
@@ -158,8 +160,9 @@ const GameBoard = ({
                 if (!serverIds.has(id)) {
                     const viz = visualEntities.current[id];
 
-                    // If it's a projectile OR if it was OUR structure, it disappears immediately
-                    if (viz.type === 'PROJECTILE' || viz.owner === myPlayerId) {
+                    // If it's a transient effect/projectile OR if it was OUR structure, it disappears immediately
+                    const TRANSIENT_TYPES = ['PROJECTILE', 'WEAPON', 'EXPLOSION', 'LASER_BEAM', 'LINK_COLLISION'];
+                    if (TRANSIENT_TYPES.includes(viz.type) || viz.owner === myPlayerId) {
                         delete visualEntities.current[id];
                         return;
                     }
@@ -224,7 +227,8 @@ const GameBoard = ({
             // This ensures objects near edges appear on the opposite side.
             // -----------------------------------------------------------------
             ctx.save();
-            // Apply camera offset
+            // Apply zoom and camera offset
+            ctx.scale(ZOOM_LEVEL, ZOOM_LEVEL);
             ctx.translate(-cameraOffset.x, -cameraOffset.y);
 
             for (let offsetOffsetX = -mapW; offsetOffsetX <= mapW; offsetOffsetX += mapW) {
@@ -608,58 +612,54 @@ const GameBoard = ({
             // 7. FOG OF WAR OVERLAY
             // -----------------------------------------------------------------
             if (myPlayerId && myPlayerId !== 'spectator') {
-                // Ensure we have a mask canvas
-                if (!window._fogMaskCanvas) {
-                    window._fogMaskCanvas = document.createElement('canvas');
-                }
-                const mCanvas = window._fogMaskCanvas;
-                mCanvas.width = canvas.width;
-                mCanvas.height = canvas.height;
-                const mctx = mCanvas.getContext('2d');
+                // To prevent destination-out from erasing our map entities,
+                // we render the fog logic to a temporary offscreen canvas first.
+                const fogCanvas = document.createElement('canvas');
+                fogCanvas.width = canvas.width;
+                fogCanvas.height = canvas.height;
+                const fctx = fogCanvas.getContext('2d');
 
-                // 1. Draw holes first (source-over)
-                mctx.clearRect(0, 0, mCanvas.width, mCanvas.height);
-                mctx.globalCompositeOperation = 'source-over';
-                mctx.fillStyle = '#ffffff'; // Solid white circles
+                // 1. Draw solid fog overlay
+                fctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                fctx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
 
-                gameState.entities.forEach(e => {
-                    const isOwnProjectile = e.type === 'PROJECTILE' && e.owner === myPlayerId;
-                    const isOwnEntity = e.owner === myPlayerId;
+                // 2. Punch holes
+                fctx.globalCompositeOperation = 'destination-out';
+                fctx.fillStyle = '#ffffff';
 
-                    if (isOwnEntity || isOwnProjectile) {
-                        const radius = ENTITY_STATS[e.type]?.vision || (e.type === 'PROJECTILE' ? ENTITY_STATS.WEAPON.vision : 0);
-                        if (radius > 0) {
-                            // Holes must be drawn relative to the screen (accounting for camera)
-                            for (let ox = -mapW; ox <= mapW; ox += mapW) {
-                                for (let oy = -mapH; oy <= mapH; oy += mapH) {
-                                    const screenX = e.x + ox - cameraOffset.x;
-                                    const screenY = e.y + oy - cameraOffset.y;
+                // We must apply the same world-space transform to the fog context
+                fctx.scale(ZOOM_LEVEL, ZOOM_LEVEL);
+                fctx.translate(-cameraOffset.x, -cameraOffset.y);
 
-                                    // Optimization: Only draw if even remotely on screen
-                                    if (screenX + radius < 0 || screenX - radius > canvas.width ||
-                                        screenY + radius < 0 || screenY - radius > canvas.height) {
-                                        continue;
-                                    }
+                // Tiled loop ensures holes wrap correctly alongside the entities
+                for (let ox = -mapW; ox <= mapW; ox += mapW) {
+                    for (let oy = -mapH; oy <= mapH; oy += mapH) {
+                        fctx.save();
+                        fctx.translate(ox, oy);
 
-                                    mctx.beginPath();
-                                    mctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
-                                    mctx.fill();
+                        gameState.entities.forEach(e => {
+                            const isOwnProjectile = e.type === 'PROJECTILE' && e.owner === myPlayerId;
+                            const isOwnEntity = e.owner === myPlayerId;
+
+                            if (isOwnEntity || isOwnProjectile) {
+                                const radius = ENTITY_STATS[e.type]?.vision || (e.type === 'PROJECTILE' ? ENTITY_STATS.WEAPON.vision : 0);
+                                if (radius > 0) {
+                                    fctx.beginPath();
+                                    const viz = visualEntities.current[e.id] || e;
+                                    fctx.arc(viz.x, viz.y, radius, 0, Math.PI * 2);
+                                    fctx.fill();
                                 }
                             }
-                        }
+                        });
+                        fctx.restore();
                     }
-                });
+                }
 
-                // 2. Fill with fog color everywhere EXCEPT holes using 'source-out'
-                // This ensures anti-aliased edges and overlaps merge perfectly without artifacts.
-                mctx.globalCompositeOperation = 'source-out';
-                mctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                mctx.fillRect(0, 0, mCanvas.width, mCanvas.height);
-
-                // 3. Draw mask onto main canvas
+                // 3. Draw the completed fog mask back onto the main canvas
                 ctx.save();
-                ctx.setTransform(1, 0, 0, 1, 0, 0); // Identity transform to draw full-screen overlay
-                ctx.drawImage(mCanvas, 0, 0);
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.drawImage(fogCanvas, 0, 0);
                 ctx.restore();
             }
 
@@ -696,8 +696,9 @@ const GameBoard = ({
             offsetY = (rh - (ch / scale)) / 2;
         }
 
-        const x = ((e.clientX - rect.left) - offsetX) * scale + cameraOffset.x;
-        const y = ((e.clientY - rect.top) - offsetY) * scale + cameraOffset.y;
+
+        const x = (((e.clientX - rect.left) - offsetX) * scale) / ZOOM_LEVEL + cameraOffset.x;
+        const y = (((e.clientY - rect.top) - offsetY) * scale) / ZOOM_LEVEL + cameraOffset.y;
         return {
             x: ((x % gameState.map.width) + gameState.map.width) % gameState.map.width,
             y: ((y % gameState.map.height) + gameState.map.height) % gameState.map.height
@@ -722,8 +723,8 @@ const GameBoard = ({
                 const scale = canvas.width / rect.width;
 
                 setCameraOffset(prev => ({
-                    x: ((prev.x - dx * scale % gameState.map.width) + gameState.map.width) % gameState.map.width,
-                    y: ((prev.y - dy * scale % gameState.map.height) + gameState.map.height) % gameState.map.height
+                    x: ((prev.x - (dx * scale / ZOOM_LEVEL) % gameState.map.width) + gameState.map.width) % gameState.map.width,
+                    y: ((prev.y - (dy * scale / ZOOM_LEVEL) % gameState.map.height) + gameState.map.height) % gameState.map.height
                 }));
 
                 setPanStart({ x: e.clientX, y: e.clientY });
