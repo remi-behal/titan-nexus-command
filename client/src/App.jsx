@@ -112,6 +112,18 @@ function App() {
     }
   }, [])
 
+  // Auto-submit turn when timer hits 0
+  useEffect(() => {
+    if (timeRemaining === 0 && !isLocked && !isResolving) {
+      console.log('Timer expired, auto-submitting turn...');
+      // If we're currently aiming, cancel it so it's NOT included in the final submission
+      if (isAiming) {
+        setIsAiming(false);
+      }
+      handleExecuteTurn();
+    }
+  }, [timeRemaining, isLocked, isResolving, handleExecuteTurn, isAiming]);
+
   const handleAimStart = (overrideHubId) => {
     const targetHubId = overrideHubId || selectedHubId;
     if (!targetHubId) return;
