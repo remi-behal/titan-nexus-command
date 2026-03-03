@@ -28,6 +28,76 @@ function App() {
   const [isResolving, setIsResolving] = useState(false)
   const [resolutionRound, setResolutionRound] = useState(null)
 
+  const isLocked = syncStatus?.lockedIn?.[myPlayerId] || false;
+
+  const handleAimStart = (overrideHubId) => {
+    const targetHubId = overrideHubId || selectedHubId;
+    if (!targetHubId) return;
+
+    // Check if selected structure has fuel
+    const selectedEntity = playerState?.entities?.find(e => e.id === targetHubId);
+    const pendingFuelSpent = committedActions.filter(a => a.sourceId === targetHubId).length;
+    const hasFuel = selectedEntity ? (selectedEntity.fuel === undefined || (selectedEntity.fuel - pendingFuelSpent) > 0) : false;
+
+    if (launchMode && !isLocked && hasFuel) {
+      setIsAiming(true)
+    }
+  }
+
+  const handleAimEnd = (x, y) => {
+    if (!isAiming) return
+    setIsAiming(false)
+
+    const hub = playerState.entities.find(e => e.id === selectedHubId)
+    if (!hub) return
+
+    // Calculate Slingshot (Opposite of drag)
+    // Use toroidal-aware vector subtraction so dragging across edges works correctly
+    const { dx, dy } = GameState.getToroidalVector(hub.x, hub.y, x, y, playerState.map.width, playerState.map.height);
+    let distance = Math.sqrt(dx * dx + dy * dy)
+
+    // Clamp distance
+    if (distance > MAX_PULL_DISTANCE) {
+      distance = MAX_PULL_DISTANCE;
+    }
+
+    const angle = GameState.calculateLaunchAngle(dx, dy);
+
+    const action = {
+      playerId: myPlayerId,
+      type: 'LAUNCH',
+      itemType: selectedItemType,
+      sourceId: hub.id,
+      sourceX: hub.x,
+      sourceY: hub.y,
+      angle: angle,
+      distance: distance
+    }
+
+    setCommittedActions(prev => [...prev, action])
+    setLaunchMode(false)
+  }
+
+  const handleExecuteTurn = useCallback(() => {
+    if (committedActions.length > 0) {
+      socket.emit('submitActions', committedActions)
+    } else {
+      socket.emit('passTurn')
+    }
+  }, [committedActions])
+
+  const handleClearActions = () => {
+    setCommittedActions([]);
+    setLaunchMode(false);
+  }
+
+  const handleRestart = () => {
+    socket.emit('restartGame')
+    setCommittedActions([])
+    setSelectedHubId(null)
+    setLaunchMode(false)
+  }
+
   useEffect(() => {
     console.log('Connecting to socket...');
 
@@ -124,73 +194,6 @@ function App() {
     }
   }, [timeRemaining, isLocked, isResolving, handleExecuteTurn, isAiming]);
 
-  const handleAimStart = (overrideHubId) => {
-    const targetHubId = overrideHubId || selectedHubId;
-    if (!targetHubId) return;
-
-    // Check if selected structure has fuel
-    const selectedEntity = playerState?.entities?.find(e => e.id === targetHubId);
-    const pendingFuelSpent = committedActions.filter(a => a.sourceId === targetHubId).length;
-    const hasFuel = selectedEntity ? (selectedEntity.fuel === undefined || (selectedEntity.fuel - pendingFuelSpent) > 0) : false;
-
-    if (launchMode && !isLocked && hasFuel) {
-      setIsAiming(true)
-    }
-  }
-
-  const handleAimEnd = (x, y) => {
-    if (!isAiming) return
-    setIsAiming(false)
-
-    const hub = playerState.entities.find(e => e.id === selectedHubId)
-    if (!hub) return
-
-    // Calculate Slingshot (Opposite of drag)
-    // Use toroidal-aware vector subtraction so dragging across edges works correctly
-    const { dx, dy } = GameState.getToroidalVector(hub.x, hub.y, x, y, playerState.map.width, playerState.map.height);
-    let distance = Math.sqrt(dx * dx + dy * dy)
-
-    // Clamp distance
-    if (distance > MAX_PULL_DISTANCE) {
-      distance = MAX_PULL_DISTANCE;
-    }
-
-    const angle = GameState.calculateLaunchAngle(dx, dy);
-
-    const action = {
-      playerId: myPlayerId,
-      type: 'LAUNCH',
-      itemType: selectedItemType,
-      sourceId: hub.id,
-      sourceX: hub.x,
-      sourceY: hub.y,
-      angle: angle,
-      distance: distance
-    }
-
-    setCommittedActions(prev => [...prev, action])
-    setLaunchMode(false)
-  }
-
-  const handleExecuteTurn = useCallback(() => {
-    if (committedActions.length > 0) {
-      socket.emit('submitActions', committedActions)
-    } else {
-      socket.emit('passTurn')
-    }
-  }, [committedActions])
-
-  const handleClearActions = () => {
-    setCommittedActions([]);
-    setLaunchMode(false);
-  }
-
-  const handleRestart = () => {
-    socket.emit('restartGame')
-    setCommittedActions([])
-    setSelectedHubId(null)
-    setLaunchMode(false)
-  }
 
   // Defensive check: Stay on loading screen until we have BOTH state and an assignment
   // Ensure we have a valid player object (with defaults if still loading)
@@ -205,7 +208,6 @@ function App() {
     energy: Math.max(0, pBase.energy - pendingCost)
   };
 
-  const isLocked = syncStatus?.lockedIn?.[myPlayerId] || false;
 
   const header = (
     <header className="game-header">
