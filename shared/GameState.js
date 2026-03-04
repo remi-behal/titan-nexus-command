@@ -19,7 +19,8 @@ export class GameState {
             height: GLOBAL_STATS.MAP_HEIGHT,
             resources: [], // Energy nodes on the map
             obstacles: [], // Rocks, walls, etc.
-            lakes: []
+            lakes: [],
+            mountains: []
         };
         this.winner = null;
     }
@@ -248,6 +249,13 @@ export class GameState {
         this.map.lakes = [
             { id: 'lake1', x: 1000, y: 560, radius: 100 }
         ];
+
+        // Seed a mountain range (Phase 6)
+        this.map.mountains = [
+            { id: 'mtn1', x: 1200, y: 1500, radius: 100 },
+            { id: 'mtn2', x: 1350, y: 1500, radius: 100 },
+            { id: 'mtn3', x: 1500, y: 1500, radius: 100 }
+        ];
     }
 
     /**
@@ -299,61 +307,77 @@ export class GameState {
     }
 
     /**
-     * Lakes Conflict Resolution (Phase 6)
-     * 1. Check for entity "drowning" (Center point in lake)
-     * 2. Check for link blockage (Link crossing lake volume)
+     * Map Hazard Conflict Resolution (Phase 6)
+     * Handles Lakes (drowning + link blockage) and Mountains (crashing only)
      */
-    checkLakeCollisions(tempVisuals = []) {
-        if (!this.map.lakes || this.map.lakes.length === 0) return;
+    checkMapHazards(tempVisuals = []) {
+        // 1. Process Lakes
+        if (this.map.lakes && this.map.lakes.length > 0) {
 
-        this.map.lakes.forEach(lake => {
-            // Stage 1: Entity Drowning
-            this.entities.forEach(entity => {
-                const dist = this.getToroidalDistance(entity.x, entity.y, lake.x, lake.y);
-                if (dist < lake.radius) {
-                    entity.hp = 0;
-                    console.log(`[Lake] ${entity.id} (${entity.type}) drowned at (${Math.round(entity.x)}, ${Math.round(entity.y)})`);
-                }
-            });
-
-            // Stage 2: Link Blockage
-            const linksToDestroy = new Set();
-            this.links.forEach(link => {
-                const s1 = this.entities.find(e => e.id === link.from);
-                const s2 = this.entities.find(e => e.id === link.to);
-                if (!s1 || !s2) return;
-
-                const segments = GameState.getLinkSegments(
-                    { x: s1.x, y: s1.y },
-                    { x: s2.x, y: s2.y },
-                    this.map.width,
-                    this.map.height
-                );
-
-                segments.forEach(seg => {
-                    const dist = GameState.getPointToSegmentDistance(lake.x, lake.y, seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y);
+            this.map.lakes.forEach(lake => {
+                // Stage 1: Entity Drowning
+                this.entities.forEach(entity => {
+                    const dist = this.getToroidalDistance(entity.x, entity.y, lake.x, lake.y);
                     if (dist < lake.radius) {
-                        linksToDestroy.add(link.to);
-
-                        // Add visual effect at the point where link segments are closest to lake center
-                        const proj = GameState.getPointOnSegment(lake.x, lake.y, seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y);
-                        tempVisuals.push({
-                            type: 'LINK_COLLISION',
-                            x: proj.x,
-                            y: proj.y,
-                            duration: 30
-                        });
-
-                        console.log(`[Lake] Link ${link.from}->${link.to} crosses lake volume! Breaking.`);
+                        entity.hp = 0;
+                        console.log(`[Lake] ${entity.id} (${entity.type}) drowned at (${Math.round(entity.x)}, ${Math.round(entity.y)})`);
                     }
                 });
-            });
 
-            linksToDestroy.forEach(id => {
-                const ent = this.entities.find(e => e.id === id);
-                if (ent) ent.hp = 0;
+                // Stage 2: Link Blockage
+                const linksToDestroy = new Set();
+                this.links.forEach(link => {
+                    const s1 = this.entities.find(e => e.id === link.from);
+                    const s2 = this.entities.find(e => e.id === link.to);
+                    if (!s1 || !s2) return;
+
+                    const segments = GameState.getLinkSegments(
+                        { x: s1.x, y: s1.y },
+                        { x: s2.x, y: s2.y },
+                        this.map.width,
+                        this.map.height
+                    );
+
+                    segments.forEach(seg => {
+                        const dist = GameState.getPointToSegmentDistance(lake.x, lake.y, seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y);
+                        if (dist < lake.radius) {
+                            linksToDestroy.add(link.to);
+
+                            // Add visual effect at the point where link segments are closest to lake center
+                            const proj = GameState.getPointOnSegment(lake.x, lake.y, seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y);
+                            tempVisuals.push({
+                                type: 'LINK_COLLISION',
+                                x: proj.x,
+                                y: proj.y,
+                                duration: 30
+                            });
+
+                            console.log(`[Lake] Link ${link.from}->${link.to} crosses lake volume! Breaking.`);
+                        }
+                    });
+                });
+
+                linksToDestroy.forEach(id => {
+                    const ent = this.entities.find(e => e.id === id);
+                    if (ent) ent.hp = 0;
+                });
             });
-        });
+        }
+
+        // 2. Process Mountains
+        if (this.map.mountains && this.map.mountains.length > 0) {
+            this.map.mountains.forEach(mtn => {
+                // Entity Crashing (Wait for landing)
+                this.entities.forEach(entity => {
+                    const dist = this.getToroidalDistance(entity.x, entity.y, mtn.x, mtn.y);
+                    if (dist < mtn.radius) {
+                        entity.hp = 0;
+                        console.log(`[Mountain] ${entity.id} (${entity.type}) crashed into mountain at (${Math.round(entity.x)}, ${Math.round(entity.y)})`);
+                    }
+                });
+                // Note: Links CAN cross mountains, so no link check here.
+            });
+        }
     }
 
     addEntity(data) {
@@ -756,8 +780,8 @@ export class GameState {
                     }
                 });
 
-                // Check for lake collisions first (sets hp to 0)
-                this.checkLakeCollisions(tempVisuals);
+                // Check for map hazards first (sets hp to 0)
+                this.checkMapHazards(tempVisuals);
 
                 // Clean up all destroyed entities this round
                 this.entities.forEach(e => {
