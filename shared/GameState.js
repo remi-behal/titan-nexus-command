@@ -748,6 +748,14 @@ export class GameState {
                     }
                 });
 
+                // Check for lake collisions first (sets hp to 0)
+                this.checkLakeCollisions();
+
+                // Clean up all destroyed entities this round
+                this.entities.forEach(e => {
+                    if (e.hp <= 0) impacts.add(e.id);
+                });
+
                 if (impacts.size > 0) {
                     this.entities = this.entities.filter(e => !impacts.has(e.id));
                     this.links = this.links.filter(l => !impacts.has(l.from) && !impacts.has(l.to));

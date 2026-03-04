@@ -206,6 +206,7 @@ describe('GameState - Turn Resolution', () => {
     beforeEach(() => {
         game = new GameState();
         game.initializeGame(['player1', 'player2']);
+        game.map.lakes = [];
     });
 
     it('should generate energy at start of turn', () => {
@@ -343,6 +344,7 @@ describe('GameState - Collision Detection', () => {
     beforeEach(() => {
         game = new GameState();
         game.initializeGame(['player1', 'player2']);
+        game.map.lakes = [];
     });
 
     it('should detect weapon impact on enemy hub', () => {
@@ -390,6 +392,7 @@ describe('GameState - Launch Direction Consistency', () => {
     beforeEach(() => {
         game = new GameState();
         game.initializeGame(['player1', 'player2']);
+        game.map.lakes = [];
     });
 
     it('should maintain direction for high-power launches (>50% map width)', () => {
@@ -437,6 +440,7 @@ describe('GameState - Fog of War', () => {
     beforeEach(() => {
         game = new GameState();
         game.initializeGame(['player1', 'player2']);
+        game.map.lakes = [];
     });
 
     it('should show own entities as visible', () => {
@@ -536,6 +540,7 @@ describe('GameState - Multi-Action Turns', () => {
     beforeEach(() => {
         game = new GameState();
         game.initializeGame(['player1', 'player2']);
+        game.map.lakes = [];
     });
 
     it('should process multiple actions for the same player in one resolution', () => {
