@@ -237,6 +237,23 @@ const GameBoard = ({
                     ctx.save();
                     ctx.translate(offsetOffsetX, offsetOffsetY);
 
+                    // 2a. DRAW LAKES
+                    if (gameState.map.lakes) {
+                        gameState.map.lakes.forEach(lake => {
+                            ctx.save();
+                            ctx.fillStyle = '#1a3a5a'; // Deep water blue
+                            ctx.globalAlpha = 0.6;
+                            ctx.beginPath();
+                            ctx.arc(lake.x, lake.y, lake.radius, 0, Math.PI * 2);
+                            ctx.fill();
+                            // Subtle border
+                            ctx.strokeStyle = '#2a5a8a';
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+                            ctx.restore();
+                        });
+                    }
+
                     // 2b. DRAW GRID (Inside tiling for toroidal continuity)
                     ctx.strokeStyle = '#222';
                     ctx.lineWidth = 1;

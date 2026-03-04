@@ -303,12 +303,11 @@ export class GameState {
      * 1. Check for entity "drowning" (Center point in lake)
      * 2. Check for link blockage (Link crossing lake volume)
      */
-    checkLakeCollisions() {
+    checkLakeCollisions(tempVisuals = []) {
         if (!this.map.lakes || this.map.lakes.length === 0) return;
 
         this.map.lakes.forEach(lake => {
             // Stage 1: Entity Drowning
-            // Projectiles are not entities yet, so they are exempt as per requirements.
             this.entities.forEach(entity => {
                 const dist = this.getToroidalDistance(entity.x, entity.y, lake.x, lake.y);
                 if (dist < lake.radius) {
@@ -318,7 +317,6 @@ export class GameState {
             });
 
             // Stage 2: Link Blockage
-            // If a link crosses a lake, the structure at the 'to' end is destroyed.
             const linksToDestroy = new Set();
             this.links.forEach(link => {
                 const s1 = this.entities.find(e => e.id === link.from);
@@ -336,6 +334,16 @@ export class GameState {
                     const dist = GameState.getPointToSegmentDistance(lake.x, lake.y, seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y);
                     if (dist < lake.radius) {
                         linksToDestroy.add(link.to);
+
+                        // Add visual effect at the point where link segments are closest to lake center
+                        const proj = GameState.getPointOnSegment(lake.x, lake.y, seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y);
+                        tempVisuals.push({
+                            type: 'LINK_COLLISION',
+                            x: proj.x,
+                            y: proj.y,
+                            duration: 30
+                        });
+
                         console.log(`[Lake] Link ${link.from}->${link.to} crosses lake volume! Breaking.`);
                     }
                 });
@@ -749,7 +757,7 @@ export class GameState {
                 });
 
                 // Check for lake collisions first (sets hp to 0)
-                this.checkLakeCollisions();
+                this.checkLakeCollisions(tempVisuals);
 
                 // Clean up all destroyed entities this round
                 this.entities.forEach(e => {
@@ -888,17 +896,22 @@ export class GameState {
      * Returns the shortest physical distance from point (px, py) to line segment (x1, y1)-(x2, y2)
      */
     static getPointToSegmentDistance(px, py, x1, y1, x2, y2) {
+        const proj = GameState.getPointOnSegment(px, py, x1, y1, x2, y2);
+        return Math.sqrt(Math.pow(px - proj.x, 2) + Math.pow(py - proj.y, 2));
+    }
+
+    /**
+     * Point-to-Segment Math Helper
+     * Returns the closest point on segment (x1, y1)-(x2, y2) to (px, py)
+     */
+    static getPointOnSegment(px, py, x1, y1, x2, y2) {
         const dx = x2 - x1;
         const dy = y2 - y1;
         const l2 = dx * dx + dy * dy;
-        // If segment is basically a point
-        if (l2 === 0) return Math.sqrt(Math.pow(px - x1, 2) + Math.pow(py - y1, 2));
-        // Project px,py onto the line segment
+        if (l2 === 0) return { x: x1, y: y1 };
         let t = ((px - x1) * dx + (py - y1) * dy) / l2;
         t = Math.max(0, Math.min(1, t)); // Clamp to segment
-        const projX = x1 + t * dx;
-        const projY = y1 + t * dy;
-        return Math.sqrt(Math.pow(px - projX, 2) + Math.pow(py - projY, 2));
+        return { x: x1 + t * dx, y: y1 + t * dy };
     }
 
     /**
