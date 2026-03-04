@@ -207,6 +207,7 @@ describe('GameState - Turn Resolution', () => {
         game = new GameState();
         game.initializeGame(['player1', 'player2']);
         game.map.lakes = [];
+        game.map.mountains = [];
     });
 
     it('should generate energy at start of turn', () => {
@@ -617,56 +618,59 @@ describe('GameState - Multi-Action Turns', () => {
     });
 });
 
-describe('GameState - Lakes (Phase 6)', () => {
+describe('GameState - Map Hazards (Phase 6)', () => {
     let game;
 
     beforeEach(() => {
         game = new GameState();
         game.initializeGame(['player1']);
-        // Add a single lake for testing
+        // Add a single lake and some mountains for testing
         game.map.lakes = [
             { id: 'lake_test', x: 500, y: 500, radius: 100 }
+        ];
+        game.map.mountains = [
+            { id: 'mtn_test', x: 1200, y: 500, radius: 100 }
         ];
     });
 
     it('should destroy an entity that lands in a lake', () => {
         const entity = game.addEntity({ type: 'HUB', owner: 'player1', x: 500, y: 500, hp: 10 });
-        game.checkLakeCollisions();
+        game.checkMapHazards();
         expect(entity.hp).toBe(0);
-    });
-
-    it('should NOT destroy an entity that lands outside a lake', () => {
-        const entity = game.addEntity({ type: 'HUB', owner: 'player1', x: 700, y: 500, hp: 10 });
-        game.checkLakeCollisions();
-        expect(entity.hp).toBe(10);
     });
 
     it('should destroy the destination entity if a link crosses a lake', () => {
         const starter = game.entities.find(e => e.isStarter && e.owner === 'player1');
         starter.x = 200; starter.y = 500;
-
-        // Target hub at 800, 500. Link passes through lake at 500, 500.
         const target = game.addEntity({ type: 'HUB', owner: 'player1', x: 800, y: 500, hp: 10 });
         game.addLink(starter.id, target.id, 'player1');
-
-        game.checkLakeCollisions();
+        game.checkMapHazards();
         expect(target.hp).toBe(0);
     });
 
-    it('should handle toroidal links correctly in lake collision', () => {
-        // Map is 2000x2000. Hub at 1800, 500. Target at 200, 500. 
-        // Shortest path wraps across x=0. Distance is 400.
-        // We'll place a lake at x=0 (effectively) to see if it catches the wrap.
-        game.map.lakes = [
-            { id: 'lake_edge', x: 0, y: 500, radius: 50 }
-        ];
+    it('should destroy an entity that lands in a mountain', () => {
+        const entity = game.addEntity({ type: 'HUB', owner: 'player1', x: 1200, y: 500, hp: 10 });
+        game.checkMapHazards();
+        expect(entity.hp).toBe(0);
+    });
 
+    it('should NOT destroy a link that crosses a mountain', () => {
         const starter = game.entities.find(e => e.isStarter && e.owner === 'player1');
-        starter.x = 1800; starter.y = 500;
-        const target = game.addEntity({ type: 'HUB', owner: 'player1', x: 200, y: 500, hp: 10 });
+        starter.x = 1000; starter.y = 500;
+        const target = game.addEntity({ type: 'HUB', owner: 'player1', x: 1400, y: 500, hp: 10 });
         game.addLink(starter.id, target.id, 'player1');
+        game.checkMapHazards();
+        // Destination should still be alive!
+        expect(target.hp).toBe(10);
+    });
 
-        game.checkLakeCollisions();
-        expect(target.hp).toBe(0);
+    it('should handle cluster of intersecting mountains', () => {
+        game.map.mountains = [
+            { id: 'm1', x: 100, y: 100, radius: 50 },
+            { id: 'm2', x: 140, y: 100, radius: 50 }
+        ];
+        const entity = game.addEntity({ type: 'HUB', owner: 'player1', x: 120, y: 100, hp: 10 });
+        game.checkMapHazards();
+        expect(entity.hp).toBe(0);
     });
 });

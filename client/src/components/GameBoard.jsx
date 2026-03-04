@@ -254,6 +254,31 @@ const GameBoard = ({
                         });
                     }
 
+                    // 2a-2. DRAW MOUNTAINS
+                    if (gameState.map.mountains) {
+                        gameState.map.mountains.forEach(mtn => {
+                            ctx.save();
+                            // Base stone circle
+                            ctx.fillStyle = '#3d3434'; // Dark stone
+                            ctx.globalAlpha = 0.8;
+                            ctx.beginPath();
+                            ctx.arc(mtn.x, mtn.y, mtn.radius, 0, Math.PI * 2);
+                            ctx.fill();
+
+                            // Peak (inner circle for height suggestion)
+                            ctx.fillStyle = '#5c5252'; // Lighter stone
+                            ctx.beginPath();
+                            ctx.arc(mtn.x, mtn.y, mtn.radius * 0.6, 0, Math.PI * 2);
+                            ctx.fill();
+
+                            // Subtle rocky border
+                            ctx.strokeStyle = '#2d2525';
+                            ctx.lineWidth = 3;
+                            ctx.stroke();
+                            ctx.restore();
+                        });
+                    }
+
                     // 2b. DRAW GRID (Inside tiling for toroidal continuity)
                     ctx.strokeStyle = '#222';
                     ctx.lineWidth = 1;
