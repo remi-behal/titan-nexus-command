@@ -443,6 +443,12 @@ export class GameState {
                     }
                 });
 
+                snapshots.push({
+                    type: 'ROUND_START',
+                    round: round,
+                    state: this.getState()
+                });
+
                 // 2. Simulation Loop
                 const subTicks = 120; // High internal resolution for smoothness
                 const snapshotStep = 4; // Capture ~30 frames per round

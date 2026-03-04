@@ -130,7 +130,7 @@ async function resolveTurn() {
         for (const snap of snapshots) {
             emitFilteredState(snap.state);
 
-            if (snap.type === 'ROUND') {
+            if (snap.type === 'ROUND_START' || snap.type === 'ROUND') {
                 io.emit('resolutionRound', snap.round);
             }
 
