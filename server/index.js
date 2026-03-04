@@ -92,57 +92,67 @@ function emitFilteredState(state = null) {
     });
 }
 
+let isResolvingTurn = false;
+
 async function resolveTurn() {
-    if (timerTimeout) {
-        clearTimeout(timerTimeout);
-        timerTimeout = null;
+    if (isResolvingTurn) {
+        console.warn('[Server] Blocked parallel turn resolution.');
+        return;
     }
+    isResolvingTurn = true;
 
-    console.log('--- Resolving Turn ---');
-
-    const actionsMap = {
-        player1: turnActions.player1 || [],
-        player2: turnActions.player2 || []
-    };
-
-    let snapshots;
     try {
-        snapshots = game.resolveTurn(actionsMap);
-    } catch (err) {
-        console.error('CRITICAL ERROR: resolveTurn failed:', err);
-        // Fallback to avoid hanging
-        snapshots = [{ type: 'FINAL', state: game.getState() }];
-    }
-
-    // Notify clients that resolution is starting
-    io.emit('resolutionStatus', { active: true, totalRounds: snapshots.length });
-
-    // Process snapshots with delays
-    for (const snap of snapshots) {
-        console.log(`[Resolution] Emitting snapshot type: ${snap.type}${snap.round ? ` (Round ${snap.round})` : ''}`);
-
-        emitFilteredState(snap.state);
-
-        if (snap.type === 'ROUND') {
-            io.emit('resolutionRound', snap.round);
+        if (timerTimeout) {
+            clearTimeout(timerTimeout);
+            timerTimeout = null;
         }
 
-        // Dynamic Delay: Sub-ticks are fast, phase/round transitions are slow
-        const delay = (snap.type === 'ROUND_SUB') ? 60 : 2000;
-        await new Promise(resolve => setTimeout(resolve, delay));
+        console.log('--- Resolving Turn ---');
+
+        const actionsMap = {
+            player1: turnActions.player1 || [],
+            player2: turnActions.player2 || []
+        };
+
+        let snapshots;
+        try {
+            snapshots = game.resolveTurn(actionsMap);
+        } catch (err) {
+            console.error('CRITICAL ERROR: resolveTurn failed:', err);
+            // Fallback to avoid hanging
+            snapshots = [{ type: 'FINAL', state: game.getState() }];
+        }
+
+        // Notify clients that resolution is starting
+        io.emit('resolutionStatus', { active: true, totalRounds: snapshots.length });
+
+        // Process snapshots with delays
+        for (const snap of snapshots) {
+            emitFilteredState(snap.state);
+
+            if (snap.type === 'ROUND') {
+                io.emit('resolutionRound', snap.round);
+            }
+
+            // Dynamic Delay: Sub-ticks are fast, phase/round transitions are slow
+            const delay = (snap.type === 'ROUND_SUB') ? 60 : 2000;
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        // Reset for next turn
+        lockedIn.player1 = false;
+        lockedIn.player2 = false;
+        turnActions.player1 = [];
+        turnActions.player2 = [];
+
+        io.emit('syncStatus', { lockedIn });
+        io.emit('resolutionStatus', { active: false });
+
+        // Start timer for the next turn
+        startTimer();
+    } finally {
+        isResolvingTurn = false;
     }
-
-    // Reset for next turn
-    lockedIn.player1 = false;
-    lockedIn.player2 = false;
-    turnActions.player1 = [];
-    turnActions.player2 = [];
-
-    io.emit('syncStatus', { lockedIn });
-    io.emit('resolutionStatus', { active: false });
-
-    // Start timer for the next turn
-    startTimer();
 }
 
 // Start first timer

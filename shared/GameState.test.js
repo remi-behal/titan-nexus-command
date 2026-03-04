@@ -581,4 +581,33 @@ describe('GameState - Multi-Action Turns', () => {
 
         expect(finalSnap.state.players.player1.energy).toBe(GLOBAL_STATS.STARTING_ENERGY + income - cost);
     });
+
+    it('should NOT include future entities in the early snapshots (ENERGY phase)', () => {
+        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const initialEntityCount = game.entities.length;
+
+        const actions = {
+            player1: [{
+                playerId: 'player1',
+                sourceId: p1Hub.id,
+                itemType: 'HUB',
+                angle: 90,
+                distance: 100
+            }],
+            player2: []
+        };
+
+        const snapshots = game.resolveTurn(actions);
+
+        // The first snapshot should be ENERGY
+        const energySnap = snapshots.find(s => s.type === 'ENERGY');
+        expect(energySnap).toBeDefined();
+
+        // It should ONLY have the initial entities (the hubs existing before resolution)
+        expect(energySnap.state.entities.length).toBe(initialEntityCount);
+
+        // The result Hub should only appear at the END of the round
+        const finalSnap = snapshots.find(s => s.type === 'FINAL');
+        expect(finalSnap.state.entities.length).toBe(initialEntityCount + 1);
+    });
 });

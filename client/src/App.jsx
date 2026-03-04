@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import './App.css'
 import { GameState } from '../../shared/GameState.js'
 import { ENTITY_STATS, GLOBAL_STATS } from '../../shared/EntityStats.js'
@@ -14,6 +14,7 @@ const MAX_PULL_DISTANCE = GLOBAL_STATS.MAX_PULL;
 
 function App() {
   const [playerState, setPlayerState] = useState(null)
+  const turnRef = useRef(1) // Track turn for stale closures in listeners
   const [isConnected, setIsConnected] = useState(socket.connected)
   const [myPlayerId, setMyPlayerId] = useState(null)
   const [syncStatus, setSyncStatus] = useState({ lockedIn: { player1: false, player2: false } })
@@ -113,10 +114,13 @@ function App() {
     };
 
     const onUpdate = (newState) => {
-      console.log('Received game state update:', newState);
-      setPlayerState(newState)
-      // Reset local committed state when turn resolves
-      setCommittedActions([])
+      setPlayerState(newState);
+
+      // Reset local committed state ONLY when the turn has advanced
+      if (newState.turn > turnRef.current) {
+        setCommittedActions([]);
+        turnRef.current = newState.turn;
+      }
       setSelectedHubId(null)
       setLaunchMode(false)
     };
@@ -148,6 +152,11 @@ function App() {
 
     const onResolutionStatus = (status) => {
       setIsResolving(status.active);
+      if (status.active) {
+        // As soon as resolution officially starts, clear local staged actions
+        // so they don't overlap with the server-side simulation projectiles.
+        setCommittedActions([]);
+      }
       if (!status.active) setResolutionRound(null);
     };
 

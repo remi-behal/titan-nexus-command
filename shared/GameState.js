@@ -139,9 +139,11 @@ export class GameState {
         const entitiesRequiredByLinks = new Set();
 
         // Filter links: visible if either end is visible, or if any segment is visible
+        const sourceEntities = baseState ? baseState.entities : this.entities;
+
         state.links = state.links.filter(l => {
-            const fullFrom = (baseState || this).entities.find(e => e.id === l.from);
-            const fullTo = (baseState || this).entities.find(e => e.id === l.to);
+            const fullFrom = sourceEntities.find(e => e.id === l.from);
+            const fullTo = sourceEntities.find(e => e.id === l.to);
             if (!fullFrom || !fullTo) return false;
 
             // Check endpoints
@@ -184,7 +186,7 @@ export class GameState {
         });
 
         // Filter entities: own entities always visible, others only if in vision OR required by a visible link
-        state.entities = (baseState || this).entities.map(e => {
+        state.entities = sourceEntities.map(e => {
             const isOwn = e.owner === playerId;
             const inVision = isVisible(e.x, e.y);
             const isLinkEndpoint = entitiesRequiredByLinks.has(e.id);
