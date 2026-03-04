@@ -9,8 +9,8 @@
     - [x] Add Laser Defense to the game. <!-- id: 51 -->
 - [x] **Economy Expansion**: Implement Extractor logic for additional energy generation. <!-- id: 45 -->
 - [ ] **Map Features**: <!-- id: 46 -->
-    - [ ] Lakes (Non-buildable, Link-blocking)
-    - [ ] Mountains (Non-buildable, Link-traversable) <!-- id: 55 -->
+    - [x] Lakes (Non-buildable, Link-blocking) <!-- id: 84 -->
+    - [x] Mountains (Non-buildable, Link-traversable) <!-- id: 55 -->
     - [x] Energy Nodes (Static locations for Extractors) <!-- id: 13 -->
     - [ ] Super Energy Nodes (High yield, competitive) <!-- id: 56 -->
 - [ ] **Multiplayer Enhancements**: <!-- id: 47 -->
@@ -47,9 +47,9 @@
 - [ ] **Testing & Refinement**: <!-- id: 52 -->
     - [ ] **Draw Condition**: Implement and test simultaneous destruction of all hubs. <!-- id: 66 -->
     - [ ] **Connection & Networking**: <!-- id: 75 -->
-        - [ ] Reconnect gracefully after drops. <!-- id: 67 -->
-        - [ ] Handle disconnect while action is "Locked In". <!-- id: 69 -->
-        - [ ] Latency Simulation (100ms+ ping). <!-- id: 68 -->
+        - [ ] Reconnect gracefully after drops. More thinking required, see Networking Resilience Tests conversation. <!-- id: 67 -->
+        - [x] Handle disconnect while action is "Locked In". <!-- id: 69 -->
+        - [x] Latency Simulation (100ms+ ping). <!-- id: 68 -->
     - [ ] **Test Coverage Expansion**: <!-- id: 76 -->
         - [ ] Server-side Action Validation (ownership, energy, fuel). <!-- id: 70 -->
         - [ ] Socket.io event handling & Multi-player sync tests. <!-- id: 77 -->
