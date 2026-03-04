@@ -18,7 +18,8 @@ export class GameState {
             width: GLOBAL_STATS.MAP_WIDTH,
             height: GLOBAL_STATS.MAP_HEIGHT,
             resources: [], // Energy nodes on the map
-            obstacles: [] // Rocks, walls, etc.
+            obstacles: [], // Rocks, walls, etc.
+            lakes: []
         };
         this.winner = null;
     }
@@ -242,6 +243,11 @@ export class GameState {
             { id: 'res3', x: 1000, y: 500, value: 15 }, // Super node (Center)
             { id: 'res4', x: 1000, y: 1500, value: 5 }  // Far side
         ];
+
+        // Seed a test lake (Phase 6)
+        this.map.lakes = [
+            { id: 'lake1', x: 1000, y: 560, radius: 100 }
+        ];
     }
 
     /**
@@ -290,6 +296,56 @@ export class GameState {
             this.entities = this.entities.filter(e => !toDestroy.has(e.id));
             this.links = this.links.filter(l => !toDestroy.has(l.from) && !toDestroy.has(l.to));
         }
+    }
+
+    /**
+     * Lakes Conflict Resolution (Phase 6)
+     * 1. Check for entity "drowning" (Center point in lake)
+     * 2. Check for link blockage (Link crossing lake volume)
+     */
+    checkLakeCollisions() {
+        if (!this.map.lakes || this.map.lakes.length === 0) return;
+
+        this.map.lakes.forEach(lake => {
+            // Stage 1: Entity Drowning
+            // Projectiles are not entities yet, so they are exempt as per requirements.
+            this.entities.forEach(entity => {
+                const dist = this.getToroidalDistance(entity.x, entity.y, lake.x, lake.y);
+                if (dist < lake.radius) {
+                    entity.hp = 0;
+                    console.log(`[Lake] ${entity.id} (${entity.type}) drowned at (${Math.round(entity.x)}, ${Math.round(entity.y)})`);
+                }
+            });
+
+            // Stage 2: Link Blockage
+            // If a link crosses a lake, the structure at the 'to' end is destroyed.
+            const linksToDestroy = new Set();
+            this.links.forEach(link => {
+                const s1 = this.entities.find(e => e.id === link.from);
+                const s2 = this.entities.find(e => e.id === link.to);
+                if (!s1 || !s2) return;
+
+                const segments = GameState.getLinkSegments(
+                    { x: s1.x, y: s1.y },
+                    { x: s2.x, y: s2.y },
+                    this.map.width,
+                    this.map.height
+                );
+
+                segments.forEach(seg => {
+                    const dist = GameState.getPointToSegmentDistance(lake.x, lake.y, seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y);
+                    if (dist < lake.radius) {
+                        linksToDestroy.add(link.to);
+                        console.log(`[Lake] Link ${link.from}->${link.to} crosses lake volume! Breaking.`);
+                    }
+                });
+            });
+
+            linksToDestroy.forEach(id => {
+                const ent = this.entities.find(e => e.id === id);
+                if (ent) ent.hp = 0;
+            });
+        });
     }
 
     addEntity(data) {
@@ -817,6 +873,24 @@ export class GameState {
             }
         }
         return segments;
+    }
+
+    /**
+     * Point-to-Segment Distance Math
+     * Returns the shortest physical distance from point (px, py) to line segment (x1, y1)-(x2, y2)
+     */
+    static getPointToSegmentDistance(px, py, x1, y1, x2, y2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const l2 = dx * dx + dy * dy;
+        // If segment is basically a point
+        if (l2 === 0) return Math.sqrt(Math.pow(px - x1, 2) + Math.pow(py - y1, 2));
+        // Project px,py onto the line segment
+        let t = ((px - x1) * dx + (py - y1) * dy) / l2;
+        t = Math.max(0, Math.min(1, t)); // Clamp to segment
+        const projX = x1 + t * dx;
+        const projY = y1 + t * dy;
+        return Math.sqrt(Math.pow(px - projX, 2) + Math.pow(py - projY, 2));
     }
 
     /**
