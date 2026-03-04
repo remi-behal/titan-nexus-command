@@ -10,12 +10,24 @@
 - [x] **Economy Expansion**: Implement Extractor logic for additional energy generation. <!-- id: 45 -->
 - [ ] **Map Features**: <!-- id: 46 -->
     - [ ] Lakes (Non-buildable, Link-blocking)
+    - [ ] Mountains (Non-buildable, Link-traversable) <!-- id: 55 -->
     - [x] Energy Nodes (Static locations for Extractors) <!-- id: 13 -->
+    - [ ] Super Energy Nodes (High yield, competitive) <!-- id: 56 -->
 - [ ] **Multiplayer Enhancements**: <!-- id: 47 -->
     - [ ] Chat system.
     - [ ] Lobby management / Player slotting.
+- [ ] **Conflict Resolution & Pathing**: <!-- id: 74 -->
+    - [ ] **Structure Overlap**: Both destroyed if landing same spot. <!-- id: 59 -->
+    - [ ] **Autonomous Projectiles**: Persist if source hub destroyed. <!-- id: 60 -->
+    - [ ] **Post-Mortem Revenge**: Finish paths before elimination. <!-- id: 61 -->
+    - [ ] **Defensive Overkill**: Defenses reacquire if target gone. <!-- id: 62 -->
+    - [ ] **Target Ambiguity**: Guided missiles reacquire or fly straight. <!-- id: 63 -->
+    - [ ] **Homing Commitment**: Define "Smart" vs "Dumb" homing. <!-- id: 64 -->
 - [x] **Link Enhancement**: Add direction arrows to links indicating the source Hub. <!-- id: 53 -->
 - [x] **Link Collision**: Destroy structures if their link crosses an existing link. <!-- id: 54 -->
+- [ ] **Resolution Polish**: <!-- id: 58 -->
+    - [ ] Improve Resolution Overlay visibility/intrusiveness. <!-- id: 82 -->
+    - [ ] Add offensive roles for Defense structures (TBD). <!-- id: 65 -->
 
 #### Phase 7: Artwork, UI/UX, Music
 - [ ] Adding artwork, UI/UX, music, and sound effects.
@@ -33,7 +45,22 @@
 - [ ] **Dynamic Weather**: Methane rain and high winds. <!-- id: 49 -->
 - [ ] **Spectator Mode**: Ability to watch without a player slot. <!-- id: 50 -->
 - [ ] **Testing & Refinement**: <!-- id: 52 -->
-    - [ ] Expand test coverage to `server/` and `client/` (Excluded because we haven't written the specific integration tests (for sockets) or component tests (for React) needed to cover them.)
+    - [ ] **Draw Condition**: Implement and test simultaneous destruction of all hubs. <!-- id: 66 -->
+    - [ ] **Connection & Networking**: <!-- id: 75 -->
+        - [ ] Reconnect gracefully after drops. <!-- id: 67 -->
+        - [ ] Handle disconnect while action is "Locked In". <!-- id: 69 -->
+        - [ ] Latency Simulation (100ms+ ping). <!-- id: 68 -->
+    - [ ] **Test Coverage Expansion**: <!-- id: 76 -->
+        - [ ] Server-side Action Validation (ownership, energy, fuel). <!-- id: 70 -->
+        - [ ] Socket.io event handling & Multi-player sync tests. <!-- id: 77 -->
+        - [ ] End-to-End game flow. <!-- id: 71 -->
+    - [ ] **Performance & Stress**: <!-- id: 78 -->
+        - [ ] 8-player stress test. <!-- id: 72 -->
+        - [ ] Large entity count (100+) performance. <!-- id: 79 -->
+        - [ ] Animation frame rate under load. <!-- id: 80 -->
+    - [ ] **Platform Support**: <!-- id: 81 -->
+        - [ ] Mobile/Touchscreen slingshot verification. <!-- id: 73 -->
+    - [ ] Expand test coverage to `server/` and `client/` (Specifically for sockets and React components). <!-- id: 83 -->
 
 ---
 
