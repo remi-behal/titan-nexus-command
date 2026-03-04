@@ -24,6 +24,19 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
+const SIMULATED_LATENCY = parseInt(process.env.SIMULATED_LATENCY) || 0;
+
+/**
+ * Helper to emit events with simulated latency if configured.
+ * This is used for testing network stability and lag compensation.
+ */
+function safeEmit(emitter, event, data) {
+    if (SIMULATED_LATENCY > 0) {
+        setTimeout(() => emitter.emit(event, data), SIMULATED_LATENCY);
+    } else {
+        emitter.emit(event, data);
+    }
+}
 
 // Initialize Server-authoritative Game State
 const game = new GameState();
@@ -56,7 +69,7 @@ function startTimer() {
     }
     timeRemaining = TURN_DURATION;
     // console.log(`[Timer] Starting new turn timer: ${timeRemaining}s`);
-    io.emit('timerUpdate', timeRemaining);
+    safeEmit(io, 'timerUpdate', timeRemaining);
 
     timerTimeout = setTimeout(tick, 1000);
 }
@@ -64,7 +77,7 @@ function startTimer() {
 function tick() {
     timeRemaining--;
     // console.log(`[Timer] Tick: ${timeRemaining}`);
-    io.emit('timerUpdate', timeRemaining);
+    safeEmit(io, 'timerUpdate', timeRemaining);
 
     if (timeRemaining <= 0) {
         // console.log('[Timer] Time up! Auto-resolving turn...');
@@ -84,10 +97,10 @@ function emitFilteredState(state = null) {
     io.sockets.sockets.forEach(socket => {
         const assignedId = Object.keys(playerAssignments).find(pid => playerAssignments[pid] === socket.id);
         if (assignedId) {
-            socket.emit('gameStateUpdate', game.getVisibleState(assignedId, baseState));
+            safeEmit(socket, 'gameStateUpdate', game.getVisibleState(assignedId, baseState));
         } else {
             // Spectators see everything
-            socket.emit('gameStateUpdate', baseState);
+            safeEmit(socket, 'gameStateUpdate', baseState);
         }
     });
 }
@@ -124,14 +137,14 @@ async function resolveTurn() {
         }
 
         // Notify clients that resolution is starting
-        io.emit('resolutionStatus', { active: true, totalRounds: snapshots.length });
+        safeEmit(io, 'resolutionStatus', { active: true, totalRounds: snapshots.length });
 
         // Process snapshots with delays
         for (const snap of snapshots) {
             emitFilteredState(snap.state);
 
             if (snap.type === 'ROUND_START' || snap.type === 'ROUND') {
-                io.emit('resolutionRound', snap.round);
+                safeEmit(io, 'resolutionRound', snap.round);
             }
 
             // Dynamic Delay: Sub-ticks are fast, phase/round transitions are slow
@@ -145,8 +158,8 @@ async function resolveTurn() {
         turnActions.player1 = [];
         turnActions.player2 = [];
 
-        io.emit('syncStatus', { lockedIn });
-        io.emit('resolutionStatus', { active: false });
+        safeEmit(io, 'syncStatus', { lockedIn });
+        safeEmit(io, 'resolutionStatus', { active: false });
 
         // Start timer for the next turn
         startTimer();
@@ -173,20 +186,20 @@ io.on('connection', (socket) => {
 
     if (assignedPlayerId) {
         console.log(`Assigned ${socket.id} to ${assignedPlayerId}`);
-        socket.emit('playerAssignment', assignedPlayerId);
+        safeEmit(socket, 'playerAssignment', assignedPlayerId);
     } else {
         console.log(`${socket.id} joined as spectator`);
-        socket.emit('playerAssignment', 'spectator');
+        safeEmit(socket, 'playerAssignment', 'spectator');
     }
 
     // Send current state
-    socket.emit('gameStateUpdate', assignedPlayerId ? game.getVisibleState(assignedPlayerId) : game.getState());
+    safeEmit(socket, 'gameStateUpdate', assignedPlayerId ? game.getVisibleState(assignedPlayerId) : game.getState());
     // Also send sync status
-    io.emit('syncStatus', { lockedIn });
+    safeEmit(io, 'syncStatus', { lockedIn });
 
     socket.on('requestState', () => {
-        socket.emit('gameStateUpdate', assignedPlayerId ? game.getVisibleState(assignedPlayerId) : game.getState());
-        socket.emit('syncStatus', { lockedIn });
+        safeEmit(socket, 'gameStateUpdate', assignedPlayerId ? game.getVisibleState(assignedPlayerId) : game.getState());
+        safeEmit(socket, 'syncStatus', { lockedIn });
     });
 
     socket.on('syncActions', (actions) => {
@@ -246,7 +259,7 @@ io.on('connection', (socket) => {
         turnActions[assignedPlayerId] = validatedActions;
         lockedIn[assignedPlayerId] = true;
 
-        io.emit('syncStatus', { lockedIn });
+        safeEmit(io, 'syncStatus', { lockedIn });
 
         // Check if both players are locked in
         if (lockedIn.player1 && lockedIn.player2) {
@@ -263,7 +276,7 @@ io.on('connection', (socket) => {
         turnActions[assignedPlayerId] = []; // Empty array for no actions
         lockedIn[assignedPlayerId] = true;
 
-        io.emit('syncStatus', { lockedIn });
+        safeEmit(io, 'syncStatus', { lockedIn });
 
         if (lockedIn.player1 && lockedIn.player2) {
             console.log('Both players locked in (via Pass). Triggering resolution early...');
@@ -278,7 +291,7 @@ io.on('connection', (socket) => {
         turnActions.player1 = null;
         turnActions.player2 = null;
         emitFilteredState();
-        socket.emit('syncStatus', { lockedIn });
+        safeEmit(socket, 'syncStatus', { lockedIn });
         startTimer();
     });
 
