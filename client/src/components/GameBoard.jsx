@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { GameState } from '../../../shared/GameState.js';
 import { ENTITY_STATS, GLOBAL_STATS } from '../../../shared/EntityStats.js';
+import { shouldHighlightRing } from '../utils/uiLogic.js';
 
 /**
  * GameBoard Component
@@ -468,13 +469,14 @@ const GameBoard = ({
                                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
                                 ctx.lineWidth = 2;
 
-                                // Account for tile translation when checking mouse highlight
-                                const d = Math.sqrt((entity.x + offsetOffsetX - mousePos.x) ** 2 + (entity.y + offsetOffsetY - mousePos.y) ** 2);
-                                const isInsideRing = d < SLING_RING_RADIUS;
+                                // Use toroidal distance for robust highlight detection
+                                const d = getToroidalDist(entity.x, entity.y, mousePos.x, mousePos.y, mapW, mapH);
+                                const ringHighlight = shouldHighlightRing(d, SLING_RING_RADIUS, isAiming && entity.id === selectedHubId);
 
-                                if (isInsideRing) {
-                                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-                                    ctx.shadowBlur = 10;
+                                if (ringHighlight) {
+                                    const isActive = isAiming && entity.id === selectedHubId;
+                                    ctx.strokeStyle = isActive ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.7)';
+                                    ctx.shadowBlur = isActive ? 15 : 10;
                                     ctx.shadowColor = '#fff';
                                 }
 
@@ -712,9 +714,11 @@ const GameBoard = ({
     // Effect: Global Mouse Listeners for Panning & Aiming
     useEffect(() => {
         const handleGlobalMouseMove = (e) => {
+            // Always track mouse coordinates for hover effects
+            const { x, y } = getGameCoords(e);
+            setMousePos({ x, y });
+
             if (isAiming) {
-                const { x, y } = getGameCoords(e);
-                setMousePos({ x, y });
                 onAimUpdate(x, y);
             } else if (isPanning) {
                 // Determine raw movement in screen pixels
