@@ -155,6 +155,13 @@ describe('GameState - Game Initialization', () => {
 
         expect(game.players['player1'].color).not.toBe(game.players['player2'].color);
     });
+
+    it('should initialize resource nodes using templates from EntityStats', () => {
+        game.initializeGame(['player1']);
+        const superNode = game.map.resources.find(r => r.isSuper);
+        expect(superNode.value).toBe(15);
+        expect(superNode.color).toBe('#bf00ff');
+    });
 });
 
 describe('GameState - Link Integrity', () => {

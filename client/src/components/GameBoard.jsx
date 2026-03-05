@@ -377,9 +377,22 @@ const GameBoard = ({
 
                     // 4. DRAW RESOURCES
                     gameState.map.resources.forEach(res => {
-                        ctx.fillStyle = '#00ffcc';
+                        const isSuper = res.isSuper === true;
+
+                        // Large Pulse Aura for Super Nodes
+                        if (isSuper) {
+                            const pulse = Math.sin(Date.now() / 200) * 5;
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.arc(res.x, res.y, (res.radius * 2 || 20) + pulse, 0, Math.PI * 2);
+                            ctx.fillStyle = 'rgba(191, 0, 255, 0.3)';
+                            ctx.fill();
+                            ctx.restore();
+                        }
+
+                        ctx.fillStyle = res.color || '#00ffcc';
                         ctx.beginPath();
-                        ctx.arc(res.x, res.y, GLOBAL_STATS.RESOURCE_SIZE, 0, Math.PI * 2);
+                        ctx.arc(res.x, res.y, res.radius || 8, 0, Math.PI * 2);
                         ctx.fill();
                     });
 

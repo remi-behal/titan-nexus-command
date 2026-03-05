@@ -137,4 +137,29 @@ describe('Economy Expansion - Energy Generation', () => {
 
         expect(game.players['player1'].energy).toBe(initialEnergy + hubIncome + extractorIncome + 50 + ubi);
     });
+
+    it('should generate high yield (20) for extractor on super node', () => {
+        const initialEnergy = game.players['player1'].energy;
+        const hubIncome = ENTITY_STATS.HUB.energyGen;
+        const extractorIncome = ENTITY_STATS.EXTRACTOR.energyGen;
+        const ubi = GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
+
+        // Find the super node from initialization (value 15)
+        const superNode = game.map.resources.find(r => r.isSuper);
+
+        game.addEntity({
+            type: 'EXTRACTOR',
+            owner: 'player1',
+            x: superNode.x,
+            y: superNode.y,
+            hp: 2,
+            deployed: true
+        });
+
+        game.resolveTurn({ player1: [] });
+
+        // Income = UBI (10) + Hub (5) + Extractor (5) + Node (15) = 35 total increment
+        // So total energy = initial + 35
+        expect(game.players['player1'].energy).toBe(initialEnergy + hubIncome + extractorIncome + superNode.value + ubi);
+    });
 });

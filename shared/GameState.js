@@ -6,7 +6,7 @@
  * or UI. This makes it easy to move to the server later!
  */
 
-import { ENTITY_STATS, GLOBAL_STATS } from './EntityStats.js';
+import { ENTITY_STATS, GLOBAL_STATS, RESOURCE_NODE_STATS } from './EntityStats.js';
 
 export class GameState {
     constructor() {
@@ -238,11 +238,12 @@ export class GameState {
         });
 
         // Mock resource nodes (Standard: 5 bonus, Super: 15 bonus)
+        const { STANDARD, SUPER } = RESOURCE_NODE_STATS;
         this.map.resources = [
-            { id: 'res1', x: 500, y: 250, value: 5 },   // Top quadrant
-            { id: 'res2', x: 1500, y: 750, value: 5 },  // Bottom quadrant
-            { id: 'res3', x: 1000, y: 500, value: 15 }, // Super node (Center)
-            { id: 'res4', x: 1000, y: 1500, value: 5 }  // Far side
+            { id: 'res1', x: 500, y: 250, ...STANDARD },   // Top quadrant
+            { id: 'res2', x: 1500, y: 750, ...STANDARD },  // Bottom quadrant
+            { id: 'res3', x: 1000, y: 500, ...SUPER },     // Super node (Center)
+            { id: 'res4', x: 1000, y: 1500, ...STANDARD }  // Far side
         ];
 
         // Seed a test lake (Phase 6)

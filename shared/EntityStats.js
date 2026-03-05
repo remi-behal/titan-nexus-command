@@ -47,6 +47,20 @@ export const ENTITY_STATS = {
     }
 };
 
+export const RESOURCE_NODE_STATS = {
+    STANDARD: {
+        value: 5,
+        radius: 8,
+        color: '#00ffff'
+    },
+    SUPER: {
+        value: 15,
+        radius: 12,
+        color: '#bf00ff',
+        isSuper: true
+    }
+};
+
 export const GLOBAL_STATS = {
     // Economy
     STARTING_ENERGY: 50,
