@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { GameState } from '../../../shared/GameState.js';
 import { ENTITY_STATS, GLOBAL_STATS } from '../../../shared/EntityStats.js';
+import { VISUAL_STATS } from '../constants/VisualStats.js';
 import { shouldHighlightRing } from '../utils/uiLogic.js';
 
 /**
@@ -381,11 +382,12 @@ const GameBoard = ({
 
                         // Large Pulse Aura for Super Nodes
                         if (isSuper) {
-                            const pulse = Math.sin(Date.now() / 200) * 5;
+                            const { AURA_PULSE_SPEED, AURA_PULSE_MAGNITUDE, AURA_RADIUS_SCALE, AURA_COLOR, AURA_DEFAULT_RADIUS } = VISUAL_STATS.SUPER_NODE;
+                            const pulse = Math.sin(Date.now() / AURA_PULSE_SPEED) * AURA_PULSE_MAGNITUDE;
                             ctx.save();
                             ctx.beginPath();
-                            ctx.arc(res.x, res.y, (res.radius * 2 || 20) + pulse, 0, Math.PI * 2);
-                            ctx.fillStyle = 'rgba(191, 0, 255, 0.3)';
+                            ctx.arc(res.x, res.y, (res.radius * AURA_RADIUS_SCALE || AURA_DEFAULT_RADIUS) + pulse, 0, Math.PI * 2);
+                            ctx.fillStyle = AURA_COLOR;
                             ctx.fill();
                             ctx.restore();
                         }
