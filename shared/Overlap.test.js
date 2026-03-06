@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { GameState } from './GameState.js';
 import { ENTITY_STATS } from './EntityStats.js';
 
-describe('GameState - Structure Overlap (Rule A)', () => {
+describe('GameState - Structure Overlap & Landing Collisions', () => {
     let game;
 
     beforeEach(() => {
@@ -10,7 +10,7 @@ describe('GameState - Structure Overlap (Rule A)', () => {
         game.initializeGame(['p1', 'p2']);
     });
 
-    it('should destroy two hubs launched to the same spot in the same round', () => {
+    it('should destroy two hubs that land in the same spot in the same round (Rule A)', () => {
         const p1Hub = game.entities.find(e => e.owner === 'p1' && e.type === 'HUB');
         const p2Hub = game.entities.find(e => e.owner === 'p2' && e.type === 'HUB');
 

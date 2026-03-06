@@ -383,7 +383,7 @@ export class GameState {
 
     /**
      * Structure Collision & Overlap Detection (Phase 6)
-     * Rule A: Simultaneous mid-air collision (destroyed)
+     * Rule A: Simultaneous landing overlap (both destroyed)
      * Rule B: Crash on existing structure (destroy landing, damage existing)
      */
     checkStructureCollisions(tempVisuals = []) {
@@ -402,11 +402,11 @@ export class GameState {
                     toDestroy.add(newEnt.id);
                     oldEnt.hp -= 1; // 1 Crash damage to existing
                     tempVisuals.push({ type: 'LINK_COLLISION', x: oldEnt.x, y: oldEnt.y, duration: 30 });
-                    console.log(`[Collision] Rule B: ${newEnt.type} crashed into ${oldEnt.type}!`);
+                    console.log(`[Collision] Rule B: ${newEnt.type} crashed into ${oldEnt.type} upon landing!`);
                 }
             });
 
-            // 2. Rule A: Simultaneous mid-air collision (Other new structures)
+            // 2. Rule A: Simultaneous landing overlap (Other new structures)
             newEntities.forEach(otherNew => {
                 if (newEnt.id === otherNew.id) return;
                 const or = ENTITY_STATS[otherNew.type]?.size || 20;
@@ -425,7 +425,7 @@ export class GameState {
                         duration: 30
                     });
 
-                    console.log(`[Collision] Rule A: ${newEnt.type} and ${otherNew.type} crashed in mid-air!`);
+                    console.log(`[Collision] Rule A: ${newEnt.type} and ${otherNew.type} overlapped upon landing!`);
                 }
             });
         });
