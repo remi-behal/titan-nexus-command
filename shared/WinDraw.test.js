@@ -15,11 +15,11 @@ describe('GameState - Win/Draw Conditions', () => {
         const p2Hub = game.entities.find(e => e.owner === 'p2' && e.type === 'HUB');
 
         // Move them close for easy targeting
-        // Hubbard at (250,500), opponent at (550,500)
+        // p1Hub at (250,500), p2Hub at (550,500)
         p1Hub.x = 250; p1Hub.y = 500;
         p2Hub.x = 550; p2Hub.y = 500;
 
-        // Weakness: Both fire weapons at each other (deals 2 damage, hubs have 5)
+        // Both fire weapons at each other (deals 2 damage, hubs have 5)
         p1Hub.hp = 1;
         p2Hub.hp = 1;
 
