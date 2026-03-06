@@ -839,6 +839,9 @@ export class GameState {
                 // Check for map hazards first (sets hp to 0)
                 this.checkMapHazards(tempVisuals);
 
+                // Check for structure overlaps (Rule A & B)
+                this.checkStructureCollisions(tempVisuals);
+
                 // Clean up all destroyed entities this round
                 this.entities.forEach(e => {
                     if (e.hp <= 0) impacts.add(e.id);

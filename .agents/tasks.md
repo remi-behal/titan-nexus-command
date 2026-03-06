@@ -17,7 +17,7 @@
     - [ ] Chat system.
     - [ ] Lobby management / Player slotting.
 - [ ] **Conflict Resolution & Pathing**: <!-- id: 74 -->
-    - [ ] **Structure Overlap**: Both destroyed if landing same spot. <!-- id: 59 -->
+    - [x] **Structure Overlap**: Both destroyed if landing same spot. <!-- id: 59 -->
     - [ ] **Autonomous Projectiles**: Persist if source hub destroyed. <!-- id: 60 -->
     - [ ] **Post-Mortem Revenge**: Finish paths before elimination. <!-- id: 61 -->
     - [ ] **Defensive Overkill**: Defenses reacquire if target gone. <!-- id: 62 -->
