@@ -568,7 +568,9 @@ export class GameState {
                         if (source.fuel !== undefined) source.fuel--;
 
                         const rad = (action.angle * Math.PI) / 180;
-                        const launchDistance = GameState.calculateLaunchDistance(action.distance);
+                        const stats = ENTITY_STATS[action.itemType];
+                        const velocity = stats.speed || GLOBAL_STATS.SPEED_TIERS.SLOW;
+                        const arrivalTick = Math.max(1, Math.floor(launchDistance / velocity));
 
                         tempProjectiles.push({
                             id: Math.random().toString(36).substring(2, 6),
@@ -581,6 +583,8 @@ export class GameState {
                             intendedDx: Math.cos(rad) * launchDistance,
                             intendedDy: Math.sin(rad) * launchDistance,
                             totalDist: launchDistance,
+                            arrivalTick: Math.min(subTicks, arrivalTick),
+                            velocity: velocity,
                             active: true
                         });
                         console.log(`[Launch] ${action.playerId} fired ${action.itemType} from ${source.id}`);
@@ -594,12 +598,10 @@ export class GameState {
                 });
 
                 // 2. Simulation Loop
-                const subTicks = 120; // High internal resolution for smoothness
-                const snapshotStep = 4; // Capture ~30 frames per round
+                const subTicks = GLOBAL_STATS.ACTION_SUB_TICKS; // Use centralized constant
+                const snapshotStep = Math.max(1, Math.floor(subTicks / 30)); // Dynamically scale snapshots
 
                 for (let t = 1; t <= subTicks; t++) {
-                    const progress = t / subTicks;
-
                     // --- Interception Logic ---
                     this.entities.forEach(def => {
                         if (def.type === 'DEFENSE' && def.fuel > 0) {
@@ -633,7 +635,7 @@ export class GameState {
                                     y: def.y,
                                     targetX: closestProj.currX,
                                     targetY: closestProj.currY,
-                                    duration: 15 // Lasts for ~15 subticks (approx 4 snapshots)
+                                    duration: Math.max(5, Math.floor(subTicks / 8)) // Scaled duration
                                 });
 
                                 console.log(`[Intercept] ${def.id} blocked projectile from ${closestProj.owner}`);
@@ -644,14 +646,21 @@ export class GameState {
                     tempProjectiles.forEach(proj => {
                         if (!proj.active) return;
 
-                        // Use explicit intended vector to avoid "Shortest Path" directional flips
-                        proj.currX = this.wrapX(proj.startX + proj.intendedDx * progress);
-                        proj.currY = this.wrapY(proj.startY + proj.intendedDy * progress);
+                        // Constant Velocity Movement
+                        const progress = t / proj.arrivalTick;
 
-                        if (t === subTicks) {
+                        if (t < proj.arrivalTick) {
+                            // Use explicit intended vector to avoid "Shortest Path" directional flips
+                            proj.currX = this.wrapX(proj.startX + proj.intendedDx * progress);
+                            proj.currY = this.wrapY(proj.startY + proj.intendedDy * progress);
+                        } else if (t === proj.arrivalTick) {
+                            // Final arrival precisely at arrivalTick
+                            proj.currX = this.wrapX(proj.startX + proj.intendedDx);
+                            proj.currY = this.wrapY(proj.startY + proj.intendedDy);
                             proj.active = false;
+
                             if (proj.type !== 'WEAPON') {
-                                // Structure landing (mid-round)
+                                // Structure landing
                                 const data = {
                                     type: proj.type,
                                     owner: proj.owner,
@@ -661,21 +670,24 @@ export class GameState {
                                     intendedDx: proj.intendedDx,
                                     intendedDy: proj.intendedDy,
                                     deployed: false,
-                                    hp: GLOBAL_STATS.UNDEPLOYED_HP // Vulnerable until round end
+                                    hp: GLOBAL_STATS.UNDEPLOYED_HP
                                 };
                                 const newEnt = this.addEntity(data);
                                 if (data.sourceId && data.intendedDx !== undefined && data.intendedDy !== undefined) {
                                     this.addLink(data.sourceId, newEnt.id, data.owner, data.intendedDx, data.intendedDy);
                                 }
                                 console.log(`[Round ${round}] ${proj.owner} ${proj.type} landed at sub-tick ${t}`);
+                            } else {
+                                // Weapon impact triggers AOE logic at end of this loop
+                                proj.hitThisTick = true;
                             }
                         }
                     });
 
                     // Second pass for Weapons to catch anything that landed this tick (AOE Damage)
                     tempProjectiles.forEach(proj => {
-                        if (proj.type === 'WEAPON' && !proj.active && t === subTicks) {
-                            console.log(`[Explosion] ${proj.owner} weapon detonated at (${Math.round(proj.currX)}, ${Math.round(proj.currY)})`);
+                        if (proj.type === 'WEAPON' && proj.hitThisTick && t === proj.arrivalTick) {
+                            console.log(`[Explosion] ${proj.owner} weapon detonated at (${Math.round(proj.currX)}, ${Math.round(proj.currY)}) at tick ${t}`);
 
                             // Create visual explosion
                             tempVisuals.push({
