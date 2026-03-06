@@ -388,12 +388,25 @@ export class GameState {
      */
     checkStructureCollisions(tempVisuals = []) {
         const newEntities = this.entities.filter(e => e.deployed === false);
+        const existingEntities = this.entities.filter(e => e.deployed !== false);
         const toDestroy = new Set();
 
         newEntities.forEach(newEnt => {
             const nr = ENTITY_STATS[newEnt.type]?.size || 20;
 
-            // 1. Rule A: Simultaneous mid-air collision (Other new structures)
+            // 1. Rule B: Crash on existing structure (already deployed)
+            existingEntities.forEach(oldEnt => {
+                const or = ENTITY_STATS[oldEnt.type]?.size || 20;
+                const dist = this.getToroidalDistance(newEnt.x, newEnt.y, oldEnt.x, oldEnt.y);
+                if (dist < (nr + or)) {
+                    toDestroy.add(newEnt.id);
+                    oldEnt.hp -= 1; // 1 Crash damage to existing
+                    tempVisuals.push({ type: 'LINK_COLLISION', x: oldEnt.x, y: oldEnt.y, duration: 30 });
+                    console.log(`[Collision] Rule B: ${newEnt.type} crashed into ${oldEnt.type}!`);
+                }
+            });
+
+            // 2. Rule A: Simultaneous mid-air collision (Other new structures)
             newEntities.forEach(otherNew => {
                 if (newEnt.id === otherNew.id) return;
                 const or = ENTITY_STATS[otherNew.type]?.size || 20;
