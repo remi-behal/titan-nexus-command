@@ -45,7 +45,7 @@
 - [ ] **Dynamic Weather**: Methane rain and high winds. <!-- id: 49 -->
 - [ ] **Spectator Mode**: Ability to watch without a player slot. <!-- id: 50 -->
 - [ ] **Testing & Refinement**: <!-- id: 52 -->
-    - [ ] **Draw Condition**: Implement and test simultaneous destruction of all hubs. <!-- id: 66 -->
+    - [x] **Draw Condition**: Implement and test simultaneous destruction of all hubs. <!-- id: 66 -->
     - [ ] **Connection & Networking**: <!-- id: 75 -->
         - [ ] Reconnect gracefully after drops. More thinking required, see Networking Resilience Tests conversation. <!-- id: 67 -->
         - [x] Handle disconnect while action is "Locked In". <!-- id: 69 -->
