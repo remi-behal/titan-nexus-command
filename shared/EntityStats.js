@@ -14,7 +14,8 @@ export const ENTITY_STATS = {
         energyGen: 0,
         cost: 20,
         size: 40, // Base radius for rendering and selection
-        labelOffset: 35
+        labelOffset: 35,
+        speed: 8 // SLOW
     },
     DEFENSE: {
         hp: 2,
@@ -24,7 +25,8 @@ export const ENTITY_STATS = {
         range: 100,
         cost: 25,
         size: 15, // Half-width for the square render
-        labelOffset: 35
+        labelOffset: 35,
+        speed: 8 // SLOW
     },
     EXTRACTOR: {
         hp: 2,
@@ -32,7 +34,8 @@ export const ENTITY_STATS = {
         energyGen: 5,
         cost: 25,
         size: 20,
-        labelOffset: 35
+        labelOffset: 35,
+        speed: 8 // SLOW
     },
     WEAPON: {
         hp: 1,
@@ -43,7 +46,8 @@ export const ENTITY_STATS = {
         radiusHalf: 20,
         vision: 100,
         size: 8, // Radius for the projectile render
-        labelOffset: 35
+        labelOffset: 35,
+        speed: 10 // NORMAL
     }
 };
 
@@ -79,6 +83,16 @@ export const GLOBAL_STATS = {
     MAP_WIDTH: 2000,
     MAP_HEIGHT: 2000,
     DEFAULT_HP: 3,
+
+    // Simulation Parameters
+    ACTION_SUB_TICKS: 100,
+    SPEED_TIERS: {
+        SLOW: 8,
+        NORMAL: 10,
+        FAST: 16,
+        VERY_FAST: 20,
+        TELE_STRIKE: 40
+    },
 
     // Visuals & UI
     RESOURCE_SIZE: 8,
