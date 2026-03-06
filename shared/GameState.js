@@ -552,6 +552,8 @@ export class GameState {
             });
 
             if (roundActions.length > 0) {
+                const subTicks = GLOBAL_STATS.ACTION_SUB_TICKS;
+
                 // b. Sub-tick Simulation
                 const tempProjectiles = [];
                 const impacts = new Set(); // IDs of entities to be destroyed at turn end
@@ -568,6 +570,7 @@ export class GameState {
                         if (source.fuel !== undefined) source.fuel--;
 
                         const rad = (action.angle * Math.PI) / 180;
+                        const launchDistance = GameState.calculateLaunchDistance(action.distance);
                         const stats = ENTITY_STATS[action.itemType];
                         const velocity = stats.speed || GLOBAL_STATS.SPEED_TIERS.SLOW;
                         const arrivalTick = Math.max(1, Math.floor(launchDistance / velocity));
@@ -598,7 +601,6 @@ export class GameState {
                 });
 
                 // 2. Simulation Loop
-                const subTicks = GLOBAL_STATS.ACTION_SUB_TICKS; // Use centralized constant
                 const snapshotStep = Math.max(1, Math.floor(subTicks / 30)); // Dynamically scale snapshots
 
                 for (let t = 1; t <= subTicks; t++) {
