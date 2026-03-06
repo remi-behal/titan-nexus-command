@@ -381,6 +381,48 @@ export class GameState {
         }
     }
 
+    /**
+     * Structure Collision & Overlap Detection (Phase 6)
+     * Rule A: Simultaneous mid-air collision (destroyed)
+     * Rule B: Crash on existing structure (destroy landing, damage existing)
+     */
+    checkStructureCollisions(tempVisuals = []) {
+        const newEntities = this.entities.filter(e => e.deployed === false);
+        const toDestroy = new Set();
+
+        newEntities.forEach(newEnt => {
+            const nr = ENTITY_STATS[newEnt.type]?.size || 20;
+
+            // 1. Rule A: Simultaneous mid-air collision (Other new structures)
+            newEntities.forEach(otherNew => {
+                if (newEnt.id === otherNew.id) return;
+                const or = ENTITY_STATS[otherNew.type]?.size || 20;
+                const dist = this.getToroidalDistance(newEnt.x, newEnt.y, otherNew.x, otherNew.y);
+
+                if (dist < (nr + or)) {
+                    toDestroy.add(newEnt.id);
+                    toDestroy.add(otherNew.id);
+
+                    // Add visual effect at the midpoint (toroidal-aware)
+                    const vector = GameState.getToroidalVector(newEnt.x, newEnt.y, otherNew.x, otherNew.y, this.map.width, this.map.height);
+                    tempVisuals.push({
+                        type: 'LINK_COLLISION',
+                        x: this.wrapX(newEnt.x + vector.dx / 2),
+                        y: this.wrapY(newEnt.y + vector.dy / 2),
+                        duration: 30
+                    });
+
+                    console.log(`[Collision] Rule A: ${newEnt.type} and ${otherNew.type} crashed in mid-air!`);
+                }
+            });
+        });
+
+        toDestroy.forEach(id => {
+            const ent = this.entities.find(e => e.id === id);
+            if (ent) ent.hp = 0;
+        });
+    }
+
     addEntity(data) {
         const id = Math.random().toString(36).substring(2, 10); // Node-friendly unique ID
 
