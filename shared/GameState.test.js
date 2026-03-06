@@ -429,17 +429,17 @@ describe('GameState - Launch Direction Consistency', () => {
 
         const snapshots = game.resolveTurn(actions);
 
-        // Find a snapshot around the midpoint of the sub-round (subTicks = 120, capture every 4)
-        // SubTick 60 is exactly halfway.
-        const midSnapshot = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 60);
+        // Find a snapshot around the midpoint of the sub-round (subTicks = 100, capture every step)
+        // SubTick 48 is close to halfway and a multiple of our dynamic snapshot step (3)
+        const midSnapshot = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 48);
         expect(midSnapshot).toBeDefined();
 
         const projectile = midSnapshot.state.entities.find(e => e.type === 'PROJECTILE');
         expect(projectile).toBeDefined();
 
-        // Expected X: 250 + 400 = 650
-        // If it flipped, it would be 250 - 100 = 150
-        expect(projectile.x).toBeCloseTo(650);
+        // Expected X: 250 + (800 * 0.48) = 634
+        // If it flipped, it would be much lower/different
+        expect(projectile.x).toBeCloseTo(634);
     });
 });
 describe('GameState - Fog of War', () => {
