@@ -12,7 +12,7 @@
     - [x] Lakes (Non-buildable, Link-blocking) <!-- id: 84 -->
     - [x] Mountains (Non-buildable, Link-traversable) <!-- id: 55 -->
     - [x] Energy Nodes (Static locations for Extractors) <!-- id: 13 -->
-    - [ ] Super Energy Nodes (High yield, competitive) <!-- id: 56 -->
+    - [x] Super Energy Nodes (High yield, competitive) <!-- id: 56 -->
 - [ ] **Multiplayer Enhancements**: <!-- id: 47 -->
     - [ ] Chat system.
     - [ ] Lobby management / Player slotting.
