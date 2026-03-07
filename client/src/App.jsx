@@ -296,6 +296,9 @@ function App() {
           <option value="DEFENSE" disabled={pCurrent.energy < ENTITY_STATS.DEFENSE.cost}>
             Static Defense ({ENTITY_STATS.DEFENSE.cost} E)
           </option>
+          <option value="SUPER_BOMB" disabled={pCurrent.energy < (ENTITY_STATS.SUPER_BOMB?.cost || 10)}>
+            Super Bomb [TEST] ({ENTITY_STATS.SUPER_BOMB?.cost || 10} E)
+          </option>
         </select>
 
         {(() => {
