@@ -115,7 +115,7 @@ const GameBoard = ({
                 .map(e => ({
                     x: e.x,
                     y: e.y,
-                    radius: ENTITY_STATS[e.type]?.vision || (e.type === 'PROJECTILE' ? ENTITY_STATS.WEAPON.vision : 0)
+                    radius: ENTITY_STATS[e.type]?.vision || 0
                 }))
                 .filter(v => v.radius > 0);
 
@@ -163,7 +163,7 @@ const GameBoard = ({
                     const viz = visualEntities.current[id];
 
                     // If it's a transient effect/projectile OR if it was OUR structure, it disappears immediately
-                    const TRANSIENT_TYPES = ['PROJECTILE', 'WEAPON', 'EXPLOSION', 'LASER_BEAM', 'LINK_COLLISION'];
+                    const TRANSIENT_TYPES = ['PROJECTILE', 'WEAPON', 'SUPER_BOMB', 'EXPLOSION', 'LASER_BEAM', 'LINK_COLLISION'];
                     if (TRANSIENT_TYPES.includes(viz.type) || viz.owner === myPlayerId) {
                         delete visualEntities.current[id];
                         return;
@@ -440,12 +440,15 @@ const GameBoard = ({
                             ctx.lineWidth = 1;
                         }
 
-                        if (entity.type === 'PROJECTILE' || entity.type === 'WEAPON') {
+                        const isProjectile = ENTITY_STATS[entity.type]?.damageFull !== undefined;
+
+                        if (isProjectile) {
                             ctx.save();
                             ctx.shadowBlur = 10;
                             ctx.shadowColor = color;
                             ctx.beginPath();
-                            ctx.arc(entity.x, entity.y, GLOBAL_STATS.PROJECTILE_RADIUS, 0, Math.PI * 2);
+                            const radius = ENTITY_STATS[entity.type]?.size || GLOBAL_STATS.PROJECTILE_RADIUS;
+                            ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
                             ctx.fill();
                             ctx.restore();
                         } else if (entity.type === 'LASER_BEAM') {
@@ -546,7 +549,8 @@ const GameBoard = ({
                         ctx.restore();
 
                         // Draw label if not a projectile or beam
-                        if (entity.type !== 'PROJECTILE' && entity.type !== 'LASER_BEAM') {
+                        const isTransEntity = ENTITY_STATS[entity.type]?.damageFull !== undefined || entity.type === 'LASER_BEAM';
+                        if (!isTransEntity) {
                             ctx.save();
                             ctx.globalAlpha = displayAsGhost ? 0.3 : 0.8;
                             ctx.fillStyle = '#fff';
@@ -701,11 +705,11 @@ const GameBoard = ({
                         fctx.translate(ox, oy);
 
                         gameState.entities.forEach(e => {
-                            const isOwnProjectile = e.type === 'PROJECTILE' && e.owner === myPlayerId;
+                            const isOwnProjectile = ENTITY_STATS[e.type]?.damageFull !== undefined && e.owner === myPlayerId;
                             const isOwnEntity = e.owner === myPlayerId;
 
                             if (isOwnEntity || isOwnProjectile) {
-                                const radius = ENTITY_STATS[e.type]?.vision || (e.type === 'PROJECTILE' ? ENTITY_STATS.WEAPON.vision : 0);
+                                const radius = ENTITY_STATS[e.type]?.vision || 0;
                                 if (radius > 0) {
                                     fctx.beginPath();
                                     const viz = visualEntities.current[e.id] || e;

@@ -661,7 +661,8 @@ export class GameState {
                             proj.currY = this.wrapY(proj.startY + proj.intendedDy);
                             proj.active = false;
 
-                            if (proj.type !== 'WEAPON') {
+                            const stats = ENTITY_STATS[proj.type];
+                            if (stats?.damageFull === undefined) {
                                 // Structure landing
                                 const data = {
                                     type: proj.type,
@@ -743,7 +744,7 @@ export class GameState {
                             ...snapshotState.entities,
                             ...tempProjectiles.filter(p => p.active).map(p => ({
                                 id: `proj-${p.id}`,
-                                type: 'PROJECTILE',
+                                type: p.type,
                                 owner: p.owner,
                                 x: p.currX,
                                 y: p.currY
