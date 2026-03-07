@@ -5,7 +5,10 @@
  * This includes HP, costs, fuel, range, and other balanced values.
  */
 
+import { EXPERIMENTAL_STATS } from './ExperimentalStats.js';
+
 export const ENTITY_STATS = {
+    ...EXPERIMENTAL_STATS,
     HUB: {
         hp: 5,
         fuel: 3,
