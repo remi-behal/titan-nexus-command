@@ -688,7 +688,8 @@ export class GameState {
 
                     // Second pass for Weapons to catch anything that landed this tick (AOE Damage)
                     tempProjectiles.forEach(proj => {
-                        if (proj.type === 'WEAPON' && proj.hitThisTick && t === proj.arrivalTick) {
+                        const stats = ENTITY_STATS[proj.type];
+                        if (stats?.damageFull !== undefined && proj.hitThisTick && t === proj.arrivalTick) {
                             console.log(`[Explosion] ${proj.owner} weapon detonated at (${Math.round(proj.currX)}, ${Math.round(proj.currY)}) at tick ${t}`);
 
                             // Create visual explosion
@@ -699,17 +700,17 @@ export class GameState {
                                 duration: 20
                             });
 
-                            const FULL_RADIUS = ENTITY_STATS.WEAPON.radiusFull;
-                            const HALF_RADIUS = ENTITY_STATS.WEAPON.radiusHalf;
+                            const FULL_RADIUS = stats.radiusFull;
+                            const HALF_RADIUS = stats.radiusHalf;
 
                             this.entities.forEach(entity => {
                                 const dist = this.getToroidalDistance(entity.x, entity.y, proj.currX, proj.currY);
                                 let damage = 0;
 
                                 if (dist <= FULL_RADIUS) {
-                                    damage = ENTITY_STATS.WEAPON.damageFull;
+                                    damage = stats.damageFull;
                                 } else if (dist <= HALF_RADIUS) {
-                                    damage = ENTITY_STATS.WEAPON.damageHalf;
+                                    damage = stats.damageHalf;
                                 }
 
                                 if (damage > 0) {
