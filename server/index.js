@@ -203,8 +203,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('syncActions', (actions) => {
+        if (isResolvingTurn) return; // Prevent late updates from leaking into current/next turn state
         if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
-        if (lockedIn[assignedPlayerId]) return; // Cannot update after lock-in
 
         console.log(`Syncing actions from ${assignedPlayerId}:`, actions.length);
 
@@ -228,6 +228,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('submitActions', (actions) => {
+        if (isResolvingTurn) return; // Ignore submissions that arrive while turn is already resolving
         if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
 
         console.log(`Actions received from ${assignedPlayerId}:`, actions);
@@ -270,6 +271,7 @@ io.on('connection', (socket) => {
 
     // Add a 'passTurn' event for when they don't want to launch anything
     socket.on('passTurn', () => {
+        if (isResolvingTurn) return;
         if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
 
         console.log(`${assignedPlayerId} passed turn`);
