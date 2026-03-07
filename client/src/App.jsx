@@ -198,17 +198,9 @@ function App() {
     }
   }, [committedActions, isLocked, isResolving]);
 
-  // Auto-submit turn when timer hits 0
-  useEffect(() => {
-    if (timeRemaining === 0 && !isLocked && !isResolving) {
-      console.log('Timer expired, auto-submitting turn...');
-      // If we're currently aiming, cancel it so it's NOT included in the final submission
-      if (isAiming) {
-        setIsAiming(false);
-      }
-      handleExecuteTurn();
-    }
-  }, [timeRemaining, isLocked, isResolving, handleExecuteTurn, isAiming]);
+  // Note: We used to auto-submit here, but the server is the primary authority for turn resolution.
+  // Letting the client auto-submit at 0 creates a race condition where it triggers for Turn 2
+  // while state is still synchronising.
 
 
   // Defensive check: Stay on loading screen until we have BOTH state and an assignment

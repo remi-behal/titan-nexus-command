@@ -80,7 +80,7 @@ function tick() {
     safeEmit(io, 'timerUpdate', timeRemaining);
 
     if (timeRemaining <= 0) {
-        // console.log('[Timer] Time up! Auto-resolving turn...');
+        console.log('[Timer] Time up! Auto-resolving turn...');
         resolveTurn();
     } else {
         timerTimeout = setTimeout(tick, 1000);
@@ -152,17 +152,22 @@ async function resolveTurn() {
             await new Promise(resolve => setTimeout(resolve, delay));
         }
 
-        // Reset for next turn
+        // 1. Reset locks and actions for the next turn
         lockedIn.player1 = false;
         lockedIn.player2 = false;
         turnActions.player1 = [];
         turnActions.player2 = [];
 
+        // 2. Clear state on clients
         safeEmit(io, 'syncStatus', { lockedIn });
+
+        // 3. START TIMER FIRST (crucial so client sees time > 0 before resolution ends)
+        startTimer();
+
+        // 4. Finally stop the resolution cinematic
         safeEmit(io, 'resolutionStatus', { active: false });
 
-        // Start timer for the next turn
-        startTimer();
+        console.log('--- Resolution Complete ---');
     } finally {
         isResolvingTurn = false;
     }
@@ -264,7 +269,7 @@ io.on('connection', (socket) => {
 
         // Check if both players are locked in
         if (lockedIn.player1 && lockedIn.player2) {
-            console.log('Both players locked in. Triggering resolution early...');
+            console.log(`[Socket] Both players locked in (via Submit from ${assignedPlayerId}). Triggering resolution early...`);
             resolveTurn();
         }
     });
@@ -281,7 +286,7 @@ io.on('connection', (socket) => {
         safeEmit(io, 'syncStatus', { lockedIn });
 
         if (lockedIn.player1 && lockedIn.player2) {
-            console.log('Both players locked in (via Pass). Triggering resolution early...');
+            console.log(`[Socket] Both players locked in (via Pass from ${assignedPlayerId}). Triggering resolution early...`);
             resolveTurn();
         }
     });
