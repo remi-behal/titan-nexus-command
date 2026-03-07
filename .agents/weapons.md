@@ -16,7 +16,7 @@ A simple weapon that travels in a straight line and explodes at it's landing spo
     * **Half Damage radius**: 20
 * **Speed**: NORMAL (10 px/tick)
 
-### Super bomb - Temp for testing only. Remove Later. Implemented []
+### Super bomb - Temp for testing only. Remove Later. Implemented [x]
 #### Overview
 A simple weapon that travels in a straight line and explodes at it's landing spot.
 #### Stats
@@ -29,7 +29,6 @@ A simple weapon that travels in a straight line and explodes at it's landing spo
     * **Full Damage radius**: 10
     * **Half Damage radius**: 20
 * **Speed**: VERY FAST (20 px/tick)
-###
 
 ## Speed Tiers
 | Keyword | Velocity | Arrival @ Max Range |
