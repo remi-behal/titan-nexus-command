@@ -11,8 +11,7 @@ describe('GameState - Structure Overlap & Landing Collisions', () => {
     });
 
     it('should destroy two hubs that land in the same spot in the same round (Rule A)', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'p1' && e.type === 'HUB');
-        const p2Hub = game.entities.find(e => e.owner === 'p2' && e.type === 'HUB');
+
 
         // Note: Real launches use complex math but for the unit test 
         // we'll manually instantiate the entities in their "landed but undeployed" state.

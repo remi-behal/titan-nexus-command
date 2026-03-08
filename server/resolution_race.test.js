@@ -59,9 +59,7 @@ describe('Server - Resolution Race Guard', () => {
 
         // 3. Send a "Malicious" submission while resolution is active
         // This simulates the user releasing a drag just after the timer expires
-        let initialSyncReceived = false;
-        client1.once('syncStatus', (status) => {
-            initialSyncReceived = true;
+        client1.once('syncStatus', () => {
         });
 
         // We want to verify that Turn 2 starts with UNLOCKED status,
@@ -90,9 +88,9 @@ describe('Server - Resolution Race Guard', () => {
             client1.emit('requestState');
         });
 
-        // With our new Responsive Behavior, pre-emptive submissions ARE accepted for the NEXT turn.
-        // So finalLockedStatus should show player1 as TRUE (since we sent [] during resolution).
-        expect(finalLockedStatus.player1).toBe(true);
+        // With our new Strict Lockout behavior, pre-emptive submissions ARE REJECTED.
+        // So finalLockedStatus should show player1 as FALSE for Turn 2.
+        expect(finalLockedStatus.player1).toBe(false);
         expect(finalLockedStatus.player2).toBe(false);
     }, 20000);
 });

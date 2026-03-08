@@ -68,7 +68,7 @@ function startTimer() {
         timerTimeout = null;
     }
     timeRemaining = TURN_DURATION;
-    // console.log(`[Timer] Starting new turn timer: ${timeRemaining}s`);
+    console.log(`[Timer] NEW TIMER START: ${timeRemaining}s`);
     safeEmit(io, 'timerUpdate', timeRemaining);
 
     timerTimeout = setTimeout(tick, 1000);
@@ -76,11 +76,11 @@ function startTimer() {
 
 function tick() {
     timeRemaining--;
-    // console.log(`[Timer] Tick: ${timeRemaining}`);
+    console.log(`[Timer] Tick: ${timeRemaining} (Phase: ${game.phase})`);
     safeEmit(io, 'timerUpdate', timeRemaining);
 
     if (timeRemaining <= 0) {
-        console.log('[Timer] Time up! Auto-resolving turn...');
+        console.log('[Timer] Time up! Condition met.');
         resolveTurn();
     } else {
         timerTimeout = setTimeout(tick, 1000);
@@ -105,14 +105,15 @@ function emitFilteredState(state = null) {
     });
 }
 
-let isResolvingTurn = false;
+
 
 async function resolveTurn() {
-    if (isResolvingTurn) {
+    console.log(`[Server] resolveTurn called. Current Phase: ${game.phase}`);
+    if (game.phase === 'RESOLVING') {
         console.warn('[Server] Blocked parallel turn resolution.');
         return;
     }
-    isResolvingTurn = true;
+    game.phase = 'RESOLVING';
 
     try {
         if (timerTimeout) {
@@ -125,12 +126,9 @@ async function resolveTurn() {
             player2: turnActions.player2 || []
         };
 
-        // 1. RESET LOCKS AND ACTIONS IMMEDIATELY FOR THE NEXT TURN
-        // This allows clients to plan Turn N+1 while Turn N's cinematic is still playing.
-        lockedIn.player1 = false;
-        lockedIn.player2 = false;
-        turnActions.player1 = [];
-        turnActions.player2 = [];
+        // 1. All action processing now happens in GameState.js, which manages its own phase.
+        // Actions are no longer cleared here at the start to prevent planning during resolution.
+        timeRemaining = TURN_DURATION; // DEFENSIVE: Reset timer value immediately so any latent ticks don't see 0.
 
         let snapshots;
         try {
@@ -163,22 +161,26 @@ async function resolveTurn() {
 
         // 2. Already reset in Step 1 above.
 
-        // 3. START TIMER FIRST (crucial so client sees time > 0 before resolution ends)
+        // 2. Reset server-side locks for the NEXT turn
+        lockedIn.player1 = false;
+        lockedIn.player2 = false;
+        turnActions.player1 = [];
+        turnActions.player2 = [];
 
+        // 3. IMPORTANT: Reset phase back to PLANNING now that observation is over
+        game.phase = 'PLANNING';
+        emitFilteredState(); // BROADCAST the Phase transition so clients unlock visually
+        safeEmit(io, 'syncStatus', { lockedIn });
+
+        // 4. START TIMER FIRST (crucial so client sees time > 0 before resolution ends)
         startTimer();
 
-        // 4. Finally stop the resolution cinematic
+        // 5. Finally stop the resolution cinematic
         safeEmit(io, 'resolutionStatus', { active: false });
 
         console.log('--- Resolution Complete ---');
-
-        // 5. POST-RESOLUTION CHECK: Did everyone lock in for the NEXT turn already?
-        if (lockedIn.player1 && lockedIn.player2) {
-            console.log(`[Socket] Both players already locked in for turn ${game.turn}. Continuing immediately...`);
-            setImmediate(resolveTurn);
-        }
     } finally {
-        isResolvingTurn = false;
+        // game.phase reset is handled above to ensure it covers the 2000ms final delay
     }
 }
 
@@ -217,7 +219,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('syncActions', (actions) => {
-        // Allow syncing even during resolution so UI remains responsive
+        if (game.phase !== 'PLANNING') return;
         if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
 
         // RACE CONDITION FIX: If the player has already SUBMITTED, don't let 
@@ -249,7 +251,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('submitActions', (actions) => {
-        // Allow submission even during resolution, but don't trigger NESTED resolution
+        if (game.phase !== 'PLANNING') return;
         if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
 
         console.log(`Actions received from ${assignedPlayerId}:`, actions);
@@ -292,7 +294,7 @@ io.on('connection', (socket) => {
 
     // Add a 'passTurn' event for when they don't want to launch anything
     socket.on('passTurn', () => {
-        if (isResolvingTurn) return;
+        if (game.phase !== 'PLANNING') return;
         if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
 
         console.log(`${assignedPlayerId} passed turn`);

@@ -23,6 +23,7 @@ export class GameState {
             mountains: []
         };
         this.winner = null;
+        this.phase = 'PLANNING'; // 'PLANNING' or 'RESOLVING'
     }
 
     /**
@@ -476,6 +477,7 @@ export class GameState {
      * Returns an array of snapshots so the client can "watch" the resolution unfold.
      */
     resolveTurn(playerActionsMap) {
+        this.phase = 'RESOLVING';
         const snapshots = [];
         if (this.winner) {
             snapshots.push({ type: 'FINAL', state: this.getState() });
@@ -837,7 +839,7 @@ export class GameState {
                                         destroyedThisCheck.add(newEnt.id);
                                         destroyedThisCheck.add(otherNewEnt.id);
                                         tempVisuals.push({ type: 'LINK_COLLISION', x: intersect.x, y: intersect.y, duration: 30 });
-                                        console.log(`[Collision] Simultaneous links crossed! Both destroyed.`);
+                                        console.log('[Collision] Simultaneous links crossed! Both destroyed.');
                                     }
                                 }
                             });
@@ -927,6 +929,7 @@ export class GameState {
     getState() {
         return {
             turn: this.turn,
+            phase: this.phase,
             players: JSON.parse(JSON.stringify(this.players)),
             entities: this.entities.map(e => ({ ...e })),
             links: this.links.map(l => ({ ...l })),

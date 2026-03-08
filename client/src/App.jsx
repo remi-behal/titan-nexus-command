@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import { GameState } from '../../shared/GameState.js'
 import { ENTITY_STATS, GLOBAL_STATS } from '../../shared/EntityStats.js'
@@ -27,8 +27,8 @@ function App() {
   const [showDebugPreview, setShowDebugPreview] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(30)
   const [isResolving, setIsResolving] = useState(false)
-  const [resolutionRound, setResolutionRound] = useState(null)
-
+  const isResolvingPhase = playerState?.phase === 'RESOLVING';
+  const isResolvingUI = isResolving || isResolvingPhase;
   const isLocked = syncStatus?.lockedIn?.[myPlayerId] || false;
 
   const handleAimStart = (overrideHubId) => {
@@ -79,13 +79,13 @@ function App() {
     setLaunchMode(false)
   }
 
-  const handleExecuteTurn = useCallback(() => {
+  const handleExecuteTurn = () => {
     if (committedActions.length > 0) {
       socket.emit('submitActions', committedActions)
     } else {
       socket.emit('passTurn')
     }
-  }, [committedActions])
+  };
 
   const handleClearActions = () => {
     setCommittedActions([]);
@@ -157,12 +157,9 @@ function App() {
         // so they don't overlap with the server-side simulation projectiles.
         setCommittedActions([]);
       }
-      if (!status.active) setResolutionRound(null);
     };
 
-    const onResolutionRound = (round) => {
-      setResolutionRound(round);
-    };
+
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
@@ -171,7 +168,6 @@ function App() {
     socket.on('syncStatus', onSyncStatus);
     socket.on('timerUpdate', onTimerUpdate);
     socket.on('resolutionStatus', onResolutionStatus);
-    socket.on('resolutionRound', onResolutionRound);
     socket.on('connect_error', onError);
 
     // Initial check in case it connected before the effect ran
@@ -186,17 +182,16 @@ function App() {
       socket.off('syncStatus', onSyncStatus);
       socket.off('timerUpdate', onTimerUpdate);
       socket.off('resolutionStatus', onResolutionStatus);
-      socket.off('resolutionRound', onResolutionRound);
       socket.off('connect_error', onError);
     }
   }, [])
 
   // Sync actions to server as they are created locally
   useEffect(() => {
-    if (!isLocked && !isResolving && committedActions.length >= 0) {
+    if (!isLocked && !isResolvingUI && committedActions.length >= 0) {
       socket.emit('syncActions', committedActions);
     }
-  }, [committedActions, isLocked, isResolving]);
+  }, [committedActions, isLocked, isResolvingUI]);
 
   // Note: We used to auto-submit here, but the server is the primary authority for turn resolution.
   // Letting the client auto-submit at 0 creates a race condition where it triggers for Turn 2
@@ -274,7 +269,7 @@ function App() {
         <select
           value={selectedItemType}
           onChange={(e) => setSelectedItemType(e.target.value)}
-          disabled={isLocked}
+          disabled={isLocked || isResolvingUI}
         >
           <option value="HUB" disabled={pCurrent.energy < ENTITY_STATS.HUB.cost}>
             New Hub ({ENTITY_STATS.HUB.cost} E)
@@ -304,20 +299,22 @@ function App() {
             <button
               className={`launch-btn ${launchMode ? 'active' : ''}`}
               onClick={() => setLaunchMode(active => !active)}
-              disabled={!selectedHubId || isLocked || pCurrent.energy < (ENTITY_STATS[selectedItemType]?.cost || 0) || !hasFuel}
+              disabled={!selectedHubId || isLocked || isResolvingUI || pCurrent.energy < (ENTITY_STATS[selectedItemType]?.cost || 0) || !hasFuel}
             >
-              {isLocked
-                ? 'Mission Locked'
-                : fuelCostWarning
-                  ? fuelCostWarning
-                  : pCurrent.energy < (ENTITY_STATS[selectedItemType]?.cost || 0)
-                    ? `Insufficient Energy (${ENTITY_STATS[selectedItemType]?.cost} E)`
-                    : launchMode ? 'Cancel Aiming' : 'Launch New Structure'}
+              {isResolvingUI
+                ? 'Observation Phase'
+                : isLocked
+                  ? 'Mission Locked'
+                  : fuelCostWarning
+                    ? fuelCostWarning
+                    : pCurrent.energy < (ENTITY_STATS[selectedItemType]?.cost || 0)
+                      ? `Insufficient Energy (${ENTITY_STATS[selectedItemType]?.cost} E)`
+                      : launchMode ? 'Cancel Aiming' : 'Launch New Structure'}
             </button>
           );
         })()}
 
-        {committedActions.length > 0 && !isLocked && (
+        {committedActions.length > 0 && !isLocked && !isResolvingUI && (
           <button className="clear-btn" onClick={handleClearActions}>
             Clear All ({committedActions.length})
           </button>
@@ -326,9 +323,9 @@ function App() {
         <button
           className={`execute-btn ${isLocked ? 'waiting' : ''}`}
           onClick={handleExecuteTurn}
-          disabled={isLocked}
+          disabled={isLocked || isResolvingUI}
         >
-          {isLocked ? 'Waiting for others...' : (committedActions.length > 0 ? `Complete Turn (${committedActions.length})` : 'Complete Turn')}
+          {isResolvingUI ? 'Resolving...' : (isLocked ? 'Waiting for others...' : (committedActions.length > 0 ? `Complete Turn (${committedActions.length})` : 'Complete Turn'))}
         </button>
       </div>
     </header>
@@ -355,19 +352,8 @@ function App() {
     <div className="App">
       {header}
 
-      <main className="game-world">
-        {isResolving && (
-          <div className="resolution-overlay">
-            <div className="spinner"></div>
-            <span>
-              {resolutionRound
-                ? `Executing Simultaneous Round ${resolutionRound}...`
-                : "Initialising Resolution..."}
-            </span>
-          </div>
-        )}
-
-        {!isResolving && !committedActions.length && selectedHubId && launchMode && (
+      <main className={`game-world ${isResolvingUI ? 'locked-out' : ''}`}>
+        {!isResolvingUI && !committedActions.length && selectedHubId && launchMode && (
           <div className="hint-overlay">
             Drag from your selected Hub to launch
           </div>
@@ -382,12 +368,13 @@ function App() {
           committedActions={committedActions}
           showDebugPreview={showDebugPreview}
           maxPullDistance={MAX_PULL_DISTANCE}
+          isResolving={isResolvingUI}
           onSelectHub={setSelectedHubId}
           onAimStart={handleAimStart}
           onAimUpdate={() => { }}
           onAimEnd={handleAimEnd}
         />
-        {launchMode && <div className="hint-overlay">Pull back from the Hub to Aim & Launch!</div>}
+        {launchMode && !isResolvingUI && <div className="hint-overlay">Pull back from the Hub to Aim & Launch!</div>}
       </main>
 
       <footer className="debug-info">

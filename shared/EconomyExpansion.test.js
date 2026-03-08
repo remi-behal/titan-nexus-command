@@ -124,7 +124,7 @@ describe('Economy Expansion - Energy Generation', () => {
         game.map.resources.push(node);
 
         // Place extractor wrapped around the edge (e.g., at x=5)
-        const extractor = game.addEntity({
+        game.addEntity({
             type: 'EXTRACTOR',
             owner: 'player1',
             x: 5,
