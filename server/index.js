@@ -120,12 +120,17 @@ async function resolveTurn() {
             timerTimeout = null;
         }
 
-        console.log('--- Resolving Turn ---');
-
         const actionsMap = {
             player1: turnActions.player1 || [],
             player2: turnActions.player2 || []
         };
+
+        // 1. RESET LOCKS AND ACTIONS IMMEDIATELY FOR THE NEXT TURN
+        // This allows clients to plan Turn N+1 while Turn N's cinematic is still playing.
+        lockedIn.player1 = false;
+        lockedIn.player2 = false;
+        turnActions.player1 = [];
+        turnActions.player2 = [];
 
         let snapshots;
         try {
@@ -137,6 +142,7 @@ async function resolveTurn() {
         }
 
         // Notify clients that resolution is starting
+        safeEmit(io, 'syncStatus', { lockedIn });
         safeEmit(io, 'resolutionStatus', { active: true, totalRounds: snapshots.length });
 
         // Process snapshots with delays
@@ -152,22 +158,25 @@ async function resolveTurn() {
             await new Promise(resolve => setTimeout(resolve, delay));
         }
 
-        // 1. Reset locks and actions for the next turn
-        lockedIn.player1 = false;
-        lockedIn.player2 = false;
-        turnActions.player1 = [];
-        turnActions.player2 = [];
+        // process snapshots...
+        // ... (This loop handles delays)
 
-        // 2. Clear state on clients
-        safeEmit(io, 'syncStatus', { lockedIn });
+        // 2. Already reset in Step 1 above.
 
         // 3. START TIMER FIRST (crucial so client sees time > 0 before resolution ends)
+
         startTimer();
 
         // 4. Finally stop the resolution cinematic
         safeEmit(io, 'resolutionStatus', { active: false });
 
         console.log('--- Resolution Complete ---');
+
+        // 5. POST-RESOLUTION CHECK: Did everyone lock in for the NEXT turn already?
+        if (lockedIn.player1 && lockedIn.player2) {
+            console.log(`[Socket] Both players already locked in for turn ${game.turn}. Continuing immediately...`);
+            setImmediate(resolveTurn);
+        }
     } finally {
         isResolvingTurn = false;
     }
@@ -208,8 +217,15 @@ io.on('connection', (socket) => {
     });
 
     socket.on('syncActions', (actions) => {
-        if (isResolvingTurn) return; // Prevent late updates from leaking into current/next turn state
+        // Allow syncing even during resolution so UI remains responsive
         if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
+
+        // RACE CONDITION FIX: If the player has already SUBMITTED, don't let 
+        // trailing 'sync' packets overwrite the final action list.
+        if (lockedIn[assignedPlayerId]) {
+            console.log(`[Server] Ignored sync from ${assignedPlayerId} (Already Locked)`);
+            return;
+        }
 
         console.log(`Syncing actions from ${assignedPlayerId}:`, actions.length);
 
@@ -233,7 +249,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('submitActions', (actions) => {
-        if (isResolvingTurn) return; // Ignore submissions that arrive while turn is already resolving
+        // Allow submission even during resolution, but don't trigger NESTED resolution
         if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
 
         console.log(`Actions received from ${assignedPlayerId}:`, actions);

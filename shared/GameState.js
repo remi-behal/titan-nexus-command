@@ -744,7 +744,8 @@ export class GameState {
                             ...snapshotState.entities,
                             ...tempProjectiles.filter(p => p.active).map(p => ({
                                 id: `proj-${p.id}`,
-                                type: p.type,
+                                type: 'PROJECTILE',
+                                itemType: p.type, // Store the specific type for UI lookup
                                 owner: p.owner,
                                 x: p.currX,
                                 y: p.currY

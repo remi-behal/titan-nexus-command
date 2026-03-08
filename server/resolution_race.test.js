@@ -90,7 +90,9 @@ describe('Server - Resolution Race Guard', () => {
             client1.emit('requestState');
         });
 
-        expect(finalLockedStatus.player1).toBe(false);
+        // With our new Responsive Behavior, pre-emptive submissions ARE accepted for the NEXT turn.
+        // So finalLockedStatus should show player1 as TRUE (since we sent [] during resolution).
+        expect(finalLockedStatus.player1).toBe(true);
         expect(finalLockedStatus.player2).toBe(false);
     }, 20000);
 });

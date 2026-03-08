@@ -115,7 +115,7 @@ const GameBoard = ({
                 .map(e => ({
                     x: e.x,
                     y: e.y,
-                    radius: ENTITY_STATS[e.type]?.vision || 0
+                    radius: ENTITY_STATS[e.itemType || e.type]?.vision || 0
                 }))
                 .filter(v => v.radius > 0);
 
@@ -440,14 +440,14 @@ const GameBoard = ({
                             ctx.lineWidth = 1;
                         }
 
-                        const isProjectile = ENTITY_STATS[entity.type]?.damageFull !== undefined;
+                        const isProjectile = (entity.type === 'PROJECTILE') || (ENTITY_STATS[entity.itemType || entity.type]?.damageFull !== undefined);
 
                         if (isProjectile) {
                             ctx.save();
                             ctx.shadowBlur = 10;
                             ctx.shadowColor = color;
                             ctx.beginPath();
-                            const radius = ENTITY_STATS[entity.type]?.size || GLOBAL_STATS.PROJECTILE_RADIUS;
+                            const radius = ENTITY_STATS[entity.itemType || entity.type]?.size || GLOBAL_STATS.PROJECTILE_RADIUS;
                             ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
                             ctx.fill();
                             ctx.restore();
@@ -497,7 +497,7 @@ const GameBoard = ({
                             ctx.restore();
                         } else {
                             ctx.beginPath();
-                            const radius = ENTITY_STATS[entity.type]?.size || 20;
+                            const radius = ENTITY_STATS[entity.itemType || entity.type]?.size || 20;
 
                             if (entity.type === 'DEFENSE') {
                                 // Draw Defense as a square/diamond (radius is half-width)
@@ -549,14 +549,14 @@ const GameBoard = ({
                         ctx.restore();
 
                         // Draw label if not a projectile or beam
-                        const isTransEntity = ENTITY_STATS[entity.type]?.damageFull !== undefined || entity.type === 'LASER_BEAM';
+                        const isTransEntity = (entity.type === 'PROJECTILE') || (ENTITY_STATS[entity.itemType || entity.type]?.damageFull !== undefined) || entity.type === 'LASER_BEAM';
                         if (!isTransEntity) {
                             ctx.save();
                             ctx.globalAlpha = displayAsGhost ? 0.3 : 0.8;
                             ctx.fillStyle = '#fff';
                             ctx.font = displayAsGhost ? 'italic 10px Arial' : '10px Arial';
                             ctx.textAlign = 'center';
-                            const labelOffset = ENTITY_STATS[entity.type]?.labelOffset || 35;
+                            const labelOffset = ENTITY_STATS[entity.itemType || entity.type]?.labelOffset || 35;
                             ctx.fillText(displayAsGhost ? `Ghost ${entity.type}` : entity.type, entity.x, entity.y + labelOffset);
                             ctx.restore();
 
