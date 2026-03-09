@@ -51,6 +51,23 @@ export const ENTITY_STATS = {
         size: 8, // Radius for the projectile render
         labelOffset: 35,
         speed: 10 // NORMAL
+    },
+    HOMING_MISSILE: {
+        hp: 1,
+        cost: 20,
+        damageFull: 2,
+        radiusFull: 10,
+        damageHalf: 1,
+        radiusHalf: 20,
+        vision: 300,
+        size: 8,
+        speed: 8,     // SLOW
+        maxSpeed: 20, // VERY FAST
+        acceleration: 1,
+        homingRange: 300,
+        homingFuel: 400,
+        searchCone: 60, //degrees
+        turnRadius: 10
     }
 };
 

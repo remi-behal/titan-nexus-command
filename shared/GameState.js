@@ -89,14 +89,36 @@ export class GameState {
      * Checks if a specific coordinate is visible to a player.
      * Accounts for toroidal wrapping.
      */
-    isPositionVisible(playerId, x, y) {
+    isPositionVisible(playerId, x, y, entities = null) {
         if (!playerId || playerId === 'spectator') return true;
 
-        return this.entities.some(e => {
+        const sourceEntities = entities || this.entities;
+        return sourceEntities.some(e => {
             if (e.owner !== playerId) return false;
-            const radius = ENTITY_STATS[e.type]?.vision || 0;
+
+            // Correctly identify stat key for buildings vs projectiles
+            const statKey = (e.type === 'PROJECTILE' || e.type === 'WEAPON') && e.itemType ? e.itemType : e.type;
+            const stats = ENTITY_STATS[statKey];
+            const radius = stats?.vision || 0;
             if (radius === 0) return false;
-            return this.getToroidalDistance(e.x, e.y, x, y) <= radius;
+
+            const dist = this.getToroidalDistance(e.x, e.y, x, y);
+            if (dist > radius) return false;
+
+            // Projectile-Specific Vision Override: 60 degree cone
+            // NOTE: A projectile ALWAYS sees its own position (dist < 1)
+            if (dist > 1 && (e.type === 'PROJECTILE' || e.type === 'HOMING_MISSILE') && (e.itemType === 'HOMING_MISSILE' || e.type === 'HOMING_MISSILE')) {
+                const vec = this.constructor.getToroidalVector(e.x, e.y, x, y, this.map.width, this.map.height);
+                const angleToPoint = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+
+                let diff = angleToPoint - (e.currentAngle || 0);
+                while (diff > 180) diff -= 360;
+                while (diff < -180) diff += 360;
+
+                return Math.abs(diff) <= (stats.searchCone || 60) / 2;
+            }
+
+            return true;
         });
     }
 
@@ -136,7 +158,7 @@ export class GameState {
             .filter(v => v.radius > 0);
 
         const isVisible = (x, y) => {
-            return visionSources.some(v => this.getToroidalDistance(v.x, v.y, x, y) <= v.radius);
+            return this.isPositionVisible(playerId, x, y, state.entities);
         };
 
         const entitiesRequiredByLinks = new Set();
@@ -580,16 +602,23 @@ export class GameState {
                         tempProjectiles.push({
                             id: Math.random().toString(36).substring(2, 6),
                             type: action.itemType,
+                            itemType: action.itemType,
                             owner: action.playerId,
                             startX: source.x,
                             startY: source.y,
                             currX: source.x,
                             currY: source.y,
+                            currentAngle: action.angle,
                             intendedDx: Math.cos(rad) * launchDistance,
                             intendedDy: Math.sin(rad) * launchDistance,
                             totalDist: launchDistance,
+                            intendedDistance: launchDistance,
                             arrivalTick: Math.min(subTicks, arrivalTick),
                             velocity: velocity,
+                            totalDistanceMoved: 0,
+                            searchMode: false,
+                            targetId: null,
+                            lockFound: false,
                             active: true
                         });
                         console.log(`[Launch] ${action.playerId} fired ${action.itemType} from ${source.id}`);
@@ -650,41 +679,138 @@ export class GameState {
                     tempProjectiles.forEach(proj => {
                         if (!proj.active) return;
 
-                        // Constant Velocity Movement
-                        const progress = t / proj.arrivalTick;
+                        if (proj.type === 'HOMING_MISSILE') {
+                            const stats = ENTITY_STATS.HOMING_MISSILE;
 
-                        if (t < proj.arrivalTick) {
-                            // Use explicit intended vector to avoid "Shortest Path" directional flips
-                            proj.currX = this.wrapX(proj.startX + proj.intendedDx * progress);
-                            proj.currY = this.wrapY(proj.startY + proj.intendedDy * progress);
-                        } else if (t === proj.arrivalTick) {
-                            // Final arrival precisely at arrivalTick
-                            proj.currX = this.wrapX(proj.startX + proj.intendedDx);
-                            proj.currY = this.wrapY(proj.startY + proj.intendedDy);
-                            proj.active = false;
+                            // 1. Lifecycle Check: Ignite seeker at 50% distance
+                            if (!proj.searchMode && proj.totalDistanceMoved >= proj.intendedDistance * 0.5) {
+                                proj.searchMode = true;
+                            }
 
-                            const stats = ENTITY_STATS[proj.type];
-                            if (stats?.damageFull === undefined) {
-                                // Structure landing
-                                const data = {
-                                    type: proj.type,
-                                    owner: proj.owner,
-                                    x: proj.currX,
-                                    y: proj.currY,
-                                    sourceId: roundActions.find(a => a.playerId === proj.owner && a.itemType === proj.type)?.sourceId,
-                                    intendedDx: proj.intendedDx,
-                                    intendedDy: proj.intendedDy,
-                                    deployed: false,
-                                    hp: GLOBAL_STATS.UNDEPLOYED_HP
-                                };
-                                const newEnt = this.addEntity(data);
-                                if (data.sourceId && data.intendedDx !== undefined && data.intendedDy !== undefined) {
-                                    this.addLink(data.sourceId, newEnt.id, data.owner, data.intendedDx, data.intendedDy);
+                            // 2. Seeker Logic: Single Lock policy
+                            if (proj.searchMode && !proj.targetId) {
+                                let minDist = Infinity;
+                                let closestTarget = null;
+
+                                this.entities.forEach(ent => {
+                                    if (ent.owner === proj.owner) return;
+                                    if (ent.type === 'WEAPON' || ent.type === 'PROJECTILE' || ent.type === 'RESOURCE') return;
+
+                                    const dist = this.getToroidalDistance(proj.currX, proj.currY, ent.x, ent.y);
+                                    if (dist > stats.homingRange) return;
+
+                                    const vec = this.constructor.getToroidalVector(proj.currX, proj.currY, ent.x, ent.y, this.map.width, this.map.height);
+                                    const angleToTarget = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+                                    let diff = angleToTarget - proj.currentAngle;
+                                    while (diff > 180) diff -= 360;
+                                    while (diff < -180) diff += 360;
+
+                                    if (Math.abs(diff) <= stats.searchCone / 2) {
+                                        if (dist < minDist) {
+                                            minDist = dist;
+                                            closestTarget = ent;
+                                        }
+                                    }
+                                });
+
+                                if (closestTarget) {
+                                    proj.targetId = closestTarget.id;
+                                    proj.lockFound = true;
                                 }
-                                console.log(`[Round ${round}] ${proj.owner} ${proj.type} landed at sub-tick ${t}`);
-                            } else {
-                                // Weapon impact triggers AOE logic at end of this loop
+                            }
+
+                            // 3. Tracking Logic
+                            if (proj.targetId) {
+                                const target = this.entities.find(e => e.id === proj.targetId);
+                                if (target && target.hp > 0) {
+                                    // Accelerate if target is still active
+                                    if (proj.velocity < stats.maxSpeed) {
+                                        proj.velocity = Math.min(stats.maxSpeed, proj.velocity + stats.acceleration);
+                                    }
+
+                                    const vec = this.constructor.getToroidalVector(proj.currX, proj.currY, target.x, target.y, this.map.width, this.map.height);
+                                    const angleToTarget = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+
+                                    let diff = angleToTarget - proj.currentAngle;
+                                    while (diff > 180) diff -= 360;
+                                    while (diff < -180) diff += 360;
+
+                                    const turn = Math.sign(diff) * Math.min(Math.abs(diff), stats.turnRadius);
+                                    proj.currentAngle += turn;
+                                } else {
+                                    proj.lockFound = false; // Target lost, stop hunting but keep flying straight
+                                }
+                            } else if (proj.searchMode) {
+                                // Passive acceleration during search phase
+                                if (proj.velocity < stats.maxSpeed) {
+                                    proj.velocity = Math.min(stats.maxSpeed, proj.velocity + stats.acceleration);
+                                }
+                            }
+
+                            // 4. Step-based Movement
+                            const moveDist = proj.velocity;
+                            const rad = (proj.currentAngle || 0) * (Math.PI / 180);
+                            proj.currX = this.wrapX(proj.currX + Math.cos(rad) * moveDist);
+                            proj.currY = this.wrapY(proj.currY + Math.sin(rad) * moveDist);
+                            proj.totalDistanceMoved += moveDist;
+
+                            // 5. Impact & Fuel Checks
+                            const fuelLimit = (proj.intendedDistance * 0.5) + (stats.homingFuel || 400);
+                            if (proj.totalDistanceMoved >= fuelLimit) {
+                                proj.active = false;
+                                proj.hitThisTick = true; // Trigger detonation logic
+                            }
+
+                            // Immediate proximity trigger if targeting something
+                            const closestEnt = this.entities.find(e => {
+                                if (e.owner === proj.owner || e.type === 'RESOURCE') return false;
+                                const eStats = ENTITY_STATS[e.type];
+                                const hitDist = (eStats?.size || 10) + (stats.size || 8) + 5;
+                                const actualDist = this.getToroidalDistance(proj.currX, proj.currY, e.x, e.y);
+                                return actualDist <= hitDist;
+                            });
+
+                            if (closestEnt) {
+                                proj.active = false;
                                 proj.hitThisTick = true;
+                            }
+                        } else {
+                            // Standard Projectile Logic (Buildings etc.)
+                            const progress = t / proj.arrivalTick;
+
+                            if (t < proj.arrivalTick) {
+                                // Use explicit intended vector to avoid "Shortest Path" directional flips
+                                proj.currX = this.wrapX(proj.startX + proj.intendedDx * progress);
+                                proj.currY = this.wrapY(proj.startY + proj.intendedDy * progress);
+                            } else if (t === proj.arrivalTick) {
+                                // Final arrival precisely at arrivalTick
+                                proj.currX = this.wrapX(proj.startX + proj.intendedDx);
+                                proj.currY = this.wrapY(proj.startY + proj.intendedDy);
+                                proj.active = false;
+
+                                const stats = ENTITY_STATS[proj.type];
+                                if (stats?.damageFull === undefined) {
+                                    // Structure landing
+                                    const data = {
+                                        type: proj.type,
+                                        owner: proj.owner,
+                                        x: proj.currX,
+                                        y: proj.currY,
+                                        sourceId: roundActions.find(a => a.playerId === proj.owner && a.itemType === proj.type)?.sourceId,
+                                        intendedDx: proj.intendedDx,
+                                        intendedDy: proj.intendedDy,
+                                        deployed: false,
+                                        hp: GLOBAL_STATS.UNDEPLOYED_HP
+                                    };
+                                    const newEnt = this.addEntity(data);
+                                    if (data.sourceId && data.intendedDx !== undefined && data.intendedDy !== undefined) {
+                                        this.addLink(data.sourceId, newEnt.id, data.owner, data.intendedDx, data.intendedDy);
+                                    }
+                                    console.log(`[Round ${round}] ${proj.owner} ${proj.type} landed at sub-tick ${t}`);
+                                } else {
+                                    // Weapon impact triggers AOE logic at end of this loop
+                                    proj.hitThisTick = true;
+                                }
                             }
                         }
                     });
@@ -747,10 +873,14 @@ export class GameState {
                             ...tempProjectiles.filter(p => p.active).map(p => ({
                                 id: `proj-${p.id}`,
                                 type: 'PROJECTILE',
-                                itemType: p.type, // Store the specific type for UI lookup
+                                itemType: p.type, // Map internal type to itemType for snapshot
                                 owner: p.owner,
                                 x: p.currX,
-                                y: p.currY
+                                y: p.currY,
+                                currentAngle: p.currentAngle,
+                                searchMode: p.searchMode,
+                                lockFound: p.lockFound,
+                                targetId: p.targetId
                             })),
                             ...tempVisuals.map(v => ({
                                 id: `viz-${Math.random()}`,

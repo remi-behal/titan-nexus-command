@@ -121,7 +121,31 @@ const GameBoard = ({
 
             const isInVision = (x, y) => {
                 if (!myPlayerId || myPlayerId === 'spectator') return true;
-                return currentVisionCircles.some(v => getToroidalDist(v.x, v.y, x, y, mapW, mapH) <= v.radius);
+
+                // First check current circular vision for buildings
+                if (currentVisionCircles.some(v => getToroidalDist(v.x, v.y, x, y, mapW, mapH) <= v.radius)) {
+                    return true;
+                }
+
+                // Then check specialized cone vision for projectiles
+                return gameState.entities.some(e => {
+                    if (e.owner !== myPlayerId) return false;
+                    const stats = ENTITY_STATS[e.itemType || e.type];
+                    const radius = stats?.vision || 0;
+                    if (radius <= 0) return false;
+                    if (e.itemType !== 'HOMING_MISSILE') return false;
+
+                    const d = getToroidalDist(e.x, e.y, x, y, mapW, mapH);
+                    if (d > radius) return false;
+                    if (d < 1) return true; // Always see self
+
+                    const vec = getToroidalDistVector(e.x, e.y, x, y, mapW, mapH);
+                    const angleToPoint = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+                    let diff = angleToPoint - (e.currentAngle || 0);
+                    while (diff > 180) diff -= 360;
+                    while (diff < -180) diff += 360;
+                    return Math.abs(diff) <= (stats?.searchCone || 60) / 2;
+                });
             };
 
             const serverIds = new Set(gameState.entities.map(e => e.id));
@@ -149,8 +173,12 @@ const GameBoard = ({
                     viz.owner = serverEnt.owner;
                     viz.hp = serverEnt.hp;
                     viz.fuel = serverEnt.fuel;
-                    viz.maxFuel = serverEnt.maxFuel;
+                    viz.energy = serverEnt.energy;
                     viz.deployed = serverEnt.deployed;
+                    viz.itemType = serverEnt.itemType;
+                    viz.currentAngle = serverEnt.currentAngle;
+                    viz.searchMode = serverEnt.searchMode;
+                    viz.lockFound = serverEnt.lockFound;
                     viz.isGhost = false;
                     viz.lastSeen = Date.now();
                     viz.scouted = viz.scouted || serverEnt.scouted; // Once scouted, always scouted for ghosting purposes
@@ -444,14 +472,73 @@ const GameBoard = ({
 
                         if (isProjectile) {
                             ctx.save();
+                            const itemType = entity.itemType || entity.type;
+                            const stats = ENTITY_STATS[itemType];
+                            const radius = stats?.size || GLOBAL_STATS.PROJECTILE_RADIUS;
+
+                            // 1. Draw Search Beam (faint cone)
+                            if (entity.searchMode) {
+                                ctx.save();
+                                ctx.globalAlpha = 0.15;
+                                ctx.fillStyle = color;
+                                const rad = ((entity.currentAngle || 0) * Math.PI) / 180;
+                                const beamRange = stats?.homingRange || 400;
+                                const halfCone = (stats?.searchCone || 60) * (Math.PI / 180) / 2;
+
+                                ctx.beginPath();
+                                ctx.moveTo(entity.x, entity.y);
+                                ctx.arc(entity.x, entity.y, beamRange, rad - halfCone, rad + halfCone);
+                                ctx.fill();
+                                ctx.restore();
+                            }
+
+                            // 2. Draw Engine Flare (back of missile)
+                            if (entity.searchMode || entity.lockFound) {
+                                ctx.save();
+                                const rad = ((entity.currentAngle || 0) * Math.PI) / 180;
+                                const flareLen = entity.lockFound ? 25 : 15;
+                                const flareColor = entity.lockFound ? '#ff4500' : '#ffa500'; // Red-orange if locked, orange if just searching
+
+                                ctx.shadowBlur = 15;
+                                ctx.shadowColor = flareColor;
+                                ctx.beginPath();
+                                ctx.moveTo(entity.x - Math.cos(rad) * radius, entity.y - Math.sin(rad) * radius);
+                                ctx.lineTo(entity.x - Math.cos(rad) * (radius + flareLen), entity.y - Math.sin(rad) * (radius + flareLen));
+                                ctx.strokeStyle = flareColor;
+                                ctx.lineWidth = radius * 0.8;
+                                ctx.lineCap = 'round';
+                                ctx.stroke();
+                                ctx.restore();
+                            }
+
+                            // 3. Draw Projectile Body
                             ctx.shadowBlur = 10;
                             ctx.shadowColor = color;
-                            ctx.beginPath();
-                            const radius = ENTITY_STATS[entity.itemType || entity.type]?.size || GLOBAL_STATS.PROJECTILE_RADIUS;
-                            ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
-                            ctx.fill();
+                            ctx.fillStyle = color;
+
+                            if (itemType === 'HOMING_MISSILE') {
+                                // Render as a bullet
+                                const rad = ((entity.currentAngle || 0) * Math.PI) / 180;
+                                ctx.translate(entity.x, entity.y);
+                                ctx.rotate(rad);
+                                ctx.beginPath();
+                                // Ellipse/Bullet shape
+                                ctx.ellipse(0, 0, radius * 1.5, radius * 0.8, 0, 0, Math.PI * 2);
+                                ctx.fill();
+                                // Nose tip highlight
+                                ctx.fillStyle = '#fff';
+                                ctx.globalAlpha = 0.5;
+                                ctx.beginPath();
+                                ctx.arc(radius * 0.5, 0, radius * 0.3, 0, Math.PI * 2);
+                                ctx.fill();
+                            } else {
+                                ctx.beginPath();
+                                ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
                             ctx.restore();
-                        } else if (entity.type === 'LASER_BEAM') {
+                        }
+                        else if (entity.type === 'LASER_BEAM') {
                             // Draw Laser Beam
                             ctx.save();
                             ctx.beginPath();
@@ -705,15 +792,24 @@ const GameBoard = ({
                         fctx.translate(ox, oy);
 
                         gameState.entities.forEach(e => {
-                            const isOwnProjectile = ENTITY_STATS[e.type]?.damageFull !== undefined && e.owner === myPlayerId;
+                            const stats = ENTITY_STATS[e.itemType || e.type];
+                            const isOwnProjectile = stats?.damageFull !== undefined && e.owner === myPlayerId;
                             const isOwnEntity = e.owner === myPlayerId;
 
                             if (isOwnEntity || isOwnProjectile) {
-                                const radius = ENTITY_STATS[e.type]?.vision || 0;
+                                const radius = stats?.vision || 0;
                                 if (radius > 0) {
-                                    fctx.beginPath();
                                     const viz = visualEntities.current[e.id] || e;
-                                    fctx.arc(viz.x, viz.y, radius, 0, Math.PI * 2);
+                                    fctx.beginPath();
+
+                                    if (e.itemType === 'HOMING_MISSILE') {
+                                        const rad = ((viz.currentAngle || 0) * Math.PI) / 180;
+                                        const halfCone = (stats.searchCone || 60) * (Math.PI / 180) / 2;
+                                        fctx.moveTo(viz.x, viz.y);
+                                        fctx.arc(viz.x, viz.y, radius, rad - halfCone, rad + halfCone);
+                                    } else {
+                                        fctx.arc(viz.x, viz.y, radius, 0, Math.PI * 2);
+                                    }
                                     fctx.fill();
                                 }
                             }
