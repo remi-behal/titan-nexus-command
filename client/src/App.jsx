@@ -12,6 +12,17 @@ const socket = io('/', {
 
 const MAX_PULL_DISTANCE = GLOBAL_STATS.MAX_PULL;
 
+// Session Token Management
+const SESSION_TOKEN_KEY = 'titan_nexus_session_token';
+const getSessionToken = () => {
+  let token = localStorage.getItem(SESSION_TOKEN_KEY);
+  if (!token) {
+    token = self.crypto.randomUUID();
+    localStorage.setItem(SESSION_TOKEN_KEY, token);
+  }
+  return token;
+};
+
 function App() {
   const [playerState, setPlayerState] = useState(null)
   const turnRef = useRef(1) // Track turn for stale closures in listeners
@@ -105,6 +116,9 @@ function App() {
     const onConnect = () => {
       console.log('Socket connected!', socket.id);
       setIsConnected(true);
+      
+      const token = getSessionToken();
+      socket.emit('authenticate', token);
       socket.emit('requestState');
     };
 

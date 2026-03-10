@@ -29,10 +29,13 @@ describe('Server - Turn Transition & Timer Continuity', () => {
         client2 = Client('http://localhost:3008');
 
         await new Promise((resolve) => {
-            let connected = 0;
-            const onConnect = () => { if (++connected === 2) resolve(); };
-            client1.on('connect', onConnect);
-            client2.on('connect', onConnect);
+            let authenticated = 0;
+            const onAuth = () => { if (++authenticated === 2) resolve(); };
+            client1.on('playerAssignment', onAuth);
+            client2.on('playerAssignment', onAuth);
+
+            client1.emit('authenticate', 'transition-token-p1');
+            client2.emit('authenticate', 'transition-token-p2');
         });
     });
 

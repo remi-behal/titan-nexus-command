@@ -48,6 +48,12 @@ let playerAssignments = {
     'player2': null
 };
 
+// Maps playerId -> current socketId
+let activeSockets = {
+    'player1': null,
+    'player2': null
+};
+
 let turnActions = {
     'player1': null,
     'player2': null
@@ -95,9 +101,11 @@ function emitFilteredState(state = null) {
     const baseState = state || game.getState();
 
     io.sockets.sockets.forEach(socket => {
-        const assignedId = Object.keys(playerAssignments).find(pid => playerAssignments[pid] === socket.id);
-        if (assignedId) {
-            safeEmit(socket, 'gameStateUpdate', game.getVisibleState(assignedId, baseState));
+        // Find if this socket is one of the active player sockets
+        const playerId = Object.keys(activeSockets).find(pid => activeSockets[pid] === socket.id);
+        
+        if (playerId) {
+            safeEmit(socket, 'gameStateUpdate', game.getVisibleState(playerId, baseState));
         } else {
             // Spectators see everything
             safeEmit(socket, 'gameStateUpdate', baseState);
@@ -186,32 +194,45 @@ startTimer();
 
 io.on('connection', (socket) => {
     console.log(`User Connected: ${socket.id}`);
-
-    // Assign Player Slot
     let assignedPlayerId = null;
-    for (const pid of playerIds) {
-        if (!playerAssignments[pid]) {
-            playerAssignments[pid] = socket.id;
-            assignedPlayerId = pid;
-            break;
+
+    socket.on('authenticate', (token) => {
+        if (!token) return;
+        console.log(`Authenticating socket ${socket.id} with token ${token}`);
+
+        // 1. Check if this token is already assigned to a player
+        assignedPlayerId = Object.keys(playerAssignments).find(pid => playerAssignments[pid] === token);
+
+        // 2. If not assigned, try to assign to a free slot
+        if (!assignedPlayerId) {
+            for (const pid of playerIds) {
+                if (!playerAssignments[pid]) {
+                    playerAssignments[pid] = token;
+                    assignedPlayerId = pid;
+                    break;
+                }
+            }
         }
-    }
 
-    if (assignedPlayerId) {
-        console.log(`Assigned ${socket.id} to ${assignedPlayerId}`);
-        safeEmit(socket, 'playerAssignment', assignedPlayerId);
-    } else {
-        console.log(`${socket.id} joined as spectator`);
-        safeEmit(socket, 'playerAssignment', 'spectator');
-    }
+        // 3. Update active socket mapping
+        if (assignedPlayerId && assignedPlayerId !== 'spectator') {
+            activeSockets[assignedPlayerId] = socket.id;
+            console.log(`Assigned ${assignedPlayerId} to socket ${socket.id} (Token: ${token})`);
+            safeEmit(socket, 'playerAssignment', assignedPlayerId);
+        } else {
+            console.log(`${socket.id} joined as spectator`);
+            safeEmit(socket, 'playerAssignment', 'spectator');
+        }
 
-    // Send current state
-    safeEmit(socket, 'gameStateUpdate', assignedPlayerId ? game.getVisibleState(assignedPlayerId) : game.getState());
-    // Also send sync status
-    safeEmit(io, 'syncStatus', { lockedIn });
+        // 4. Send initial state and sync status
+        safeEmit(socket, 'gameStateUpdate', assignedPlayerId && assignedPlayerId !== 'spectator' ? 
+            game.getVisibleState(assignedPlayerId) : game.getState());
+        safeEmit(io, 'syncStatus', { lockedIn });
+    });
 
     socket.on('requestState', () => {
-        safeEmit(socket, 'gameStateUpdate', assignedPlayerId ? game.getVisibleState(assignedPlayerId) : game.getState());
+        safeEmit(socket, 'gameStateUpdate', assignedPlayerId && assignedPlayerId !== 'spectator' ? 
+            game.getVisibleState(assignedPlayerId) : game.getState());
         safeEmit(socket, 'syncStatus', { lockedIn });
     });
 
@@ -312,6 +333,13 @@ io.on('connection', (socket) => {
         lockedIn.player2 = false;
         turnActions.player1 = null;
         turnActions.player2 = null;
+        
+        // Clear assignments on game restart to allow fresh testing
+        playerAssignments.player1 = null;
+        playerAssignments.player2 = null;
+        activeSockets.player1 = null;
+        activeSockets.player2 = null;
+        
         emitFilteredState();
         safeEmit(socket, 'syncStatus', { lockedIn });
         startTimer();
@@ -320,9 +348,10 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log(`User Disconnected: ${socket.id}`);
         if (assignedPlayerId && assignedPlayerId !== 'spectator') {
-            playerAssignments[assignedPlayerId] = null;
-            // Option: auto-pass for disconnected players or wait? 
-            // For prototype, we'll just free the slot.
+            // Only clear the active socket mapping, RETAIN the playerAssignment (token)
+            if (activeSockets[assignedPlayerId] === socket.id) {
+                activeSockets[assignedPlayerId] = null;
+            }
         }
     });
 });

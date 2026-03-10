@@ -6,6 +6,7 @@ import path from 'path';
 describe('Server Integration - Turn Resolution Race Condition', () => {
     let serverProcess;
     let client1, client2;
+    let p1Id, p2Id;
 
     beforeAll(async () => {
         const serverPath = path.resolve(__dirname, 'index.js');
@@ -33,10 +34,14 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
         client2 = Client('http://localhost:3005');
 
         await new Promise((resolve) => {
-            let connected = 0;
-            const onConnect = () => { if (++connected === 2) resolve(); };
-            client1.on('connect', onConnect);
-            client2.on('connect', onConnect);
+            let authenticated = 0;
+            const onAuth1 = (id) => { p1Id = id; if (++authenticated === 2) resolve(); };
+            const onAuth2 = (id) => { p2Id = id; if (++authenticated === 2) resolve(); };
+            client1.on('playerAssignment', onAuth1);
+            client2.on('playerAssignment', onAuth2);
+
+            client1.emit('authenticate', 'integration-token-p1');
+            client2.emit('authenticate', 'integration-token-p2');
         });
     });
 
@@ -47,10 +52,11 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
     });
 
     it('should prevent double resolution if multiple submit events are sent rapidly', async () => {
+        // Wait for server to process auth and stabilize
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         // Setup state to track double turn
         let initialTurn = 0;
-
-        await new Promise(resolve => setTimeout(resolve, 1000)); // wait for initial game state sync
 
         // Request initial state
         const statePromise = new Promise(resolve => {
@@ -64,11 +70,11 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
         const state = await statePromise;
 
         // Find player1's HUB
-        const p1Hub = state.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = state.entities.find(e => e.owner === p1Id && e.type === 'HUB');
 
         // Create a basic valid action (e.g. fire a weapon)
         const actions = [{
-            playerId: 'player1',
+            playerId: p1Id,
             type: 'LAUNCH',
             itemType: 'WEAPON', // Costs 10
             sourceId: p1Hub.id,

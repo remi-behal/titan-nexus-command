@@ -39,7 +39,9 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             p2State = s;
         });
         p1.on('syncStatus', s => {
-            console.log(`p1 syncStatus: p1=${s.lockedIn.player1}`);
+            if (p1Id) {
+                console.log(`p1 syncStatus: ${p1Id}=${s.lockedIn[p1Id]}`);
+            }
             p1Status = s;
         });
         p1.on('resolutionStatus', s => {
@@ -75,11 +77,15 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
                 });
             });
 
-            // 2. Sequential connect
+            // 2. Sequential connect - ensure p1 gets player1
             console.log(`Connecting p1/p2 (ENV PORT: ${process.env.PORT || 3000})`);
             p1.connect();
-            await new Promise(r => setTimeout(r, 500));
+            p1.emit('authenticate', 'p1-token-real-life');
+            await waitFor(() => p1Id === 'player1', 5000);
+            
             p2.connect();
+            p2.emit('authenticate', 'p2-token-real-life');
+            await waitFor(() => p2Id === 'player2', 5000);
 
             console.log('Waiting for initial state...');
             await waitFor(() => p1State && p1State.entities.some(e => e.owner === p1Id));

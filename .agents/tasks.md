@@ -46,14 +46,14 @@
 - [ ] **Spectator Mode**: Ability to watch without a player slot. <!-- id: 50 -->
 - [ ] **Testing & Refinement**: <!-- id: 52 -->
     - [x] **Draw Condition**: Implement and test simultaneous destruction of all hubs. <!-- id: 66 -->
-    - [ ] **Connection & Networking**: <!-- id: 75 -->
-        - [ ] Reconnect gracefully after drops. More thinking required, see Networking Resilience Tests conversation. <!-- id: 67 -->
+    - [x] **Connection & Networking**: <!-- id: 75 -->
+        - [x] Reconnect gracefully after drops. <!-- id: 67 -->
         - [x] Handle disconnect while action is "Locked In". <!-- id: 69 -->
         - [x] Latency Simulation (100ms+ ping). <!-- id: 68 -->
     - [ ] **Test Coverage Expansion**: <!-- id: 76 -->
         - [ ] Server-side Action Validation (ownership, energy, fuel). <!-- id: 70 -->
         - [ ] Socket.io event handling & Multi-player sync tests. <!-- id: 77 -->
-        - [ ] End-to-End game flow. <!-- id: 71 -->
+        - [ ] Expanded End-to-End game flow. <!-- id: 71 -->
     - [ ] **Performance & Stress**: <!-- id: 78 -->
         - [ ] 8-player stress test. <!-- id: 72 -->
         - [ ] Large entity count (100+) performance. <!-- id: 79 -->
