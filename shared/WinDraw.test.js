@@ -60,8 +60,7 @@ describe('GameState - Win/Draw Conditions', () => {
                 { playerId: 'p1', sourceId: p1Hub.id, itemType: 'WEAPON', angle: 0, distance: 237 }  // Hits P2-Hub2 (800) in R2
             ],
             p2: [
-                { playerId: 'p2', sourceId: p2Hub1.id, itemType: 'EXTRACTOR', angle: 90, distance: 50 }, // Filler R1
-                { playerId: 'p2', sourceId: p2Hub2.id, itemType: 'WEAPON', angle: 180, distance: 237 } // Hits P1-Hub (250) in R2
+                { playerId: 'p2', sourceId: p2Hub1.id, itemType: 'WEAPON', angle: 180, distance: 162 } // Hits P1-Hub (250) in R1
             ]
         };
 

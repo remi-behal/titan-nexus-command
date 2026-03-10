@@ -64,3 +64,10 @@ If a network packet containing an action arrives while the server is in the `RES
 ### **Test Stability**
 -   **Unit Tests**: Must verify that the phase remains `RESOLVING` until an explicit server-side trigger is fired.
 -   **Integration Tests**: (e.g., `resolution_race.test.js`) verify that submissions sent during Phase 3 are ignored and do not pollute the next turn's state.
+
+---
+
+## 3. Elimination Integrity
+- **Persistence**: If a player is eliminated (all Hubs destroyed) during the Resolution Phase, the phase MUST still continue for its full duration so all other players can observe the final moments.
+- **Lockout Override**: The server MUST reset `phase: 'PLANNING'` and broadcast `resolutionStatus(active: false)` even if all players are eliminated, ensuring the "Restart Game" button becomes interactive and the game doesn't hang.
+- **Authoritative Unlock**: The `finally` block in the server's `resolveTurn` is the ultimate safeguard for unlocking the UI.

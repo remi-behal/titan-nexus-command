@@ -290,29 +290,32 @@ export class GameState {
         const toDestroy = new Set();
 
         Object.keys(this.players).forEach(pid => {
-            const starter = this.entities.find(e => e.owner === pid && e.isStarter);
-            if (!starter) return; // If starter is gone, player is dead anyway
-
             const connected = new Set();
-            const queue = [starter.id];
-            connected.add(starter.id);
+            const starter = this.entities.find(e => e.owner === pid && e.isStarter);
 
-            while (queue.length > 0) {
-                const currentId = queue.shift();
-                // Find all entities linked to this one
-                this.links.forEach(link => {
-                    let neighborId = null;
-                    if (link.from === currentId) neighborId = link.to;
-                    if (link.to === currentId) neighborId = link.from;
+            if (starter) {
+                const queue = [starter.id];
+                connected.add(starter.id);
 
-                    if (neighborId && !connected.has(neighborId)) {
-                        const neighbor = this.entities.find(e => e.id === neighborId);
-                        if (neighbor && neighbor.owner === pid) {
-                            connected.add(neighborId);
-                            queue.push(neighborId);
+                while (queue.length > 0) {
+                    const currentId = queue.shift();
+                    // Find all entities linked to this one
+                    this.links.forEach(link => {
+                        let neighborId = null;
+                        if (link.from === currentId) neighborId = link.to;
+                        if (link.to === currentId) neighborId = link.from;
+
+                        if (neighborId && !connected.has(neighborId)) {
+                            const neighbor = this.entities.find(e => e.id === neighborId);
+                            if (neighbor && neighbor.owner === pid) {
+                                connected.add(neighborId);
+                                queue.push(neighborId);
+                            }
                         }
-                    }
-                });
+                    });
+                }
+            } else {
+                console.log(`[Link Decay] Player ${pid} has no starter hub. All structures orphaned.`);
             }
 
             // Mark for destruction all entities owned by this player that aren't in 'connected'
@@ -613,6 +616,7 @@ export class GameState {
                             intendedDy: Math.sin(rad) * launchDistance,
                             totalDist: launchDistance,
                             intendedDistance: launchDistance,
+                            pullDistance: action.distance,
                             arrivalTick: Math.min(subTicks, arrivalTick),
                             velocity: velocity,
                             totalDistanceMoved: 0,
@@ -796,7 +800,7 @@ export class GameState {
                                         owner: proj.owner,
                                         x: proj.currX,
                                         y: proj.currY,
-                                        sourceId: roundActions.find(a => a.playerId === proj.owner && a.itemType === proj.type)?.sourceId,
+                                        sourceId: roundActions.find(a => a.playerId === proj.owner && a.itemType === proj.type && a.distance === proj.pullDistance)?.sourceId,
                                         intendedDx: proj.intendedDx,
                                         intendedDy: proj.intendedDy,
                                         deployed: false,

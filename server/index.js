@@ -126,15 +126,14 @@ async function resolveTurn() {
             player2: turnActions.player2 || []
         };
 
-        // 1. All action processing now happens in GameState.js, which manages its own phase.
-        // Actions are no longer cleared here at the start to prevent planning during resolution.
-        timeRemaining = TURN_DURATION; // DEFENSIVE: Reset timer value immediately so any latent ticks don't see 0.
+        // 1. All action processing now happens in GameState.js
+        timeRemaining = TURN_DURATION; // DEFENSIVE: Reset timer value immediately
 
         let snapshots;
         try {
             snapshots = game.resolveTurn(actionsMap);
         } catch (err) {
-            console.error('CRITICAL ERROR: resolveTurn failed:', err);
+            console.error('CRITICAL ERROR: GameState.resolveTurn failed:', err);
             // Fallback to avoid hanging
             snapshots = [{ type: 'FINAL', state: game.getState() }];
         }
@@ -156,31 +155,29 @@ async function resolveTurn() {
             await new Promise(resolve => setTimeout(resolve, delay));
         }
 
-        // process snapshots...
-        // ... (This loop handles delays)
+    } catch (err) {
+        console.error('CRITICAL ERROR during snapshot processing:', err);
+    } finally {
+        console.log('[Server] Finalizing turn resolution and unlocking UI...');
 
-        // 2. Already reset in Step 1 above.
-
-        // 2. Reset server-side locks for the NEXT turn
+        // 1. Reset server-side action buffers for the NEXT turn
         lockedIn.player1 = false;
         lockedIn.player2 = false;
         turnActions.player1 = [];
         turnActions.player2 = [];
 
-        // 3. IMPORTANT: Reset phase back to PLANNING now that observation is over
+        // 2. Reset phase back to PLANNING
         game.phase = 'PLANNING';
-        emitFilteredState(); // BROADCAST the Phase transition so clients unlock visually
+
+        // 3. BROADCAST the transition
+        emitFilteredState();
         safeEmit(io, 'syncStatus', { lockedIn });
-
-        // 4. START TIMER FIRST (crucial so client sees time > 0 before resolution ends)
-        startTimer();
-
-        // 5. Finally stop the resolution cinematic
         safeEmit(io, 'resolutionStatus', { active: false });
 
+        // 4. Restart the timer
+        startTimer();
+
         console.log('--- Resolution Complete ---');
-    } finally {
-        // game.phase reset is handled above to ensure it covers the 2000ms final delay
     }
 }
 
