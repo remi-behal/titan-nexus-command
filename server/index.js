@@ -58,7 +58,7 @@ let lockedIn = {
     'player2': false
 };
 
-const TURN_DURATION = 30;
+const TURN_DURATION = parseInt(process.env.TURN_DURATION) || 30;
 let timeRemaining = TURN_DURATION;
 let timerTimeout = null;
 
