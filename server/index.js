@@ -3,7 +3,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { GameState } from '../shared/GameState.js';
-import { ENTITY_STATS } from '../shared/EntityStats.js';
+import { ENTITY_STATS } from '../shared/constants/EntityStats.js';
 
 const app = express();
 app.use(cors());
@@ -103,7 +103,7 @@ function emitFilteredState(state = null) {
     io.sockets.sockets.forEach(socket => {
         // Find if this socket is one of the active player sockets
         const playerId = Object.keys(activeSockets).find(pid => activeSockets[pid] === socket.id);
-        
+
         if (playerId) {
             safeEmit(socket, 'gameStateUpdate', game.getVisibleState(playerId, baseState));
         } else {
@@ -225,13 +225,13 @@ io.on('connection', (socket) => {
         }
 
         // 4. Send initial state and sync status
-        safeEmit(socket, 'gameStateUpdate', assignedPlayerId && assignedPlayerId !== 'spectator' ? 
+        safeEmit(socket, 'gameStateUpdate', assignedPlayerId && assignedPlayerId !== 'spectator' ?
             game.getVisibleState(assignedPlayerId) : game.getState());
         safeEmit(io, 'syncStatus', { lockedIn });
     });
 
     socket.on('requestState', () => {
-        safeEmit(socket, 'gameStateUpdate', assignedPlayerId && assignedPlayerId !== 'spectator' ? 
+        safeEmit(socket, 'gameStateUpdate', assignedPlayerId && assignedPlayerId !== 'spectator' ?
             game.getVisibleState(assignedPlayerId) : game.getState());
         safeEmit(socket, 'syncStatus', { lockedIn });
     });
@@ -333,13 +333,13 @@ io.on('connection', (socket) => {
         lockedIn.player2 = false;
         turnActions.player1 = null;
         turnActions.player2 = null;
-        
+
         // Clear assignments on game restart to allow fresh testing
         playerAssignments.player1 = null;
         playerAssignments.player2 = null;
         activeSockets.player1 = null;
         activeSockets.player2 = null;
-        
+
         emitFilteredState();
         safeEmit(io, 'syncStatus', { lockedIn });
         safeEmit(io, 'matchRestarted');

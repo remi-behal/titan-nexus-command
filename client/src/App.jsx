@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import { GameState } from '../../shared/GameState.js'
-import { ENTITY_STATS, GLOBAL_STATS } from '../../shared/EntityStats.js'
+import { ENTITY_STATS, GLOBAL_STATS } from '../../shared/constants/EntityStats.js'
 import GameBoard from './components/GameBoard'
 import { io } from 'socket.io-client'
 
@@ -116,7 +116,7 @@ function App() {
     const onConnect = () => {
       console.log('Socket connected!', socket.id);
       setIsConnected(true);
-      
+
       const token = getSessionToken();
       socket.emit('authenticate', token);
       socket.emit('requestState');

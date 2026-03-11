@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { GameState } from './GameState.js';
+import { GameState } from '../GameState.js';
 
 describe('GameState - Sync Visuals', () => {
     it('should generate a start-of-round snapshot before simulation sub-ticks', () => {

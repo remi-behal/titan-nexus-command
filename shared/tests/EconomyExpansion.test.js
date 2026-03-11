@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { GameState } from './GameState.js';
-import { ENTITY_STATS, GLOBAL_STATS } from './EntityStats.js';
+import { GameState } from '../GameState.js';
+import { ENTITY_STATS, GLOBAL_STATS } from '../constants/EntityStats.js';
 
 describe('Economy Expansion - Energy Generation', () => {
     let game;

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { GameState } from '../../../shared/GameState.js';
-import { ENTITY_STATS, GLOBAL_STATS } from '../../../shared/EntityStats.js';
+import { ENTITY_STATS, GLOBAL_STATS } from '../../../shared/constants/EntityStats.js';
 import { VISUAL_STATS } from '../constants/VisualStats.js';
 import { shouldHighlightRing } from '../utils/uiLogic.js';
 

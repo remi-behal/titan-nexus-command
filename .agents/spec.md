@@ -12,11 +12,11 @@
 ## 📡 Networking Standard
 *   **Vite Proxy**: Port 5173 proxies `/socket.io` to Port 3000.
 *   **WSL Mode**: Mirrored networking should be enabled in `.wslconfig`.
-*   **Browser Bridge**: See `.agents/workflows/browser-testing.md`.
+*   **Browser Bridge**: See `_agents/workflows/browser-testing.md`.
 
 ## 🛠️ Development Workflow
 *   **Run All**: `npm run dev` from the root.
-*   **Turn Logic**: See detailed protocol in [.agents/turn_resolution_logic.md](file:///.agents/turn_resolution_logic.md).
+*   **Turn Logic**: See detailed protocol in [_agents/turn_resolution_logic.md](file:///_agents/turn_resolution_logic.md).
 *   **State Updates**:
     1. Update logic in `shared/GameState.js`.
     2. Handle event in `server/index.js`.

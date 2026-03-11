@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { GameState } from './GameState.js';
+import { GameState } from '../GameState.js';
 
 describe('GameState - Phase Lockout', () => {
     it('should initialize in PLANNING phase', () => {

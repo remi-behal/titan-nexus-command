@@ -6,7 +6,7 @@
  * or UI. This makes it easy to move to the server later!
  */
 
-import { ENTITY_STATS, GLOBAL_STATS, RESOURCE_NODE_STATS } from './EntityStats.js';
+import { ENTITY_STATS, GLOBAL_STATS, RESOURCE_NODE_STATS } from './constants/EntityStats.js';
 
 export class GameState {
     constructor() {

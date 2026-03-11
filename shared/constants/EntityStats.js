@@ -5,6 +5,7 @@
  * This includes HP, costs, fuel, range, and other balanced values.
  */
 
+import { SPEED_TIERS } from './LaunchSpeeds.js';
 import { EXPERIMENTAL_STATS } from './ExperimentalStats.js';
 
 export const ENTITY_STATS = {
@@ -18,7 +19,7 @@ export const ENTITY_STATS = {
         cost: 20,
         size: 40, // Base radius for rendering and selection
         labelOffset: 35,
-        speed: 8 // SLOW
+        speed: SPEED_TIERS.SLOW
     },
     DEFENSE: {
         hp: 2,
@@ -29,7 +30,7 @@ export const ENTITY_STATS = {
         cost: 25,
         size: 15, // Half-width for the square render
         labelOffset: 35,
-        speed: 8 // SLOW
+        speed: SPEED_TIERS.SLOW
     },
     EXTRACTOR: {
         hp: 2,
@@ -38,7 +39,7 @@ export const ENTITY_STATS = {
         cost: 25,
         size: 20,
         labelOffset: 35,
-        speed: 8 // SLOW
+        speed: SPEED_TIERS.SLOW
     },
     WEAPON: {
         hp: 1,
@@ -50,7 +51,7 @@ export const ENTITY_STATS = {
         vision: 100,
         size: 8, // Radius for the projectile render
         labelOffset: 35,
-        speed: 10 // NORMAL
+        speed: SPEED_TIERS.NORMAL
     },
     HOMING_MISSILE: {
         hp: 1,
@@ -61,8 +62,8 @@ export const ENTITY_STATS = {
         radiusHalf: 20,
         vision: 300,
         size: 8,
-        speed: 8,     // SLOW
-        maxSpeed: 20, // VERY FAST
+        speed: SPEED_TIERS.SLOW,
+        maxSpeed: SPEED_TIERS.VERY_FAST,
         acceleration: 1,
         homingRange: 300,
         homingFuel: 400,
@@ -106,13 +107,7 @@ export const GLOBAL_STATS = {
 
     // Simulation Parameters
     ACTION_SUB_TICKS: 100,
-    SPEED_TIERS: {
-        SLOW: 8,
-        NORMAL: 10,
-        FAST: 16,
-        VERY_FAST: 20,
-        TELE_STRIKE: 40
-    },
+    SPEED_TIERS,
 
     // Visuals & UI
     RESOURCE_SIZE: 8,

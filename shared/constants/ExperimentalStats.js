@@ -5,6 +5,8 @@
  * To remove: Delete this file and its references in EntityStats.js.
  */
 
+import { SPEED_TIERS } from './LaunchSpeeds.js';
+
 export const EXPERIMENTAL_STATS = {
     SUPER_BOMB: {
         hp: 1,
@@ -15,6 +17,6 @@ export const EXPERIMENTAL_STATS = {
         radiusHalf: 20,
         vision: 100,
         size: 15,           // Large projectile for visual distinction
-        speed: 20           // VERY FAST (20 px/tick)
+        speed: SPEED_TIERS.VERY_FAST           // VERY FAST (20 px/tick)
     }
 };

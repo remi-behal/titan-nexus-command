@@ -5,8 +5,8 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { GameState } from './GameState.js';
-import { GLOBAL_STATS } from './EntityStats.js';
+import { GameState } from '../GameState.js';
+import { GLOBAL_STATS } from '../constants/EntityStats.js';
 
 describe('GameState - Laser Defense Fuel', () => {
     let game;

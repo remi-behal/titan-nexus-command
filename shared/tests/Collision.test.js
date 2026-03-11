@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { GameState } from './GameState.js';
+import { GameState } from '../GameState.js';
 
 describe('GameState - Link Collision Math', () => {
     let game;
