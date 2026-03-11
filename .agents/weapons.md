@@ -30,7 +30,7 @@ A simple weapon that travels in a straight line and explodes at it's landing spo
     * **Half Damage radius**: 20
 * **Speed**: VERY FAST (20 px/tick)
 
-### Homing Missile - Implemented []
+### Homing Missile - Implemented [x]
 #### Overview
 A homing weapon that launches and then starts travelling through the air to the nearest detected enemy structure. Target can not be reaquired if the target is destroyed before the projectile hits.
 #### Stats

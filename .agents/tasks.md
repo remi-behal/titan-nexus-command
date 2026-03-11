@@ -7,6 +7,8 @@
 #### Phase 6 (Game Feature Expansion)
 - [x] **Intercept System**: Implement logic for Defense structures to target and destroy incoming weapons. <!-- id: 44 -->
     - [x] Add Laser Defense to the game. <!-- id: 51 -->
+    - [ ] Add light SAM defense <!-- id: 52 -->
+    - [ ] Add flak defense <!-- id: 53 -->
 - [x] **Economy Expansion**: Implement Extractor logic for additional energy generation. <!-- id: 45 -->
 - [ ] **Map Features**: <!-- id: 46 -->
     - [x] Lakes (Non-buildable, Link-blocking) <!-- id: 84 -->

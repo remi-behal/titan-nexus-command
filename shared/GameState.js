@@ -97,9 +97,9 @@ export class GameState {
             if (e.owner !== playerId) return false;
 
             // Correctly identify stat key for buildings vs projectiles
-            const statKey = (e.type === 'PROJECTILE' || e.type === 'WEAPON') && e.itemType ? e.itemType : e.type;
+            const statKey = (e.type === 'PROJECTILE' || e.type === 'WEAPON' || e.type === 'HOMING_MISSILE' || e.type === 'SAM_MISSILE') && e.itemType ? e.itemType : e.type;
             const stats = ENTITY_STATS[statKey];
-            const radius = stats?.vision || 0;
+            const radius = e.vision !== undefined ? e.vision : (stats?.vision || 0);
             if (radius === 0) return false;
 
             const dist = this.getToroidalDistance(e.x, e.y, x, y);
@@ -641,10 +641,15 @@ export class GameState {
                 for (let t = 1; t <= subTicks; t++) {
                     // --- Interception Logic ---
                     this.entities.forEach(def => {
-                        if (def.type === 'DEFENSE' && def.fuel > 0) {
+                        if ((def.type === 'DEFENSE' || def.type === 'LIGHT_SAM_DEFENSE') && def.fuel > 0) {
+                            if (def.deployed === false) {
+                                return;
+                            }
+
                             // Find closest active enemy projectile in range
                             let closestProj = null;
-                            let minDist = ENTITY_STATS.DEFENSE.range;
+                            const stats = ENTITY_STATS[def.type];
+                            let minDist = stats.range;
 
                             tempProjectiles.forEach(proj => {
                                 if (!proj.active || proj.owner === def.owner) return;
@@ -656,26 +661,51 @@ export class GameState {
                             });
 
                             if (closestProj) {
-                                if (def.deployed === false) {
-                                    console.log(`[Dormant] ${def.id} (DEFENSE) is undeployed; skipping interception.`);
-                                    return;
+                                if (def.type === 'DEFENSE') {
+                                    // Laser Intercept!
+                                    closestProj.active = false;
+                                    def.fuel--;
+
+                                    // Create visual beam
+                                    tempVisuals.push({
+                                        type: 'LASER_BEAM',
+                                        x: def.x,
+                                        y: def.y,
+                                        targetX: closestProj.currX,
+                                        targetY: closestProj.currY,
+                                        duration: Math.max(5, Math.floor(subTicks / 8))
+                                    });
+                                    console.log(`[Intercept] ${def.id} (Laser) blocked projectile from ${closestProj.owner}`);
+                                } else if (def.type === 'LIGHT_SAM_DEFENSE') {
+                                    // SAM Intercept!
+                                    def.fuel--;
+
+                                    // Spawn SAM Missile
+                                    const samStats = ENTITY_STATS.SAM_MISSILE;
+                                    const vec = this.constructor.getToroidalVector(def.x, def.y, closestProj.currX, closestProj.currY, this.map.width, this.map.height);
+                                    const initialAngle = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+
+                                    const samMissile = {
+                                        id: 'sam_' + Math.random().toString(36).substr(2, 9),
+                                        type: 'SAM_MISSILE',
+                                        itemType: 'SAM_MISSILE',
+                                        owner: def.owner,
+                                        active: true,
+                                        currX: def.x,
+                                        currY: def.y,
+                                        targetX: closestProj.currX, // Initial target X/Y for direction
+                                        targetY: closestProj.currY,
+                                        velocity: samStats.speed,
+                                        currentAngle: initialAngle,
+                                        targetId: closestProj.id, // LOCKED ON
+                                        searchMode: true,
+                                        totalDistanceMoved: 0,
+                                        maxDistance: 600 // High enough range for defense
+                                    };
+
+                                    tempProjectiles.push(samMissile);
+                                    console.log(`[SAM Launch] ${def.id} fired SAM at ${closestProj.id}`);
                                 }
-
-                                // Intercept!
-                                closestProj.active = false;
-                                def.fuel--;
-
-                                // Create visual beam
-                                tempVisuals.push({
-                                    type: 'LASER_BEAM',
-                                    x: def.x,
-                                    y: def.y,
-                                    targetX: closestProj.currX,
-                                    targetY: closestProj.currY,
-                                    duration: Math.max(5, Math.floor(subTicks / 8)) // Scaled duration
-                                });
-
-                                console.log(`[Intercept] ${def.id} blocked projectile from ${closestProj.owner}`);
                             }
                         }
                     });
@@ -683,8 +713,8 @@ export class GameState {
                     tempProjectiles.forEach(proj => {
                         if (!proj.active) return;
 
-                        if (proj.type === 'HOMING_MISSILE') {
-                            const stats = ENTITY_STATS.HOMING_MISSILE;
+                        if (proj.type === 'HOMING_MISSILE' || proj.type === 'SAM_MISSILE') {
+                            const stats = ENTITY_STATS[proj.type];
 
                             // 1. Lifecycle Check: Ignite seeker at 50% distance
                             if (!proj.searchMode && proj.totalDistanceMoved >= proj.intendedDistance * 0.5) {
@@ -725,14 +755,21 @@ export class GameState {
 
                             // 3. Tracking Logic
                             if (proj.targetId) {
-                                const target = this.entities.find(e => e.id === proj.targetId);
-                                if (target && target.hp > 0) {
+                                let target = this.entities.find(e => e.id === proj.targetId);
+                                if (!target && ENTITY_STATS[proj.type]?.isInterceptor) {
+                                    target = tempProjectiles.find(p => p.id === proj.targetId && p.active);
+                                }
+
+                                if (target && (target.hp > 0 || target.active)) {
                                     // Accelerate if target is still active
                                     if (proj.velocity < stats.maxSpeed) {
                                         proj.velocity = Math.min(stats.maxSpeed, proj.velocity + stats.acceleration);
                                     }
 
-                                    const vec = this.constructor.getToroidalVector(proj.currX, proj.currY, target.x, target.y, this.map.width, this.map.height);
+                                    const targetX = target.x !== undefined ? target.x : target.currX;
+                                    const targetY = target.y !== undefined ? target.y : target.currY;
+
+                                    const vec = this.constructor.getToroidalVector(proj.currX, proj.currY, targetX, targetY, this.map.width, this.map.height);
                                     const angleToTarget = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
 
                                     let diff = angleToTarget - proj.currentAngle;
@@ -774,9 +811,21 @@ export class GameState {
                                 return actualDist <= hitDist;
                             });
 
-                            if (closestEnt) {
+                            let closestProjTarget = null;
+                            if (ENTITY_STATS[proj.type]?.isInterceptor) {
+                                closestProjTarget = tempProjectiles.find(p => {
+                                    if (p.owner === proj.owner || !p.active || p.id === proj.id) return false;
+                                    const pStats = ENTITY_STATS[p.type];
+                                    const hitDist = (pStats?.size || 8) + (stats.size || 8) + 5;
+                                    const actualDist = this.getToroidalDistance(proj.currX, proj.currY, p.currX, p.currY);
+                                    return actualDist <= hitDist;
+                                });
+                            }
+
+                            if (closestEnt || closestProjTarget) {
                                 proj.active = false;
                                 proj.hitThisTick = true;
+                                if (closestProjTarget) closestProjTarget.active = false;
                             }
                         } else {
                             // Standard Projectile Logic (Buildings etc.)

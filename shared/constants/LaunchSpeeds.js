@@ -9,5 +9,7 @@ export const SPEED_TIERS = {
     NORMAL: 10,
     FAST: 16,
     VERY_FAST: 20,
-    TELE_STRIKE: 40
+    TELE_STRIKE: 40,
+    INTERCEPTOR_INITIAL: 10,
+    INTERCEPTOR_MAX: 25
 };

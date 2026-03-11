@@ -69,6 +69,35 @@ export const ENTITY_STATS = {
         homingFuel: 400,
         searchCone: 60, //degrees
         turnRadius: 10
+    },
+    LIGHT_SAM_DEFENSE: {
+        hp: 2,
+        fuel: 1,
+        fuelRegen: 1,
+        vision: 250,
+        range: 100,
+        cost: 25,
+        size: 15,
+        labelOffset: 35,
+        speed: SPEED_TIERS.SLOW
+    },
+    SAM_MISSILE: {
+        hp: 1,
+        cost: 0,
+        damageFull: 2,
+        radiusFull: 10,
+        damageHalf: 1,
+        radiusHalf: 20,
+        vision: 0,
+        size: 8,
+        speed: SPEED_TIERS.INTERCEPTOR_INITIAL,
+        maxSpeed: SPEED_TIERS.INTERCEPTOR_MAX,
+        acceleration: 2,
+        homingRange: 300,
+        homingFuel: 400,
+        searchCone: 360, // Full circle range for intercept
+        turnRadius: 15,
+        isInterceptor: true
     }
 };
 

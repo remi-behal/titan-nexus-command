@@ -15,3 +15,14 @@ The laser beam starts at the laser defense and ends at the intercepted projectil
 * **Damage**: 1
 * **Interception chance**: 100%
 
+### Light SAM Defense - IMPLEMENTED [ ]
+#### Overview
+A missile based defense system that fires a light missile at any enemy projectiles within range.
+#### Stats
+* **Range**: 100
+* **Health**: 2
+* **Launch Cost**: 25
+* **Fuel**: 1
+* **Damage**: 2
+* **Interception chance**: Projectile based
+
