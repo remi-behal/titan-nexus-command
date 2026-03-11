@@ -21,7 +21,7 @@ export const ENTITY_STATS = {
         labelOffset: 35,
         speed: SPEED_TIERS.SLOW
     },
-    DEFENSE: {
+    LASER_POINT_DEFENSE: {
         hp: 2,
         fuel: 1,
         fuelRegen: 1,
@@ -64,11 +64,12 @@ export const ENTITY_STATS = {
         size: 8,
         speed: SPEED_TIERS.SLOW,
         maxSpeed: SPEED_TIERS.VERY_FAST,
-        acceleration: 1,
+        acceleration: 0.5,
         homingRange: 300,
         homingFuel: 400,
         searchCone: 60, //degrees
-        turnRadius: 10
+        turnRadius: 5,
+        isSeeker: true
     },
     LIGHT_SAM_DEFENSE: {
         hp: 2,
@@ -92,12 +93,13 @@ export const ENTITY_STATS = {
         size: 8,
         speed: SPEED_TIERS.INTERCEPTOR_INITIAL,
         maxSpeed: SPEED_TIERS.INTERCEPTOR_MAX,
-        acceleration: 2,
+        acceleration: 1,
         homingRange: 300,
         homingFuel: 400,
         searchCone: 360, // Full circle range for intercept
-        turnRadius: 15,
-        isInterceptor: true
+        turnRadius: 7.5,
+        isInterceptor: true,
+        isSeeker: true
     }
 };
 
@@ -135,7 +137,7 @@ export const GLOBAL_STATS = {
     DEFAULT_HP: 3,
 
     // Simulation Parameters
-    ACTION_SUB_TICKS: 100,
+    ACTION_SUB_TICKS: 200,
     SPEED_TIERS,
 
     // Visuals & UI
@@ -144,6 +146,6 @@ export const GLOBAL_STATS = {
     RING_INTERACTION_BUFFER: 15,
     PROJECTILE_RADIUS: 8,
     LASER_BEAM_WIDTH: 3,
-    EXPLOSION_DURATION: 20,
-    LASER_DURATION: 15
+    EXPLOSION_DURATION: 40,
+    LASER_DURATION: 30
 };

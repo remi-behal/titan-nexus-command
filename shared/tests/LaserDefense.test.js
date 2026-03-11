@@ -22,7 +22,7 @@ describe('GameState - Laser Defense Fuel', () => {
 
         // 1. Add a Laser Defense for Player 2 near their hub
         const defense = game.addEntity({
-            type: 'DEFENSE',
+            type: 'LASER_POINT_DEFENSE',
             owner: 'player2',
             x: p2Hub.x - 50,
             y: p2Hub.y,

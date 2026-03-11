@@ -303,8 +303,11 @@ function App() {
           <option value="EXTRACTOR" disabled={pCurrent.energy < ENTITY_STATS.EXTRACTOR.cost}>
             Extractor ({ENTITY_STATS.EXTRACTOR.cost} E)
           </option>
-          <option value="DEFENSE" disabled={pCurrent.energy < ENTITY_STATS.DEFENSE.cost}>
-            Static Defense ({ENTITY_STATS.DEFENSE.cost} E)
+          <option value="LASER_POINT_DEFENSE" disabled={pCurrent.energy < ENTITY_STATS.LASER_POINT_DEFENSE.cost}>
+            Laser Point Defense ({ENTITY_STATS.LASER_POINT_DEFENSE.cost} E)
+          </option>
+          <option value="LIGHT_SAM_DEFENSE" disabled={pCurrent.energy < ENTITY_STATS.LIGHT_SAM_DEFENSE.cost}>
+            Light SAM Defense ({ENTITY_STATS.LIGHT_SAM_DEFENSE.cost} E)
           </option>
           <option value="HOMING_MISSILE" disabled={pCurrent.energy < ENTITY_STATS.HOMING_MISSILE.cost}>
             Homing Missile ({ENTITY_STATS.HOMING_MISSILE.cost} E)

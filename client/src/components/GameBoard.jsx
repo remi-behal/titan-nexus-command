@@ -586,7 +586,7 @@ const GameBoard = ({
                             ctx.beginPath();
                             const radius = ENTITY_STATS[entity.itemType || entity.type]?.size || 20;
 
-                            if (entity.type === 'DEFENSE') {
+                            if (entity.type === 'LASER_POINT_DEFENSE') {
                                 // Draw Defense as a square/diamond (radius is half-width)
                                 ctx.rect(entity.x - radius, entity.y - radius, radius * 2, radius * 2);
                             } else if (entity.type === 'EXTRACTOR') {

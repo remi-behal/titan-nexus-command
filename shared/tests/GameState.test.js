@@ -429,9 +429,9 @@ describe('GameState - Launch Direction Consistency', () => {
 
         const snapshots = game.resolveTurn(actions);
 
-        // Find a snapshot around the midpoint of the sub-round (subTicks = 100, capture every step)
-        // SubTick 48 is close to halfway and a multiple of our dynamic snapshot step (3)
-        const midSnapshot = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 48);
+        // Find a snapshot around the midpoint of the sub-round (subTicks = 200, capture every step)
+        // SubTick 96 is close to halfway and a multiple of our dynamic snapshot step (6)
+        const midSnapshot = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 96);
         expect(midSnapshot).toBeDefined();
 
         const projectile = midSnapshot.state.entities.find(e => e.type === 'PROJECTILE');

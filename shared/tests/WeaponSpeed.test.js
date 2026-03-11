@@ -12,11 +12,11 @@ describe('Weapon Speed Tiers Verification', () => {
         game.map.mountains = [];
     });
 
-    it('should land a FAST (16) weapon at tick 50 when fired 800px', () => {
+    it('should land a speed-8 weapon at tick 100 when fired 800px', () => {
         const p1Hub = game.entities.find(e => e.owner === 'p1');
 
-        // Mock a FAST weapon launch
-        // Dist = 800, Speed = 16 => Arrival = 800 / 16 = 50
+        // Mock a speed-8 weapon launch
+        // Dist = 800, Speed = 8 => Arrival = 800 / 8 = 100
         const actions = {
             p1: [{
                 playerId: 'p1',
@@ -27,36 +27,28 @@ describe('Weapon Speed Tiers Verification', () => {
             }]
         };
 
-        // Inject speed FAST into WEAPON for this test
-        ENTITY_STATS.WEAPON.speed = GLOBAL_STATS.SPEED_TIERS.FAST;
+        // Inject speed 8 into WEAPON for this test
+        ENTITY_STATS.WEAPON.speed = 8;
 
         const snapshots = game.resolveTurn(actions);
 
-        // Check if there is a land/explosion at tick 50
-        // Our snapshots capture every snapshotStep (which is Math.floor(100/30) = 3)
-        // Tick 50 might not be captured, but we can check the FINAL state or logs
-
-        // Actually, we can check for a snapshot near 50 or verify the final state
-        const roundSnapshot = snapshots.find(s => s.type === 'ROUND' && s.round === 1);
-        expect(roundSnapshot).toBeDefined();
-
-        // If it landed at 50, it should be in the FINAL snapshot of that round
-        // Wait, the simulation loop captures ROUND_SUB.
-        // Let's check for an explosion in the logs (or we can add a way to check it)
+        // Check if there is a land/explosion at tick 100
+        // Our snapshots capture every snapshotStep (which is Math.floor(200/30) = 6)
+        // Tick 100 might not be captured, but we can check the snapshots near it
 
         // For testing, let's verify it hits the target in the final state
-        // and that it was active in snapshot 48 and inactive in 51.
-        const snap48 = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 48);
-        const snap51 = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 51);
+        // and that it was active in snapshot 96 and inactive in 102.
+        const snap96 = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 96);
+        const snap102 = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 102);
 
-        expect(snap48.state.entities.some(e => e.type === 'PROJECTILE')).toBe(true);
-        expect(snap51.state.entities.some(e => e.type === 'PROJECTILE')).toBe(false);
+        expect(snap96.state.entities.some(e => e.type === 'PROJECTILE')).toBe(true);
+        expect(snap102.state.entities.some(e => e.type === 'PROJECTILE')).toBe(false);
     });
 
-    it('should land a SLOW (8) structure at tick 100 when fired 800px', () => {
+    it('should land a SLOW (4) structure at tick 200 when fired 800px', () => {
         const p1Hub = game.entities.find(e => e.owner === 'p1');
 
-        // HUB is Speed 8. Dist = 800 => Arrival = 100
+        // HUB is Speed 4. Dist = 800 => Arrival = 200
         const actions = {
             p1: [{
                 playerId: 'p1',
@@ -69,21 +61,20 @@ describe('Weapon Speed Tiers Verification', () => {
 
         const snapshots = game.resolveTurn(actions);
 
-        // Should be in flight until tick 99
-        const snap99 = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 99);
-        expect(snap99.state.entities.some(e => e.type === 'PROJECTILE')).toBe(true);
+        // Should be in flight until tick 198
+        const snap198 = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 198);
+        expect(snap198.state.entities.some(e => e.type === 'PROJECTILE')).toBe(true);
 
         const finalRound = snapshots.find(s => s.type === 'ROUND' && s.round === 1);
-        console.log('Entities in final round:', finalRound.state.entities.map(e => `${e.type}:${e.id} owner:${e.owner}`));
         const landedHub = finalRound.state.entities.find(e => e.owner === 'p1' && e.id !== p1Hub.id);
         expect(landedHub).toBeDefined();
         expect(landedHub.deployed).toBe(true); // Deploys at end of round
     });
 
-    it('should land an early shot at the correct tick (800px @ Speed 10 = Tick 80)', () => {
+    it('should land an early shot at the correct tick (800px @ Speed 5 = Tick 160)', () => {
         const p1Hub = game.entities.find(e => e.owner === 'p1');
 
-        ENTITY_STATS.WEAPON.speed = 10; // NORMAL
+        ENTITY_STATS.WEAPON.speed = 5; // NORMAL
 
         const actions = {
             p1: [{
@@ -97,14 +88,14 @@ describe('Weapon Speed Tiers Verification', () => {
 
         const snapshots = game.resolveTurn(actions);
 
-        // 800 / 10 = 80. SnapshotStep 3 means 78 and 81 are captured.
-        const snap78 = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 78);
-        const snap81 = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 81);
+        // 800 / 5 = 160. SnapshotStep 6 means 156 and 162 are captured.
+        const snap156 = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 156);
+        const snap162 = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 162);
 
-        expect(snap78).toBeDefined();
-        expect(snap81).toBeDefined();
+        expect(snap156).toBeDefined();
+        expect(snap162).toBeDefined();
 
-        expect(snap78.state.entities.some(e => e.type === 'PROJECTILE')).toBe(true);
-        expect(snap81.state.entities.some(e => e.type === 'PROJECTILE')).toBe(false);
+        expect(snap156.state.entities.some(e => e.type === 'PROJECTILE')).toBe(true);
+        expect(snap162.state.entities.some(e => e.type === 'PROJECTILE')).toBe(false);
     });
 });

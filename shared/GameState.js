@@ -641,7 +641,7 @@ export class GameState {
                 for (let t = 1; t <= subTicks; t++) {
                     // --- Interception Logic ---
                     this.entities.forEach(def => {
-                        if ((def.type === 'DEFENSE' || def.type === 'LIGHT_SAM_DEFENSE') && def.fuel > 0) {
+                        if ((def.type === 'LASER_POINT_DEFENSE' || def.type === 'LIGHT_SAM_DEFENSE') && def.fuel > 0) {
                             if (def.deployed === false) {
                                 return;
                             }
@@ -661,7 +661,7 @@ export class GameState {
                             });
 
                             if (closestProj) {
-                                if (def.type === 'DEFENSE') {
+                                if (def.type === 'LASER_POINT_DEFENSE') {
                                     // Laser Intercept!
                                     closestProj.active = false;
                                     def.fuel--;
@@ -769,6 +769,10 @@ export class GameState {
                                     const targetX = target.x !== undefined ? target.x : target.currX;
                                     const targetY = target.y !== undefined ? target.y : target.currY;
 
+                                    // Save last known coordinates for persistence
+                                    proj.targetX = targetX;
+                                    proj.targetY = targetY;
+
                                     const vec = this.constructor.getToroidalVector(proj.currX, proj.currY, targetX, targetY, this.map.width, this.map.height);
                                     const angleToTarget = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
 
@@ -802,30 +806,34 @@ export class GameState {
                                 proj.hitThisTick = true; // Trigger detonation logic
                             }
 
-                            // Immediate proximity trigger if targeting something
-                            const closestEnt = this.entities.find(e => {
-                                if (e.owner === proj.owner || e.type === 'RESOURCE') return false;
-                                const eStats = ENTITY_STATS[e.type];
-                                const hitDist = (eStats?.size || 10) + (stats.size || 8) + 5;
-                                const actualDist = this.getToroidalDistance(proj.currX, proj.currY, e.x, e.y);
-                                return actualDist <= hitDist;
-                            });
+                            // Immediate proximity trigger ONLY if targeting something
+                            if (proj.targetId) {
+                                let target = this.entities.find(e => e.id === proj.targetId);
+                                if (!target && ENTITY_STATS[proj.type]?.isInterceptor) {
+                                    target = tempProjectiles.find(p => p.id === proj.targetId && p.active);
+                                }
 
-                            let closestProjTarget = null;
-                            if (ENTITY_STATS[proj.type]?.isInterceptor) {
-                                closestProjTarget = tempProjectiles.find(p => {
-                                    if (p.owner === proj.owner || !p.active || p.id === proj.id) return false;
-                                    const pStats = ENTITY_STATS[p.type];
-                                    const hitDist = (pStats?.size || 8) + (stats.size || 8) + 5;
-                                    const actualDist = this.getToroidalDistance(proj.currX, proj.currY, p.currX, p.currY);
-                                    return actualDist <= hitDist;
-                                });
-                            }
+                                if (target && (target.hp > 0 || target.active)) {
+                                    const tx = target.x !== undefined ? target.x : target.currX;
+                                    const ty = target.y !== undefined ? target.y : target.currY;
+                                    const actualDist = this.getToroidalDistance(proj.currX, proj.currY, tx, ty);
 
-                            if (closestEnt || closestProjTarget) {
-                                proj.active = false;
-                                proj.hitThisTick = true;
-                                if (closestProjTarget) closestProjTarget.active = false;
+                                    // Surface-to-Surface trigger: detonate when "touching" the building's edge
+                                    const targetStats = ENTITY_STATS[target.type] || ENTITY_STATS[target.itemType];
+                                    const hitDist = (targetStats?.size || 10) + 2;
+
+                                    if (actualDist <= hitDist) {
+                                        proj.active = false;
+                                        proj.hitThisTick = true;
+                                    }
+                                } else if (proj.targetX !== undefined) {
+                                    // Target lost: detonate at last known coordinates
+                                    const actualDist = this.getToroidalDistance(proj.currX, proj.currY, proj.targetX, proj.targetY);
+                                    if (actualDist <= 15) {
+                                        proj.active = false;
+                                        proj.hitThisTick = true;
+                                    }
+                                }
                             }
                         } else {
                             // Standard Projectile Logic (Buildings etc.)
@@ -871,7 +879,7 @@ export class GameState {
                     // Second pass for Weapons to catch anything that landed this tick (AOE Damage)
                     tempProjectiles.forEach(proj => {
                         const stats = ENTITY_STATS[proj.type];
-                        if (stats?.damageFull !== undefined && proj.hitThisTick && t === proj.arrivalTick) {
+                        if (stats?.damageFull !== undefined && proj.hitThisTick && (t === proj.arrivalTick || stats.isSeeker)) {
                             console.log(`[Explosion] ${proj.owner} weapon detonated at (${Math.round(proj.currX)}, ${Math.round(proj.currY)}) at tick ${t}`);
 
                             // Create visual explosion
@@ -886,12 +894,15 @@ export class GameState {
                             const HALF_RADIUS = stats.radiusHalf;
 
                             this.entities.forEach(entity => {
-                                const dist = this.getToroidalDistance(entity.x, entity.y, proj.currX, proj.currY);
+                                const eStats = ENTITY_STATS[entity.type];
+                                const rawDist = this.getToroidalDistance(entity.x, entity.y, proj.currX, proj.currY);
+                                const effDist = Math.max(0, rawDist - (eStats?.size || 0));
+
                                 let damage = 0;
 
-                                if (dist <= FULL_RADIUS) {
+                                if (effDist <= FULL_RADIUS) {
                                     damage = stats.damageFull;
-                                } else if (dist <= HALF_RADIUS) {
+                                } else if (effDist <= HALF_RADIUS) {
                                     damage = stats.damageHalf;
                                 }
 
@@ -906,6 +917,7 @@ export class GameState {
                                     }
                                 }
                             });
+                            proj.hitThisTick = false;
                         }
                     });
 
