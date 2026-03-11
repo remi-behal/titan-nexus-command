@@ -45,10 +45,11 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
         });
     });
 
-    afterAll(() => {
+    afterAll(async () => {
         client1?.disconnect();
         client2?.disconnect();
-        serverProcess?.kill();
+        serverProcess?.kill('SIGKILL');
+        await new Promise(r => setTimeout(r, 200));
     });
 
     it('should prevent double resolution if multiple submit events are sent rapidly', async () => {

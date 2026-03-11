@@ -5,12 +5,12 @@ import path from 'path';
 
 describe('Server Networking - Reconnection and Resilience', () => {
     let serverProcess;
-    let url = 'http://localhost:3006';
+    let url = 'http://localhost:3015';
 
     beforeAll(async () => {
         const serverPath = path.resolve(__dirname, 'index.js');
         serverProcess = spawn('node', [serverPath], {
-            env: { ...process.env, PORT: '3006' },
+            env: { ...process.env, PORT: '3015' },
             stdio: 'pipe'
         });
 
@@ -25,8 +25,9 @@ describe('Server Networking - Reconnection and Resilience', () => {
         });
     });
 
-    afterAll(() => {
-        serverProcess?.kill();
+    afterAll(async () => {
+        serverProcess?.kill('SIGKILL');
+        await new Promise(r => setTimeout(r, 200));
     });
 
     // Ensure each test starts with a fresh server state
@@ -138,7 +139,7 @@ describe('Server Networking - Reconnection and Resilience', () => {
 
     it('should delay outgoing messages when SIMULATED_LATENCY is set (id: 68)', async () => {
         const latency = 150;
-        const latencyServerPort = '3007';
+        const latencyServerPort = '3016';
         const serverPath = path.resolve(__dirname, 'index.js');
 
         const latencyServer = spawn('node', [serverPath], {
@@ -163,7 +164,8 @@ describe('Server Networking - Reconnection and Resilience', () => {
 
         // cleanup early
         client.disconnect();
-        latencyServer.kill();
+        latencyServer.kill('SIGKILL');
+        await new Promise(r => setTimeout(r, 200));
 
         expect(duration).toBeGreaterThanOrEqual(latency);
     }, 10000);

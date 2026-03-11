@@ -78,7 +78,7 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             });
 
             // 2. Sequential connect - ensure p1 gets player1
-            console.log(`Connecting p1/p2 (ENV PORT: ${process.env.PORT || 3000})`);
+            console.log(`Connecting p1/p2 (ENV PORT: 3010)`);
             p1.connect();
             p1.emit('authenticate', 'p1-token-real-life');
             await waitFor(() => p1Id === 'player1', 5000);
@@ -196,9 +196,10 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             console.log('INTEGRATION TEST PASSED');
 
         } finally {
-            p1.disconnect();
-            p2.disconnect();
-            serverProcess.kill();
+            p1?.disconnect();
+            p2?.disconnect();
+            serverProcess?.kill('SIGKILL');
+            await new Promise(r => setTimeout(r, 200));
         }
     }, 120000);
 });

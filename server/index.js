@@ -341,7 +341,8 @@ io.on('connection', (socket) => {
         activeSockets.player2 = null;
         
         emitFilteredState();
-        safeEmit(socket, 'syncStatus', { lockedIn });
+        safeEmit(io, 'syncStatus', { lockedIn });
+        safeEmit(io, 'matchRestarted');
         startTimer();
     });
 

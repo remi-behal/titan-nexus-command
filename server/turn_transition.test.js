@@ -39,10 +39,11 @@ describe('Server - Turn Transition & Timer Continuity', () => {
         });
     });
 
-    afterAll(() => {
+    afterAll(async () => {
         client1?.disconnect();
         client2?.disconnect();
-        serverProcess?.kill();
+        serverProcess?.kill('SIGKILL');
+        await new Promise(r => setTimeout(r, 200));
     });
 
     it('should reset the timer to 30s and unlock players at start of Turn 2', async () => {

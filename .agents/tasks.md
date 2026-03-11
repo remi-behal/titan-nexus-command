@@ -50,9 +50,11 @@
         - [x] Reconnect gracefully after drops. <!-- id: 67 -->
         - [x] Handle disconnect while action is "Locked In". <!-- id: 69 -->
         - [x] Latency Simulation (100ms+ ping). <!-- id: 68 -->
+        - [x] Match Restart Persistence & Auto-Reclaim. <!-- id: 80 -->
     - [ ] **Test Coverage Expansion**: <!-- id: 76 -->
         - [ ] Server-side Action Validation (ownership, energy, fuel). <!-- id: 70 -->
-        - [ ] Socket.io event handling & Multi-player sync tests. <!-- id: 77 -->
+        - [x] Socket.io event handling & Multi-player sync tests. <!-- id: 77 -->
+        - [x] End-to-End game flow. <!-- id: 84 -->
         - [ ] Expanded End-to-End game flow. <!-- id: 71 -->
     - [ ] **Performance & Stress**: <!-- id: 78 -->
         - [ ] 8-player stress test. <!-- id: 72 -->

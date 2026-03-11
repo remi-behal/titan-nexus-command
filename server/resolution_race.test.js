@@ -39,10 +39,11 @@ describe('Server - Resolution Race Guard', () => {
         });
     });
 
-    afterAll(() => {
+    afterAll(async () => {
         client1?.disconnect();
         client2?.disconnect();
-        serverProcess?.kill();
+        serverProcess?.kill('SIGKILL');
+        await new Promise(r => setTimeout(r, 200));
     });
 
     it('should ignore submissions sent DURING resolution', async () => {

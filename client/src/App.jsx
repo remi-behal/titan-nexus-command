@@ -173,6 +173,13 @@ function App() {
       }
     };
 
+    const onMatchRestarted = () => {
+      console.log('Match restarted! Re-authenticating...');
+      const token = getSessionToken();
+      socket.emit('authenticate', token);
+      socket.emit('requestState');
+    };
+
 
 
     socket.on('connect', onConnect);
@@ -182,6 +189,7 @@ function App() {
     socket.on('syncStatus', onSyncStatus);
     socket.on('timerUpdate', onTimerUpdate);
     socket.on('resolutionStatus', onResolutionStatus);
+    socket.on('matchRestarted', onMatchRestarted);
     socket.on('connect_error', onError);
 
     // Initial check in case it connected before the effect ran
@@ -196,6 +204,7 @@ function App() {
       socket.off('syncStatus', onSyncStatus);
       socket.off('timerUpdate', onTimerUpdate);
       socket.off('resolutionStatus', onResolutionStatus);
+      socket.off('matchRestarted', onMatchRestarted);
       socket.off('connect_error', onError);
     }
   }, [])
