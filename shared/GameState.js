@@ -147,15 +147,6 @@ export class GameState {
         const state = baseState ? JSON.parse(JSON.stringify(baseState)) : this.getState();
         if (!playerId || playerId === 'spectator') return state;
 
-        // Vision sources for this player in the provided state
-        const visionSources = state.entities
-            .filter(e => e.owner === playerId)
-            .map(e => ({
-                x: e.x,
-                y: e.y,
-                radius: ENTITY_STATS[e.type]?.vision || 0
-            }))
-            .filter(v => v.radius > 0);
 
         const isVisible = (x, y) => {
             return this.isPositionVisible(playerId, x, y, state.entities);
@@ -623,6 +614,7 @@ export class GameState {
                             searchMode: false,
                             targetId: null,
                             lockFound: false,
+                            hp: stats.hp || 1,
                             active: true
                         });
                         console.log(`[Launch] ${action.playerId} fired ${action.itemType} from ${source.id}`);
@@ -887,16 +879,24 @@ export class GameState {
                                 type: 'EXPLOSION',
                                 x: proj.currX,
                                 y: proj.currY,
-                                duration: 20
+                                duration: GLOBAL_STATS.EXPLOSION_DURATION
                             });
 
                             const FULL_RADIUS = stats.radiusFull;
                             const HALF_RADIUS = stats.radiusHalf;
 
-                            this.entities.forEach(entity => {
-                                const eStats = ENTITY_STATS[entity.type];
-                                const rawDist = this.getToroidalDistance(entity.x, entity.y, proj.currX, proj.currY);
-                                const effDist = Math.max(0, rawDist - (eStats?.size || 0));
+                            const targets = [
+                                ...this.entities,
+                                ...tempProjectiles.filter(p => p.active)
+                            ];
+
+                            targets.forEach(target => {
+                                const tStats = ENTITY_STATS[target.type];
+                                const tx = target.x !== undefined ? target.x : target.currX;
+                                const ty = target.y !== undefined ? target.y : target.currY;
+
+                                const rawDist = this.getToroidalDistance(tx, ty, proj.currX, proj.currY);
+                                const effDist = Math.max(0, rawDist - (tStats?.size || 0));
 
                                 let damage = 0;
 
@@ -907,13 +907,22 @@ export class GameState {
                                 }
 
                                 if (damage > 0) {
-                                    entity.hp -= damage;
-                                    const status = entity.deployed === false ? 'UNDEPLOYED' : 'DEPLOYED';
-                                    console.log(`[AOE Damage] ${entity.id} (${entity.type}) [${status}] took ${damage} damage. Current HP: ${entity.hp}`);
+                                    target.hp -= damage;
+                                    const status = target.deployed === false ? 'UNDEPLOYED' : 'DEPLOYED';
+                                    const targetName = target.id ? `${target.id} (${target.type})` : `Projectile ${target.type}`;
+                                    console.log(`[AOE Damage] ${targetName} [${status}] took ${damage} damage. Current HP: ${target.hp}`);
 
-                                    if (entity.hp <= 0) {
-                                        impacts.add(entity.id);
-                                        console.log(`[Combat] ${entity.id} (${entity.type}) was DESTROYED by explosion!`);
+                                    if (target.hp <= 0) {
+                                        if (target.id && this.entities.some(e => e.id === target.id)) {
+                                            impacts.add(target.id);
+                                        } else {
+                                            // Handle projectile destruction in flight
+                                            target.active = false;
+                                            if (tStats?.deathEffect === 'DETONATE') {
+                                                target.hitThisTick = true;
+                                            }
+                                        }
+                                        console.log(`[Combat] ${targetName} was DESTROYED by explosion!`);
                                     }
                                 }
                             });

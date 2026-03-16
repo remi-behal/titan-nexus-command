@@ -20,7 +20,6 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
 
         let p1State = null;
         let p2State = null;
-        let p1Status = null;
         let p1Resolution = false;
 
         let p1Id = 'player1'; // Fallback
@@ -42,7 +41,6 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             if (p1Id) {
                 console.log(`p1 syncStatus: ${p1Id}=${s.lockedIn[p1Id]}`);
             }
-            p1Status = s;
         });
         p1.on('resolutionStatus', s => {
             console.log(`p1 resolutionStatus: ${s.active}`);
@@ -78,11 +76,11 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             });
 
             // 2. Sequential connect - ensure p1 gets player1
-            console.log(`Connecting p1/p2 (ENV PORT: 3010)`);
+            console.log('Connecting p1/p2 (ENV PORT: 3010)');
             p1.connect();
             p1.emit('authenticate', 'p1-token-real-life');
             await waitFor(() => p1Id === 'player1', 5000);
-            
+
             p2.connect();
             p2.emit('authenticate', 'p2-token-real-life');
             await waitFor(() => p2Id === 'player2', 5000);
@@ -90,7 +88,7 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             console.log('Waiting for initial state...');
             await waitFor(() => p1State && p1State.entities.some(e => e.owner === p1Id));
             await waitFor(() => p2State && p2State.entities.some(e => e.owner === p2Id));
-            
+
             const hub1p1 = p1State.entities.find(e => e.owner === p1Id);
             const hub1p2 = p2State.entities.find(e => e.owner === p2Id);
             console.log(`Initial hubs: p1(${p1Id})=${hub1p1.id}, p2(${p2Id})=${hub1p2.id}`);
@@ -103,7 +101,7 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             p2.emit('submitActions', [{ playerId: p2Id, sourceId: hub1p2.id, itemType: 'HUB', angle: 225, distance: 300 }]);
 
             await waitFor(() => p1State.turn === 2 && p1State.phase === 'PLANNING', 25000);
-            
+
             // After resolution, each player should have 2 hubs (1 starter, 1 deployed)
             const p1HubsTurn2 = p1State.entities.filter(e => e.owner === p1Id && (e.itemType === 'HUB' || e.type === 'HUB')).length;
             console.log(`Turn 2 Start: p1(${p1Id}) has ${p1HubsTurn2} hubs, p1 energy: ${p1State.players[p1Id].energy}`);
@@ -119,7 +117,6 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
                 return hubs === 2 && phase === 'PLANNING';
             }, 20000);
 
-            const hub2p1 = p1State.entities.find(e => e.owner === p1Id && e.id !== hub1p1.id);
             const hub2p2 = p2State.entities.find(e => e.owner === p2Id && e.id !== hub1p2.id);
 
             // P1 strikes at P2's new hub location
@@ -133,8 +130,8 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             if (dx < -1000) dx += 2000;
             if (dy > 1000) dy -= 2000;
             if (dy < -1000) dy += 2000;
-            
-            const distToP2 = Math.sqrt(dx*dx + dy*dy);
+
+            const distToP2 = Math.sqrt(dx * dx + dy * dy);
             const angleToP2 = Math.atan2(dy, dx) * (180 / Math.PI);
 
             console.log(`p1(${p1Id}) striking p2(${p2Id}) hub ${hub2p2.id} at (${Math.round(targetX)}, ${Math.round(targetY)})`);
@@ -142,7 +139,7 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
 
             // To land at distToP2, we need to find the pull distance that results in that launch distance
             // d_launch = (pull / 300)^1.6 * 800  =>  pull = 300 * (d_launch / 800)^(1/1.6)
-            const pullDistance = 300 * Math.pow(distToP2 / 800, 1/1.6);
+            const pullDistance = 300 * Math.pow(distToP2 / 800, 1 / 1.6);
             console.log(`Calculated Pull Distance for ${Math.round(distToP2)}px launch: ${pullDistance.toFixed(1)}`);
 
             p1.emit('submitActions', [{ playerId: p1Id, sourceId: hub1p1.id, itemType: 'SUPER_BOMB', angle: angleToP2, distance: pullDistance }]);
@@ -163,12 +160,12 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             // Refresh hub2p1 from latest state
             const h2p1Latest = p1State.entities.find(e => e.owner === p1Id && e.id !== hub1p1.id);
             console.log(`Hub 2 status: ${!!h2p1Latest}, Deployed: ${h2p1Latest?.deployed}, HP: ${h2p1Latest?.hp}, Energy: ${p1State.players[p1Id].energy}, Phase: ${p1State.phase}`);
-            
+
             p1.emit('submitActions', [{ playerId: p1Id, sourceId: h2p1Latest.id, itemType: 'EXTRACTOR', angle: 0, distance: 300 }]);
-            
+
             // P2 does nothing, wait for timer (5s) + resolution
             await waitFor(() => p1State.turn === 4 && p1State.phase === 'PLANNING', 30000);
-            
+
             const p1Extractors = p1State.entities.filter(e => e.owner === p1Id && (e.itemType === 'EXTRACTOR' || e.type === 'EXTRACTOR'));
             if (p1Extractors.length === 0) {
                 console.log(`P1 Entities at Turn 4: ${p1State.entities.map(e => `${e.type}:${e.owner}:${e.id}`).join(', ')}`);
@@ -185,11 +182,11 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             console.log('Turn 5: Hard Drop Protocol');
             // Wait for resolution to BE ACTIVE (must wait for 5s timer + buffer)
             await waitFor(() => p1Resolution === true, 25000);
-            
+
             // This late submission should be rejected because phase is RESOLVING
             console.log('Emitting late submission during resolution...');
             p1.emit('submitActions', [{ playerId: p1Id, sourceId: hub1p1.id, itemType: 'WEAPON', angle: 0, distance: 100 }]);
-            
+
             await waitFor(() => p1State.turn === 6 && p1State.phase === 'PLANNING', 25000);
             expect(p1State.entities.find(e => e.owner === p1Id && (e.itemType === 'WEAPON' || e.type === 'WEAPON'))).toBeUndefined();
 

@@ -96,45 +96,12 @@ describe('Light SAM Defense Logic', () => {
     });
 
     it('should accelerate faster than standard homing missiles (Task 3)', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
 
         // Spawn a SAM
         const samStats = ENTITY_STATS.SAM_MISSILE;
-        const sam = {
-            id: 'sam_test',
-            type: 'SAM_MISSILE',
-            itemType: 'SAM_MISSILE',
-            owner: 'player1',
-            active: true,
-            currX: 100,
-            currY: 100,
-            targetX: 500,
-            targetY: 100,
-            velocity: samStats.speed,
-            currentAngle: 0,
-            totalDistanceMoved: 0,
-            intendedDistance: 600,
-            searchMode: true // Fast forward to search/tracking
-        };
 
         // Spawn a standard Homing Missile for comparison
         const hmStats = ENTITY_STATS.HOMING_MISSILE;
-        const hm = {
-            id: 'hm_test',
-            type: 'HOMING_MISSILE',
-            itemType: 'HOMING_MISSILE',
-            owner: 'player1',
-            active: true,
-            currX: 100,
-            currY: 200,
-            targetX: 500,
-            targetY: 200,
-            velocity: hmStats.speed,
-            currentAngle: 0,
-            totalDistanceMoved: 0,
-            intendedDistance: 600,
-            searchMode: true
-        };
 
         // We'll manually tick the game to see speed differences
         // Since we can't easily launch them simultaneously via actions in a clean way for comparison,

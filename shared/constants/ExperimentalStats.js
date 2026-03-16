@@ -17,6 +17,7 @@ export const EXPERIMENTAL_STATS = {
         radiusHalf: 20,
         vision: 100,
         size: 15,           // Large projectile for visual distinction
-        speed: SPEED_TIERS.VERY_FAST           // VERY FAST (20 px/tick)
+        speed: SPEED_TIERS.VERY_FAST,           // VERY FAST (7 px/tick)
+        deathEffect: 'DETONATE'
     }
 };

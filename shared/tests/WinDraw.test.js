@@ -42,7 +42,7 @@ describe('GameState - Win/Draw Conditions', () => {
         const p2Hub1 = game.entities.find(e => e.owner === 'p2' && e.type === 'HUB');
 
         // Add a second hub for P2 so they can survive Round 1 and strike back in Round 2
-        const p2Hub2 = game.addEntity({ type: 'HUB', owner: 'p2', x: 800, y: 500, deployed: true, hp: 1 });
+        game.addEntity({ type: 'HUB', owner: 'p2', x: 800, y: 500, deployed: true, hp: 1 });
 
         p1Hub.x = 250; p1Hub.y = 500; p1Hub.hp = 1;
         p2Hub1.x = 550; p2Hub1.y = 500; p2Hub1.hp = 1;

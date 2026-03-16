@@ -5,12 +5,19 @@
 ### Hubs
 *   Hubs are the only structures that can create links by launching other structures.
 *   Players start with a single "Starter Hub" which has more health and a unique appearance.
-#### Starter Hub
+#### Stats
 *   **Health**: 5
-*   **Launch Cost**: Cannot be launched, each player starts with 1
+*   **Launch Cost**: 20 (Starter Hub is free)
 *   **Fuel**: 3
+*   **Vision**: 400
 ### Extractors
 *   Extractors generate energy every turn and can be launched from Hubs.
+#### Stats
+*   **Health**: 2
+*   **Vision**: 200
+*   **Launch Cost**: 25
+*   **Energy Gen**: 5 per turn
+ Emma: Extractors must be built on Energy Nodes.
 ### Links
 *   Links are created by launching structures from Hubs.
 *   All links must eventually connect back to the Starter Hub. If a structure cannot be reached via a link from the Starter Hub, it is destroyed.

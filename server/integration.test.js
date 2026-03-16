@@ -6,7 +6,7 @@ import path from 'path';
 describe('Server Integration - Turn Resolution Race Condition', () => {
     let serverProcess;
     let client1, client2;
-    let p1Id, p2Id;
+    let p1Id;
 
     beforeAll(async () => {
         const serverPath = path.resolve(__dirname, 'index.js');
@@ -36,7 +36,7 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
         await new Promise((resolve) => {
             let authenticated = 0;
             const onAuth1 = (id) => { p1Id = id; if (++authenticated === 2) resolve(); };
-            const onAuth2 = (id) => { p2Id = id; if (++authenticated === 2) resolve(); };
+            const onAuth2 = (_id) => { if (++authenticated === 2) resolve(); };
             client1.on('playerAssignment', onAuth1);
             client2.on('playerAssignment', onAuth2);
 

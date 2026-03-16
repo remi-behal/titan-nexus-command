@@ -10,6 +10,7 @@ import { EXPERIMENTAL_STATS } from './ExperimentalStats.js';
 
 export const ENTITY_STATS = {
     ...EXPERIMENTAL_STATS,
+    /** @see [structures.md#hubs](../../.agents/structures.md#hubs) */
     HUB: {
         hp: 5,
         fuel: 3,
@@ -19,8 +20,10 @@ export const ENTITY_STATS = {
         cost: 20,
         size: 40, // Base radius for rendering and selection
         labelOffset: 35,
-        speed: SPEED_TIERS.SLOW
+        speed: SPEED_TIERS.SLOW,
+        deathEffect: 'DISINTEGRATE'
     },
+    /** @see [defenses.md#laser-point-defense](../../.agents/defenses.md#laser-point-defense) */
     LASER_POINT_DEFENSE: {
         hp: 2,
         fuel: 1,
@@ -30,8 +33,10 @@ export const ENTITY_STATS = {
         cost: 25,
         size: 15, // Half-width for the square render
         labelOffset: 35,
-        speed: SPEED_TIERS.SLOW
+        speed: SPEED_TIERS.SLOW,
+        deathEffect: 'DISINTEGRATE'
     },
+    /** @see [structures.md#extractors](../../.agents/structures.md#extractors) */   
     EXTRACTOR: {
         hp: 2,
         vision: 200,
@@ -39,8 +44,10 @@ export const ENTITY_STATS = {
         cost: 25,
         size: 20,
         labelOffset: 35,
-        speed: SPEED_TIERS.SLOW
+        speed: SPEED_TIERS.SLOW,
+        deathEffect: 'DISINTEGRATE'
     },
+    /** @see [weapons.md#dumb-bomb](../../.agents/weapons.md#dumb-bomb) */
     WEAPON: {
         hp: 1,
         cost: 15,
@@ -51,10 +58,12 @@ export const ENTITY_STATS = {
         vision: 100,
         size: 8, // Radius for the projectile render
         labelOffset: 35,
-        speed: SPEED_TIERS.NORMAL
+        speed: SPEED_TIERS.NORMAL,
+        deathEffect: 'DETONATE'
     },
+    /** @see [weapons.md#homing-missile](../../.agents/weapons.md#homing-missile) */
     HOMING_MISSILE: {
-        hp: 1,
+        hp: 2,
         cost: 20,
         damageFull: 2,
         radiusFull: 10,
@@ -69,19 +78,23 @@ export const ENTITY_STATS = {
         homingFuel: 400,
         searchCone: 60, //degrees
         turnRadius: 5,
-        isSeeker: true
+        isSeeker: true,
+        deathEffect: 'DETONATE'
     },
+    /** @see [defenses.md#light-sam-defense](../../.agents/defenses.md#light-sam-defense) */
     LIGHT_SAM_DEFENSE: {
         hp: 2,
         fuel: 1,
         fuelRegen: 1,
         vision: 250,
-        range: 100,
+        range: 200,
         cost: 25,
         size: 15,
         labelOffset: 35,
-        speed: SPEED_TIERS.SLOW
+        speed: SPEED_TIERS.SLOW,
+        deathEffect: 'DISINTEGRATE'
     },
+    /** @see [defenses.md#sam-missile](../../.agents/defenses.md#sam-missile) */
     SAM_MISSILE: {
         hp: 1,
         cost: 0,
@@ -99,7 +112,8 @@ export const ENTITY_STATS = {
         searchCone: 360, // Full circle range for intercept
         turnRadius: 7.5,
         isInterceptor: true,
-        isSeeker: true
+        isSeeker: true,
+        deathEffect: 'DETONATE'
     }
 };
 

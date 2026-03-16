@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { GameState } from '../../../shared/GameState.js';
 import { ENTITY_STATS, GLOBAL_STATS } from '../../../shared/constants/EntityStats.js';
 import { VISUAL_STATS } from '../constants/VisualStats.js';
@@ -833,10 +833,10 @@ const GameBoard = ({
 
         animationFrameId = requestAnimationFrame(updateAndDraw);
         return () => cancelAnimationFrame(animationFrameId);
-    }, [gameState, launchMode, isAiming, selectedHubId, mousePos, committedActions, showDebugPreview, maxPullDistance, myPlayerId, cameraOffset]);
+    }, [gameState, launchMode, isAiming, selectedHubId, mousePos, committedActions, showDebugPreview, maxPullDistance, myPlayerId, cameraOffset, HUB_RADIUS, SLING_RING_RADIUS]);
 
     // Helper: Calculate game coordinates from mouse event
-    const getGameCoords = (e) => {
+    const getGameCoords = useCallback((e) => {
         const canvas = canvasRef.current;
         if (!canvas) return { x: 0, y: 0 };
 
@@ -866,7 +866,7 @@ const GameBoard = ({
             x: ((x % gameState.map.width) + gameState.map.width) % gameState.map.width,
             y: ((y % gameState.map.height) + gameState.map.height) % gameState.map.height
         };
-    };
+    }, [cameraOffset, gameState.map.width, gameState.map.height]);
 
     // Effect: Global Mouse Listeners for Panning & Aiming
     useEffect(() => {
@@ -911,7 +911,7 @@ const GameBoard = ({
             window.removeEventListener('mousemove', handleGlobalMouseMove);
             window.removeEventListener('mouseup', handleGlobalMouseUp);
         };
-    }, [isAiming, isPanning, panStart, gameState.map.width, gameState.map.height]);
+    }, [isAiming, isPanning, panStart, gameState.map.width, gameState.map.height, getGameCoords, onAimEnd, onAimUpdate]);
 
     const handleMouseDown = (e) => {
         const { x, y } = getGameCoords(e);

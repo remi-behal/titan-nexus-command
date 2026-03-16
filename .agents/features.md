@@ -89,7 +89,7 @@ The game follows a strict state machine for actions:
     3.  Impact animations
     4.  Deployment animations
 *   Additional animations **TBD**.
-*   **Sub-tick Simulation [Implemented]**: Resolution processes actions in 120 sub-ticks for smooth, frame-by-frame animation snapshots.
+*   **Sub-tick Simulation [Implemented]**: Resolution processes actions in 200 sub-ticks for smooth, frame-by-frame animation snapshots.
 
 ### Structure Lifecycle & Deployment
 *   **Three-State Lifecycle**: To facilitate variable flight speeds and visual weight, structures follow a distinct lifecycle:
