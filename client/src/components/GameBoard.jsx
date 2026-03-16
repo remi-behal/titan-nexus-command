@@ -179,6 +179,9 @@ const GameBoard = ({
                     viz.currentAngle = serverEnt.currentAngle;
                     viz.searchMode = serverEnt.searchMode;
                     viz.lockFound = serverEnt.lockFound;
+                    viz.flakActive = serverEnt.flakActive;
+                    viz.flakAngle = serverEnt.flakAngle;
+                    viz.flakTriggerTick = serverEnt.flakTriggerTick;
                     viz.isGhost = false;
                     viz.lastSeen = Date.now();
                     viz.scouted = viz.scouted || serverEnt.scouted; // Once scouted, always scouted for ghosting purposes
@@ -191,7 +194,7 @@ const GameBoard = ({
                     const viz = visualEntities.current[id];
 
                     // If it's a transient effect/projectile OR if it was OUR structure, it disappears immediately
-                    const TRANSIENT_TYPES = ['PROJECTILE', 'WEAPON', 'SUPER_BOMB', 'EXPLOSION', 'LASER_BEAM', 'LINK_COLLISION'];
+                    const TRANSIENT_TYPES = ['PROJECTILE', 'WEAPON', 'SUPER_BOMB', 'EXPLOSION', 'LASER_BEAM', 'LINK_COLLISION', 'SPARK'];
                     if (TRANSIENT_TYPES.includes(viz.type) || viz.owner === myPlayerId) {
                         delete visualEntities.current[id];
                         return;
@@ -555,6 +558,16 @@ const GameBoard = ({
                             ctx.lineWidth = 6;
                             ctx.stroke();
                             ctx.restore();
+                        } else if (entity.type === 'SPARK') {
+                            ctx.save();
+                            const sparkSize = 6 + Math.random() * 8; // Increased size
+                            ctx.beginPath();
+                            ctx.arc(entity.x, entity.y, sparkSize, 0, Math.PI * 2);
+                            ctx.fillStyle = '#fff';
+                            ctx.shadowBlur = 15;
+                            ctx.shadowColor = '#ffff00';
+                            ctx.fill();
+                            ctx.restore();
                         } else if (entity.type === 'EXPLOSION') {
                             ctx.save();
                             ctx.beginPath();
@@ -586,9 +599,60 @@ const GameBoard = ({
                             ctx.beginPath();
                             const radius = ENTITY_STATS[entity.itemType || entity.type]?.size || 20;
 
-                            if (entity.type === 'LASER_POINT_DEFENSE') {
+                            if (entity.type === 'LASER_POINT_DEFENSE' || entity.type === 'FLAK_DEFENSE') {
                                 // Draw Defense as a square/diamond (radius is half-width)
                                 ctx.rect(entity.x - radius, entity.y - radius, radius * 2, radius * 2);
+
+                                // --- Flak Defense Wall Visuals ---
+                                if (entity.type === 'FLAK_DEFENSE' && entity.flakActive) {
+                                    ctx.save();
+                                    const stats = ENTITY_STATS.FLAK_DEFENSE;
+                                    const arcRange = stats.range;
+                                    const arcWidth = (stats.arc * Math.PI) / 180;
+                                    const centerAngle = (entity.flakAngle * Math.PI) / 180;
+
+                                    // 1. Draw Sensor Cone (persistent faint arc)
+                                    ctx.save();
+                                    ctx.globalAlpha = 0.1;
+                                    ctx.fillStyle = color;
+                                    ctx.beginPath();
+                                    ctx.moveTo(entity.x, entity.y);
+                                    ctx.arc(entity.x, entity.y, arcRange, centerAngle - arcWidth / 2, centerAngle + arcWidth / 2);
+                                    ctx.fill();
+                                    ctx.restore();
+
+                                    // 2. Draw multiple random small "explosions" in the arc
+                                    // We use a seeded PRNG tied to time buckets to refresh positions every ~5 frames (12fps)
+                                    ctx.save();
+                                    ctx.globalAlpha = 0.4; // Faded for a "cloud/hazard" feel
+                                    const timeBucket = Math.floor(Date.now() / 83); // ~12 fps
+                                    const getSeededRandom = (seed) => {
+                                        const x = Math.sin(seed) * 10000;
+                                        return x - Math.floor(x);
+                                    };
+
+                                    // Use entity.id to ensure different towers have unique patterns
+                                    let patternSeed = entity.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + timeBucket;
+
+                                    for (let i = 0; i < 8; i++) {
+                                        const r = getSeededRandom(patternSeed++) * arcRange;
+                                        const theta = centerAngle + (getSeededRandom(patternSeed++) - 0.5) * arcWidth;
+                                        const ex = entity.x + Math.cos(theta) * r;
+                                        const ey = entity.y + Math.sin(theta) * r;
+                                        const eSize = 4 + getSeededRandom(patternSeed++) * 8;
+
+                                        ctx.beginPath();
+                                        ctx.arc(ex, ey, eSize, 0, Math.PI * 2);
+                                        const colorIdx = Math.floor(getSeededRandom(patternSeed++) * 3);
+                                        // Softer, more desaturated colors: Dusty Red, Pale Orange, Muted Yellow
+                                        ctx.fillStyle = colorIdx === 0 ? '#cc6655' : (colorIdx === 1 ? '#ccaa66' : '#cccc77');
+                                        ctx.shadowBlur = 5;
+                                        ctx.shadowColor = '#884433';
+                                        ctx.fill();
+                                    }
+                                    ctx.restore();
+                                    ctx.restore(); // Close the outer flakActive save
+                                }
                             } else if (entity.type === 'EXTRACTOR') {
                                 // Draw Extractor as a triangle
                                 ctx.beginPath();

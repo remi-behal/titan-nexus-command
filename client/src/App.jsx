@@ -312,6 +312,9 @@ function App() {
           <option value="HOMING_MISSILE" disabled={pCurrent.energy < ENTITY_STATS.HOMING_MISSILE.cost}>
             Homing Missile ({ENTITY_STATS.HOMING_MISSILE.cost} E)
           </option>
+          <option value="FLAK_DEFENSE" disabled={pCurrent.energy < ENTITY_STATS.FLAK_DEFENSE.cost}>
+            Flak Defense ({ENTITY_STATS.FLAK_DEFENSE.cost} E)
+          </option>
           <option value="SUPER_BOMB" disabled={pCurrent.energy < (ENTITY_STATS.SUPER_BOMB?.cost || 10)}>
             Super Bomb [TEST] ({ENTITY_STATS.SUPER_BOMB?.cost || 10} E)
           </option>

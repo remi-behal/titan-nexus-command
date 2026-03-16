@@ -614,8 +614,9 @@ export class GameState {
                             searchMode: false,
                             targetId: null,
                             lockFound: false,
-                            hp: stats.hp || 1,
-                            active: true
+                            hp: (stats.damageFull !== undefined || stats.isInterceptor) ? (stats.hp || 1) : GLOBAL_STATS.UNDEPLOYED_HP,
+                            active: true,
+                            hitByFlakDefense: new Set() // Track unique flak hits per round
                         });
                         console.log(`[Launch] ${action.playerId} fired ${action.itemType} from ${source.id}`);
                     }
@@ -633,8 +634,13 @@ export class GameState {
                 for (let t = 1; t <= subTicks; t++) {
                     // --- Interception Logic ---
                     this.entities.forEach(def => {
-                        if ((def.type === 'LASER_POINT_DEFENSE' || def.type === 'LIGHT_SAM_DEFENSE') && def.fuel > 0) {
+                        if ((def.type === 'LASER_POINT_DEFENSE' || def.type === 'LIGHT_SAM_DEFENSE' || def.type === 'FLAK_DEFENSE') && def.fuel > 0) {
                             if (def.deployed === false) {
+                                return;
+                            }
+
+                            // Flak logic: If already active, it doesn't need to re-trigger or search
+                            if (def.type === 'FLAK_DEFENSE' && def.flakActive) {
                                 return;
                             }
 
@@ -668,6 +674,16 @@ export class GameState {
                                         duration: Math.max(5, Math.floor(subTicks / 8))
                                     });
                                     console.log(`[Intercept] ${def.id} (Laser) blocked projectile from ${closestProj.owner}`);
+                                } else if (def.type === 'FLAK_DEFENSE') {
+                                    // Flak Activation!
+                                    def.flakActive = true;
+                                    def.flakTriggerTick = t;
+                                    def.fuel--;
+
+                                    const vec = this.constructor.getToroidalVector(def.x, def.y, closestProj.currX, closestProj.currY, this.map.width, this.map.height);
+                                    def.flakAngle = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+
+                                    console.log(`[Flak Activation] ${def.id} triggered at ${Math.round(def.flakAngle)} degrees`);
                                 } else if (def.type === 'LIGHT_SAM_DEFENSE') {
                                     // SAM Intercept!
                                     def.fuel--;
@@ -699,6 +715,48 @@ export class GameState {
                                     console.log(`[SAM Launch] ${def.id} fired SAM at ${closestProj.id}`);
                                 }
                             }
+                        }
+
+                        // --- Persistent Flak Damage Logic ---
+                        if (def.type === 'FLAK_DEFENSE' && def.flakActive) {
+                            const stats = ENTITY_STATS.FLAK_DEFENSE;
+                            tempProjectiles.forEach(proj => {
+                                if (!proj.active || proj.hitByFlakDefense.has(def.id)) return;
+
+                                const dist = this.getToroidalDistance(def.x, def.y, proj.currX, proj.currY);
+                                if (dist <= stats.range) {
+                                    const vec = this.constructor.getToroidalVector(def.x, def.y, proj.currX, proj.currY, this.map.width, this.map.height);
+                                    const angleToProj = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+
+                                    let diff = angleToProj - (def.flakAngle || 0);
+                                    while (diff > 180) diff -= 360;
+                                    while (diff < -180) diff += 360;
+
+                                    if (Math.abs(diff) <= stats.arc / 2) {
+                                        // HIT!
+                                        proj.hp -= stats.damage;
+                                        proj.hitByFlakDefense.add(def.id);
+
+                                        // Impact Sparks
+                                        tempVisuals.push({
+                                            type: 'SPARK',
+                                            x: proj.currX,
+                                            y: proj.currY,
+                                            duration: 15
+                                        });
+
+                                        console.log(`[Flak Hit] Proj ${proj.id} hit by ${def.id}. HP: ${proj.hp}`);
+
+                                        if (proj.hp <= 0) {
+                                            proj.active = false;
+                                            const pStats = ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
+                                            if (pStats?.deathEffect === 'DETONATE') {
+                                                proj.hitThisTick = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            });
                         }
                     });
 
@@ -1081,6 +1139,15 @@ export class GameState {
                         e.deployed = true;
                         e.hp = ENTITY_STATS[e.type]?.hp || GLOBAL_STATS.DEFAULT_HP; // Restore full HP
                         console.log(`[Round ${round}]${e.type} ${e.id} fully deployed.`);
+                    }
+                });
+
+                // Clean up flak state for this round
+                this.entities.forEach(e => {
+                    if (e.type === 'FLAK_DEFENSE') {
+                        e.flakActive = false;
+                        e.flakAngle = null;
+                        e.flakTriggerTick = null;
                     }
                 });
 

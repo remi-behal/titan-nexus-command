@@ -26,3 +26,15 @@ A missile based defense system that fires a light missile at any enemy projectil
 * **Damage**: 2
 * **Interception chance**: Projectile based
 
+### Flak Defense - IMPLEMENTED [x]
+#### Overview
+A persistent area-of-denial defense system that creates a "wall" of flak in a 90° arc. 
+Triggers on the first enemy projectile within range, locking its firing angle for the remainder of the round. 
+Deals constant damage to any projectiles (friend or foe) crossing the hazard zone.
+#### Stats
+* **Range**: 150px
+* **Health**: 2
+* **Launch Cost**: 25
+* **Fuel**: 1 (Single activation per round)
+* **Damage**: 1
+* **Interception chance**: Guaranteed damage to all units in the 90° hazard arc.

@@ -36,7 +36,7 @@ export const ENTITY_STATS = {
         speed: SPEED_TIERS.SLOW,
         deathEffect: 'DISINTEGRATE'
     },
-    /** @see [structures.md#extractors](../../.agents/structures.md#extractors) */   
+    /** @see [structures.md#extractors](../../.agents/structures.md#extractors) */
     EXTRACTOR: {
         hp: 2,
         vision: 200,
@@ -114,6 +114,21 @@ export const ENTITY_STATS = {
         isInterceptor: true,
         isSeeker: true,
         deathEffect: 'DETONATE'
+    },
+    /** @see [defenses.md#flak-defense](../../.agents/defenses.md#flak-defense) */
+    FLAK_DEFENSE: {
+        hp: 2,
+        fuel: 1,
+        fuelRegen: 1,
+        vision: 250,
+        range: 150,
+        cost: 25,
+        size: 15,
+        arc: 90,
+        damage: 1,
+        labelOffset: 35,
+        speed: SPEED_TIERS.SLOW,
+        deathEffect: 'DISINTEGRATE'
     }
 };
 
