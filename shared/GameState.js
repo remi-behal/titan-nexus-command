@@ -537,10 +537,10 @@ export class GameState {
         });
         snapshots.push({ type: 'ENERGY', state: this.getState() });
 
-        // 2. Process Actions with "Skip-and-Slide" Logic
+        // 2. Process Actions with Entity-Autonomous "One-per-Hub-per-Round" Logic
         const playerIds = Object.keys(this.players);
-        const actionPointers = {};
-        playerIds.forEach(pid => actionPointers[pid] = 0);
+        const processedActions = {}; // Indices of actions already resolved or discarded
+        playerIds.forEach(pid => processedActions[pid] = new Set());
 
         let round = 0;
         let activeInProgress = true;
@@ -549,22 +549,28 @@ export class GameState {
             round++;
             const roundActions = [];
 
-            // a. Collection: Find the next valid action for this player
+            // a. Collection: Find the next valid action for each UNIQUE hub of this player
             playerIds.forEach(pid => {
                 const actions = playerActionsMap[pid] || [];
+                const hubsFiredThisRound = new Set();
 
-                // Skip-and-Slide: Find the next valid action for this player
-                while (actionPointers[pid] < actions.length) {
-                    const action = actions[actionPointers[pid]];
+                for (let i = 0; i < actions.length; i++) {
+                    if (processedActions[pid].has(i)) continue;
+
+                    const action = actions[i];
                     const source = this.entities.find(e => e.id === action.sourceId);
 
-                    if (source && (source.fuel === undefined || source.fuel > 0)) {
-                        // Found a valid action for this round
+                    // Discard invalid actions (source destroyed or out of fuel)
+                    if (!source || (source.fuel !== undefined && source.fuel <= 0)) {
+                        processedActions[pid].add(i);
+                        continue;
+                    }
+
+                    // Strict Rule: One action per unique Hub per round
+                    if (!hubsFiredThisRound.has(action.sourceId)) {
                         roundActions.push(action);
-                        actionPointers[pid]++;
-                        break;
-                    } else {
-                        actionPointers[pid]++;
+                        hubsFiredThisRound.add(action.sourceId);
+                        processedActions[pid].add(i);
                     }
                 }
             });
@@ -634,10 +640,10 @@ export class GameState {
                 for (let t = 1; t <= subTicks; t++) {
                     // --- Interception Logic ---
                     this.entities.forEach(def => {
-                        if ((def.type === 'LASER_POINT_DEFENSE' || def.type === 'LIGHT_SAM_DEFENSE' || def.type === 'FLAK_DEFENSE') && def.fuel > 0) {
-                            if (def.deployed === false) {
-                                return;
-                            }
+                        const isDefense = def.type === 'LASER_POINT_DEFENSE' || def.type === 'LIGHT_SAM_DEFENSE' || def.type === 'FLAK_DEFENSE';
+                        if (isDefense && def.fuel > 0 && def.deployed !== false) {
+                            // ROF Limit: 1 interception per round
+                            if (def.lastRoundFired === round) return;
 
                             // Flak logic: If already active, it doesn't need to re-trigger or search
                             if (def.type === 'FLAK_DEFENSE' && def.flakActive) {
@@ -659,6 +665,9 @@ export class GameState {
                             });
 
                             if (closestProj) {
+                                // Mark as fired this round
+                                def.lastRoundFired = round;
+
                                 if (def.type === 'LASER_POINT_DEFENSE') {
                                     // Laser Intercept!
                                     closestProj.active = false;
