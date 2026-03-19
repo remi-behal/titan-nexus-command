@@ -655,14 +655,15 @@ export class GameState {
                             const stats = ENTITY_STATS[def.type];
                             let minDist = stats.range;
 
-                            tempProjectiles.forEach(proj => {
-                                if (!proj.active || proj.owner === def.owner) return;
-                                const dist = this.getToroidalDistance(def.x, def.y, proj.currX, proj.currY);
-                                if (dist <= minDist) {
-                                    minDist = dist;
-                                    closestProj = proj;
-                                }
-                            });
+                             tempProjectiles.forEach(proj => {
+                                 if (!proj.active || proj.owner === def.owner) return;
+                                 const dist = this.getToroidalDistance(def.x, def.y, proj.currX, proj.currY);
+                                 // Deterministic Tie-break: if distances are equal, pick by ID (lexicographical)
+                                 if (dist < minDist || (dist === minDist && (!closestProj || proj.id < closestProj.id))) {
+                                     minDist = dist;
+                                     closestProj = proj;
+                                 }
+                             });
 
                             if (closestProj) {
                                 // Mark as fired this round
@@ -832,15 +833,22 @@ export class GameState {
                                     proj.targetX = targetX;
                                     proj.targetY = targetY;
 
-                                    const vec = this.constructor.getToroidalVector(proj.currX, proj.currY, targetX, targetY, this.map.width, this.map.height);
-                                    const angleToTarget = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
-
-                                    let diff = angleToTarget - proj.currentAngle;
-                                    while (diff > 180) diff -= 360;
-                                    while (diff < -180) diff += 360;
-
-                                    const turn = Math.sign(diff) * Math.min(Math.abs(diff), stats.turnRadius);
-                                    proj.currentAngle += turn;
+                                     const vec = this.constructor.getToroidalVector(proj.currX, proj.currY, targetX, targetY, this.map.width, this.map.height);
+                                     const angleToTarget = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+ 
+                                     let diff = angleToTarget - proj.currentAngle;
+                                     while (diff > 180) diff -= 360;
+                                     while (diff < -180) diff += 360;
+ 
+                                     // Stability Hysteresis: If the target crosses the halfway point of the toroidal map, 
+                                     // the "shortest path" angle can suddenly flip 180 degrees. We detect this 
+                                     // and ignore the snap to avoid seeker oscillation.
+                                     if (Math.abs(diff) > 170) {
+                                         diff = 0;
+                                     }
+ 
+                                     const turn = Math.sign(diff) * Math.min(Math.abs(diff), stats.turnRadius);
+                                     proj.currentAngle += turn;
                                 } else {
                                     proj.lockFound = false; // Target lost, stop hunting but keep flying straight
                                 }
