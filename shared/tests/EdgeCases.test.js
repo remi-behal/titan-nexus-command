@@ -149,4 +149,37 @@ describe('GameState - Edge Case Fixes', () => {
 
         expect(missile.currentAngle).toBe(0); // Should NOT have turned towards 180
     });
+
+    it('should persist projectiles if source hub is destroyed mid-round', () => {
+        // p1 has a Hub at (500, 500)
+        const hubP1 = game.entities.find(e => e.owner === 'p1' && e.type === 'HUB');
+        hubP1.x = 500; hubP1.y = 500;
+        hubP1.hp = 1; // Make it fragile so one hit kills it
+
+        // p2 has a Weapon that will hit p1's hub at t=50
+        // Weapon speed 5, dist 250 -> arrival 50.
+        const hubP2 = game.addEntity({ type: 'HUB', owner: 'p2', x: 250, y: 500, deployed: true });
+
+        const actions = {
+            p1: [
+                // p1 fire a weapon. Speed 5, dist 500 -> arrival 100.
+                { playerId: 'p1', sourceId: hubP1.id, itemType: 'WEAPON', angle: 0, distance: 188 } // 188 pull ~ 500 dist
+            ],
+            p2: [
+                // p2 fire a weapon that hits p1 hub at t=50.
+                // Dist 250.
+                { playerId: 'p2', sourceId: hubP2.id, itemType: 'WEAPON', angle: 0, distance: 146 } // 146 pull ~ 250 dist
+            ]
+        };
+
+        const snapshots = game.resolveTurn(actions);
+
+        // At t=54 (after hub hit at t=50), check if p1's projectile still exists
+        const subSnap = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick >= 54);
+        const p1Proj = subSnap.state.entities.find(e => e.owner === 'p1' && e.itemType === 'WEAPON');
+        const p1Hub = subSnap.state.entities.find(e => e.owner === 'p1' && e.type === 'HUB');
+
+        expect(p1Hub.hp).toBeLessThanOrEqual(0); // Hub should be "destroyed" (HP <= 0)
+        expect(p1Proj).toBeDefined(); // Projectile should still be in flight
+    });
 });

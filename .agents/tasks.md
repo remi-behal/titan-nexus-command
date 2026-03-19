@@ -20,7 +20,7 @@
     - [ ] Lobby management / Player slotting.
 - [ ] **Conflict Resolution & Pathing**: <!-- id: 74 -->
     - [x] **Structure Overlap**: Both destroyed if landing same spot. <!-- id: 59 -->
-    - [ ] **Autonomous Projectiles**: Persist if source hub destroyed. <!-- id: 60 -->
+    - [x] **Autonomous Projectiles**: Persist if source hub destroyed. <!-- id: 60 -->
     - [ ] **Post-Mortem Revenge**: Finish paths before elimination. <!-- id: 61 -->
     - [ ] **Defensive Overkill**: Defenses reacquire if target gone. <!-- id: 62 -->
     - [ ] **Target Ambiguity**: Guided missiles reacquire or fly straight. <!-- id: 63 -->
@@ -64,6 +64,9 @@
         - [ ] Animation frame rate under load. <!-- id: 80 -->
     - [ ] **Platform Support**: <!-- id: 81 -->
         - [ ] Mobile/Touchscreen slingshot verification. <!-- id: 73 -->
+    - [ ] **Game Feature Expansion**: <!-- id: 84 -->
+        - [ ] Multi-round projectiles. Brainstorm weapons <!-- id: 85 -->
+
     - [ ] Expand test coverage to `server/` and `client/` (Specifically for sockets and React components). <!-- id: 83 -->
 
 ---

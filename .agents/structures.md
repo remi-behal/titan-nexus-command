@@ -17,7 +17,7 @@
 *   **Vision**: 200
 *   **Launch Cost**: 25
 *   **Energy Gen**: 5 per turn
- Emma: Extractors must be built on Energy Nodes.
+
 ### Links
 *   Links are created by launching structures from Hubs.
 *   All links must eventually connect back to the Starter Hub. If a structure cannot be reached via a link from the Starter Hub, it is destroyed.

@@ -15,7 +15,6 @@ A simple weapon that travels in a straight line and explodes at it's landing spo
     * **Full Damage radius**: 10
     * **Half Damage radius**: 20
 * **Speed**: NORMAL (5 px/tick)
- Emma: Speed tiers were recently halved.
 
 ### Super bomb - Temp for testing only. Remove Later. Implemented [x]
 #### Overview
@@ -30,7 +29,6 @@ A simple weapon that travels in a straight line and explodes at it's landing spo
     * **Full Damage radius**: 10
     * **Half Damage radius**: 20
 * **Speed**: VERY FAST (7 px/tick)
- Emma: Speed tiers were recently halved.
 
 ### Homing Missile - Implemented [x]
 #### Overview
@@ -56,4 +54,3 @@ A homing weapon that launches and then starts travelling through the air to the 
 | **FAST** | 6 px/tick | Tick 133 |
 | **VERY_FAST** | 7 px/tick | Tick 114 |
 | **TELE_STRIKE** | 20 px/tick | Tick 40 |
- Emma: Values reflect halved speeds and 200 subticks.
