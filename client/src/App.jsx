@@ -315,6 +315,9 @@ function App() {
           <option value="FLAK_DEFENSE" disabled={pCurrent.energy < ENTITY_STATS.FLAK_DEFENSE.cost}>
             Flak Defense ({ENTITY_STATS.FLAK_DEFENSE.cost} E)
           </option>
+          <option value="CLUSTER_BOMB" disabled={pCurrent.energy < ENTITY_STATS.CLUSTER_BOMB.cost}>
+            Cluster Bomb ({ENTITY_STATS.CLUSTER_BOMB.cost} E)
+          </option>
           <option value="SUPER_BOMB" disabled={pCurrent.energy < (ENTITY_STATS.SUPER_BOMB?.cost || 10)}>
             Super Bomb [TEST] ({ENTITY_STATS.SUPER_BOMB?.cost || 10} E)
           </option>

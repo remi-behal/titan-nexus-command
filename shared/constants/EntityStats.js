@@ -61,6 +61,22 @@ export const ENTITY_STATS = {
         speed: SPEED_TIERS.NORMAL,
         deathEffect: 'DETONATE'
     },
+    /** @see [weapons.md#cluster-bomb](../../.agents/weapons.md#cluster-bomb) */
+    CLUSTER_BOMB: {
+        hp: 1,
+        cost: 30,
+        damageFull: 1,
+        radiusFull: 30,
+        damageHalf: 1,
+        radiusHalf: 30,
+        vision: 100,
+        size: 8,
+        speed: SPEED_TIERS.NORMAL,
+        deathEffect: 'DETONATE',
+        splitTickRatio: 0.6, // Splits at 60% of its travel time
+        subBombCount: 3,
+        spreadDistance: 200 // Total width of the perpendicular line
+    },
     /** @see [weapons.md#homing-missile](../../.agents/weapons.md#homing-missile) */
     HOMING_MISSILE: {
         hp: 2,

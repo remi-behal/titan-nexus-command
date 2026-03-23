@@ -622,7 +622,8 @@ export class GameState {
                             lockFound: false,
                             hp: (stats.damageFull !== undefined || stats.isInterceptor) ? (stats.hp || 1) : GLOBAL_STATS.UNDEPLOYED_HP,
                             active: true,
-                            hitByFlakDefense: new Set() // Track unique flak hits per round
+                            hitByFlakDefense: new Set(), // Track unique flak hits per round
+                            hasSplit: false
                         });
                         console.log(`[Launch] ${action.playerId} fired ${action.itemType} from ${source.id}`);
                     }
@@ -655,15 +656,15 @@ export class GameState {
                             const stats = ENTITY_STATS[def.type];
                             let minDist = stats.range;
 
-                             tempProjectiles.forEach(proj => {
-                                 if (!proj.active || proj.owner === def.owner) return;
-                                 const dist = this.getToroidalDistance(def.x, def.y, proj.currX, proj.currY);
-                                 // Deterministic Tie-break: if distances are equal, pick by ID (lexicographical)
-                                 if (dist < minDist || (dist === minDist && (!closestProj || proj.id < closestProj.id))) {
-                                     minDist = dist;
-                                     closestProj = proj;
-                                 }
-                             });
+                            tempProjectiles.forEach(proj => {
+                                if (!proj.active || proj.owner === def.owner) return;
+                                const dist = this.getToroidalDistance(def.x, def.y, proj.currX, proj.currY);
+                                // Deterministic Tie-break: if distances are equal, pick by ID (lexicographical)
+                                if (dist < minDist || (dist === minDist && (!closestProj || proj.id < closestProj.id))) {
+                                    minDist = dist;
+                                    closestProj = proj;
+                                }
+                            });
 
                             if (closestProj) {
                                 // Mark as fired this round
@@ -833,22 +834,22 @@ export class GameState {
                                     proj.targetX = targetX;
                                     proj.targetY = targetY;
 
-                                     const vec = this.constructor.getToroidalVector(proj.currX, proj.currY, targetX, targetY, this.map.width, this.map.height);
-                                     const angleToTarget = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
- 
-                                     let diff = angleToTarget - proj.currentAngle;
-                                     while (diff > 180) diff -= 360;
-                                     while (diff < -180) diff += 360;
- 
-                                     // Stability Hysteresis: If the target crosses the halfway point of the toroidal map, 
-                                     // the "shortest path" angle can suddenly flip 180 degrees. We detect this 
-                                     // and ignore the snap to avoid seeker oscillation.
-                                     if (Math.abs(diff) > 170) {
-                                         diff = 0;
-                                     }
- 
-                                     const turn = Math.sign(diff) * Math.min(Math.abs(diff), stats.turnRadius);
-                                     proj.currentAngle += turn;
+                                    const vec = this.constructor.getToroidalVector(proj.currX, proj.currY, targetX, targetY, this.map.width, this.map.height);
+                                    const angleToTarget = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+
+                                    let diff = angleToTarget - proj.currentAngle;
+                                    while (diff > 180) diff -= 360;
+                                    while (diff < -180) diff += 360;
+
+                                    // Stability Hysteresis: If the target crosses the halfway point of the toroidal map, 
+                                    // the "shortest path" angle can suddenly flip 180 degrees. We detect this 
+                                    // and ignore the snap to avoid seeker oscillation.
+                                    if (Math.abs(diff) > 170) {
+                                        diff = 0;
+                                    }
+
+                                    const turn = Math.sign(diff) * Math.min(Math.abs(diff), stats.turnRadius);
+                                    proj.currentAngle += turn;
                                 } else {
                                     proj.lockFound = false; // Target lost, stop hunting but keep flying straight
                                 }
@@ -904,6 +905,56 @@ export class GameState {
                             }
                         } else {
                             // Standard Projectile Logic (Buildings etc.)
+
+                            // --- Cluster Bomb Special Logic ---
+                            const clusterStats = ENTITY_STATS.CLUSTER_BOMB;
+                            if (proj.type === 'CLUSTER_BOMB' && !proj.hasSplit && t >= proj.arrivalTick * clusterStats.splitTickRatio) {
+                                proj.active = false;
+                                proj.hasSplit = true;
+
+                                const originalTargetX = proj.startX + proj.intendedDx;
+                                const originalTargetY = proj.startY + proj.intendedDy;
+
+                                // Calculate perpendicular unit vector
+                                const dist = Math.sqrt(proj.intendedDx * proj.intendedDx + proj.intendedDy * proj.intendedDy);
+                                const px = -proj.intendedDy / dist;
+                                const py = proj.intendedDx / dist;
+
+                                const count = clusterStats.subBombCount;
+                                const totalSpread = clusterStats.spreadDistance;
+                                const step = totalSpread / (count - 1 || 1);
+
+                                for (let i = 0; i < count; i++) {
+                                    const offset = (i * step) - (totalSpread / 2);
+                                    const subTargetX = originalTargetX + offset * px;
+                                    const subTargetY = originalTargetY + offset * py;
+
+                                    const splitX = proj.startX + proj.intendedDx * (t / proj.arrivalTick);
+                                    const splitY = proj.startY + proj.intendedDy * (t / proj.arrivalTick);
+
+                                    // Math to ensure sub-bomb arrives at subTargetX/Y at proj.arrivalTick
+                                    // using the standard progress = t / arrivalTick formula.
+                                    const factor = proj.arrivalTick / (t - proj.arrivalTick);
+                                    const subIntendedDx = (splitX - subTargetX) * factor;
+                                    const subIntendedDy = (splitY - subTargetY) * factor;
+                                    const subStartX = subTargetX - subIntendedDx;
+                                    const subStartY = subTargetY - subIntendedDy;
+
+                                    tempProjectiles.push({
+                                        ...proj,
+                                        id: `${proj.id}-sub-${i}`,
+                                        startX: subStartX,
+                                        startY: subStartY,
+                                        intendedDx: subIntendedDx,
+                                        intendedDy: subIntendedDy,
+                                        active: true,
+                                        hasSplit: true, // Prevent re-splitting
+                                        hitByFlakDefense: new Set() // Fresh flak state for sub-bombs
+                                    });
+                                }
+                                console.log(`[Cluster] ${proj.id} split into ${count} sub-bombs at tick ${t}`);
+                            }
+
                             const progress = t / proj.arrivalTick;
 
                             if (t < proj.arrivalTick) {
@@ -954,7 +1005,8 @@ export class GameState {
                                 type: 'EXPLOSION',
                                 x: proj.currX,
                                 y: proj.currY,
-                                duration: GLOBAL_STATS.EXPLOSION_DURATION
+                                duration: GLOBAL_STATS.EXPLOSION_DURATION,
+                                radius: stats.radiusFull
                             });
 
                             const FULL_RADIUS = stats.radiusFull;
@@ -1036,6 +1088,7 @@ export class GameState {
                                 type: v.type,
                                 x: v.x,
                                 y: v.y,
+                                radius: v.radius,
                                 targetX: v.targetX,
                                 targetY: v.targetY
                             }))

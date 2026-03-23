@@ -571,7 +571,7 @@ const GameBoard = ({
                         } else if (entity.type === 'EXPLOSION') {
                             ctx.save();
                             ctx.beginPath();
-                            ctx.arc(entity.x, entity.y, 40, 0, Math.PI * 2);
+                            ctx.arc(entity.x, entity.y, entity.radius || 40, 0, Math.PI * 2);
                             ctx.fillStyle = '#ff6600';
                             ctx.shadowBlur = 20;
                             ctx.shadowColor = '#ff3300';

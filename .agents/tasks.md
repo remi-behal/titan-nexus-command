@@ -15,6 +15,8 @@
     - [x] Mountains (Non-buildable, Link-traversable) <!-- id: 55 -->
     - [x] Energy Nodes (Static locations for Extractors) <!-- id: 13 -->
     - [x] Super Energy Nodes (High yield, competitive) <!-- id: 56 -->
+- [ ] **Weapon Expansion**: <!-- id: 86 -->
+    - [x] **Cluster Bomb**: Implement separation into multiple sub-bombs landing in a perpendicular line. <!-- id: 87 -->
 - [ ] **Multiplayer Enhancements**: <!-- id: 47 -->
     - [ ] Chat system.
     - [ ] Lobby management / Player slotting.
@@ -66,7 +68,9 @@
         - [ ] Mobile/Touchscreen slingshot verification. <!-- id: 73 -->
     - [ ] **Game Feature Expansion**: <!-- id: 84 -->
         - [ ] Multi-round projectiles. Brainstorm weapons <!-- id: 85 -->
-
+    - [ ] **Weapon finetuning**: <!-- id: 86 -->
+        - [ ] Adjust weapon stats to make the game more fun. <!-- id: 87 -->
+        - [ ] Flak defense - damage is applied the instant a projectile enters the cone, making the effect look bad. Brainstorm solutions. <!-- id: 88 -->
     - [ ] Expand test coverage to `server/` and `client/` (Specifically for sockets and React components). <!-- id: 83 -->
 
 ---

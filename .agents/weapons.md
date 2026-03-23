@@ -46,6 +46,20 @@ A homing weapon that launches and then starts travelling through the air to the 
 * **Homing speed**: VERY FAST (7 px/tick)
 * **Homing range**: 300
 
+### Cluster bomb - IMPLEMENTED [x]
+#### Overview
+A weapon that travels in a straight line but seperates before splitting into multiple small bombs that land in a line perpendicular to the direction of travel.
+#### Stats
+* **Range**: standard
+* **Health**: 1
+* **Launch Cost**: 30
+* **Damage**: 1
+* **Type**: projectile
+* **Damage type**: explosive
+    * **Full Damage radius**: 30
+    * **Half Damage radius**: 30
+* **Speed**: NORMAL (5 px/tick)
+
 ## Speed Tiers
 | Keyword | Velocity | Arrival @ Max Range |
 | :--- | :--- | :--- |
