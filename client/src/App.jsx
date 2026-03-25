@@ -318,6 +318,9 @@ function App() {
           <option value="CLUSTER_BOMB" disabled={pCurrent.energy < ENTITY_STATS.CLUSTER_BOMB.cost}>
             Cluster Bomb ({ENTITY_STATS.CLUSTER_BOMB.cost} E)
           </option>
+          <option value="NUKE" disabled={pCurrent.energy < ENTITY_STATS.NUKE.cost}>
+            Nuke ({ENTITY_STATS.NUKE.cost} E)
+          </option>
           <option value="SUPER_BOMB" disabled={pCurrent.energy < (ENTITY_STATS.SUPER_BOMB?.cost || 10)}>
             Super Bomb [TEST] ({ENTITY_STATS.SUPER_BOMB?.cost || 10} E)
           </option>
@@ -398,6 +401,7 @@ function App() {
           gameState={playerState}
           myPlayerId={myPlayerId}
           selectedHubId={selectedHubId}
+          selectedItemType={selectedItemType}
           launchMode={launchMode}
           isAiming={isAiming}
           committedActions={committedActions}

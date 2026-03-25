@@ -145,6 +145,27 @@ export const ENTITY_STATS = {
         labelOffset: 35,
         speed: SPEED_TIERS.SLOW,
         deathEffect: 'DISINTEGRATE'
+    },
+    /** @see [weapons.md#nuke](../../.agents/weapons.md#nuke) */
+    NUKE: {
+        hp: 5,
+        cost: 100,
+        damageFull: 10,
+        radiusFull: 200,
+        damageHalf: 5,
+        radiusHalf: 400,
+        vision: 200,
+        size: 25,
+        speed: SPEED_TIERS.SLOW,
+        landAsStructure: true,
+        deathEffect: 'DISINTEGRATE' // Silent death if destroyed early
+    },
+    EXPLOSION_HAZARD: {
+        radius: 200,
+        damageTick: 1, // Damage taken by structures each round
+        hp: 9999,      // Immune to accidental deletion
+        isHazard: true,
+        vision: 0
     }
 };
 

@@ -87,4 +87,63 @@ describe('GameState - Laser Defense Fuel', () => {
         // It should take 2 damage (AOE full damage): 5 - 2 = 3.
         expect(p2HubAfter.hp).toBe(3);
     });
+
+    it('should use shortest toroidal path for laser beam visual coordinates', () => {
+        // 1. Setup: Move Hubs near the boundary
+        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p2Hub = game.entities.find(e => e.owner === 'player2' && e.type === 'HUB');
+        p1Hub.x = 20;
+        p1Hub.y = 100;
+        p2Hub.x = 1000; // Keep p2 hub away
+        p2Hub.y = 1000;
+
+        // 2. Place a Laser Defense near the right edge (1990)
+        const defense = game.addEntity({
+            type: 'LASER_POINT_DEFENSE',
+            owner: 'player2',
+            x: 1990,
+            y: 100,
+            deployed: true
+        });
+        // Link it to p2Hub so it doesn't decay
+        game.addLink(p2Hub.id, defense.id, 'player2');
+
+        // 3. Player 1 launches a weapon to the LEFT (angle 180) from x=20.
+        // It will immediately wrap around to x=1990+ area.
+        const actions = {
+            player1: [
+                {
+                    playerId: 'player1',
+                    sourceId: p1Hub.id,
+                    itemType: 'WEAPON',
+                    angle: 180, // Left
+                    distance: 100 // Should go ~45 pixels
+                }
+            ],
+            player2: []
+        };
+
+        const snapshots = game.resolveTurn(actions);
+
+        let laserVisual = null;
+        for (const snapshot of snapshots) {
+            if (snapshot.visuals) {
+                laserVisual = snapshot.visuals.find(v => v.type === 'LASER_BEAM');
+                if (laserVisual) break;
+            }
+        }
+
+        expect(laserVisual).toBeDefined();
+        if (laserVisual) {
+            // Defense at 1990. Weapon should be at something like 1980 or 4 (which is 2004).
+            // Shortest path should be a small positive or negative dx.
+            // If the bug exists, targetX will be a small number (e.g., 5 or 1995) 
+            // but the Euclidean distance from 1990 will be large if it doesn't use virtual coords.
+
+            // We expect targetX to be near 2000 (e.g. 2005) or slightly below (e.g. 1970)
+            // instead of jumping to 5.
+            const distX = Math.abs(laserVisual.targetX - laserVisual.x);
+            expect(distX).toBeLessThan(150); // Laser range is 100
+        }
+    });
 });

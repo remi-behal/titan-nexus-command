@@ -14,6 +14,7 @@ const GameBoard = ({
     gameState,
     myPlayerId,
     selectedHubId,
+    selectedItemType,
     launchMode,
     isAiming,
     onAimStart,
@@ -311,6 +312,28 @@ const GameBoard = ({
                         });
                     }
 
+                    // 2-c. Craters (Permanent scars)
+                    if (gameState.map.craters) {
+                        gameState.map.craters.forEach(crater => {
+                            ctx.save();
+                            ctx.fillStyle = "rgba(0,0,0,0.5)";
+                            ctx.beginPath();
+                            ctx.arc(crater.x, crater.y, crater.radius, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.strokeStyle = "#222";
+                            ctx.lineWidth = 4;
+                            ctx.beginPath();
+                            for (let i = 0; i < 16; i++) {
+                                const ang = (i / 16) * Math.PI * 2;
+                                const r = crater.radius * (0.85 + Math.sin(i * 1.3) * 0.1);
+                                ctx.lineTo(crater.x + Math.cos(ang) * r, crater.y + Math.sin(ang) * r);
+                            }
+                            ctx.closePath();
+                            ctx.stroke();
+                            ctx.restore();
+                        });
+                    }
+
                     // 2b. DRAW GRID (Inside tiling for toroidal continuity)
                     ctx.strokeStyle = '#222';
                     ctx.lineWidth = 1;
@@ -472,12 +495,11 @@ const GameBoard = ({
                         }
 
                         const isProjectile = (entity.type === 'PROJECTILE') || (ENTITY_STATS[entity.itemType || entity.type]?.damageFull !== undefined);
+                        const stats = ENTITY_STATS[entity.itemType || entity.type];
+                        const radius = stats?.size || (isProjectile ? GLOBAL_STATS.PROJECTILE_RADIUS : 20);
 
                         if (isProjectile) {
                             ctx.save();
-                            const itemType = entity.itemType || entity.type;
-                            const stats = ENTITY_STATS[itemType];
-                            const radius = stats?.size || GLOBAL_STATS.PROJECTILE_RADIUS;
 
                             // 1. Draw Search Beam (faint cone)
                             if (entity.searchMode) {
@@ -519,7 +541,7 @@ const GameBoard = ({
                             ctx.shadowColor = color;
                             ctx.fillStyle = color;
 
-                            if (itemType === 'HOMING_MISSILE') {
+                            if (entity.itemType === "HOMING_MISSILE") {
                                 // Render as a bullet
                                 const rad = ((entity.currentAngle || 0) * Math.PI) / 180;
                                 ctx.translate(entity.x, entity.y);
@@ -534,6 +556,27 @@ const GameBoard = ({
                                 ctx.beginPath();
                                 ctx.arc(radius * 0.5, 0, radius * 0.3, 0, Math.PI * 2);
                                 ctx.fill();
+                            } else if (entity.type === 'NUKE') {
+                                // Flying Nuke Icon (matching structure phase)
+                                ctx.save();
+                                ctx.translate(entity.x, entity.y);
+                                const pulse = 1 + Math.sin(Date.now() / 200) * 0.08;
+                                ctx.scale(pulse, pulse);
+                                ctx.beginPath();
+                                for (let i = 0; i < 6; i++) {
+                                    const a = (i * 2 * Math.PI) / 6;
+                                    ctx.lineTo(radius * Math.cos(a), radius * Math.sin(a));
+                                }
+                                ctx.closePath();
+                                ctx.fillStyle = '#f39c12';
+                                ctx.fill();
+                                // Simplified radiation symbol for small projectile
+                                ctx.fillStyle = '#000';
+                                ctx.globalAlpha = 0.6;
+                                ctx.beginPath();
+                                ctx.arc(0, 0, radius * 0.2, 0, Math.PI * 2);
+                                ctx.fill();
+                                ctx.restore();
                             } else {
                                 ctx.beginPath();
                                 ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
@@ -570,12 +613,40 @@ const GameBoard = ({
                             ctx.restore();
                         } else if (entity.type === 'EXPLOSION') {
                             ctx.save();
+                            const explosionRadius = entity.radius || 40;
+                            ctx.strokeStyle = '#ff9900';
+                            ctx.lineWidth = 6;
                             ctx.beginPath();
-                            ctx.arc(entity.x, entity.y, entity.radius || 40, 0, Math.PI * 2);
+                            ctx.arc(entity.x, entity.y, explosionRadius * 1.2, 0, Math.PI * 2);
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.arc(entity.x, entity.y, explosionRadius, 0, Math.PI * 2);
                             ctx.fillStyle = '#ff6600';
                             ctx.shadowBlur = 20;
                             ctx.shadowColor = '#ff3300';
                             ctx.fill();
+                            ctx.restore();
+                        } else if (entity.type === 'EXPLOSION_HAZARD') {
+                            ctx.save();
+                            const radius = entity.radius || 200;
+                            const time = Date.now() / 1000;
+                            const pulse = 1 + Math.sin(time * 5) * 0.05;
+                            const grad = ctx.createRadialGradient(entity.x, entity.y, 0, entity.x, entity.y, radius * pulse);
+                            grad.addColorStop(0, 'rgba(255, 69, 0, 0.6)');
+                            grad.addColorStop(0.5, 'rgba(255, 140, 0, 0.3)');
+                            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                            ctx.fillStyle = grad;
+                            ctx.beginPath();
+                            ctx.arc(entity.x, entity.y, radius * pulse, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.fillStyle = 'rgba(255, 255, 0, 0.1)';
+                            for (let i = 0; i < 6; i++) {
+                                const angle = time + (i * Math.PI * 2 / 6);
+                                const r = radius * 0.5;
+                                ctx.beginPath();
+                                ctx.arc(entity.x + Math.cos(angle) * r, entity.y + Math.sin(angle) * r, radius * 0.4, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
                             ctx.restore();
                         } else if (entity.type === 'LINK_COLLISION') {
                             ctx.save();
@@ -597,8 +668,6 @@ const GameBoard = ({
                             ctx.restore();
                         } else {
                             ctx.beginPath();
-                            const radius = ENTITY_STATS[entity.itemType || entity.type]?.size || 20;
-
                             if (entity.type === 'LASER_POINT_DEFENSE' || entity.type === 'FLAK_DEFENSE') {
                                 // Draw Defense as a square/diamond (radius is half-width)
                                 ctx.rect(entity.x - radius, entity.y - radius, radius * 2, radius * 2);
@@ -660,6 +729,80 @@ const GameBoard = ({
                                 ctx.lineTo(entity.x + radius, entity.y + radius / 2);
                                 ctx.lineTo(entity.x - radius, entity.y + radius / 2);
                                 ctx.closePath();
+                            } else if (entity.type === 'NUKE') {
+                                // Enhanced Nuke Icon (Landed)
+                                ctx.save();
+                                ctx.translate(entity.x, entity.y);
+                                const time = Date.now();
+                                const pulseFactor = Math.sin(time / 200);
+                                const pulseScale = 1 + pulseFactor * 0.08;
+                                const remainingTurns = (entity.detonationTurn || 0) - gameState.turn;
+                                const isCritical = remainingTurns <= 1;
+
+                                // 1. Pulsing Outer Aura
+                                ctx.save();
+                                ctx.globalAlpha = 0.15 + (pulseFactor + 1) * 0.15;
+                                ctx.fillStyle = isCritical ? '#ff3300' : '#f1c40f';
+                                ctx.beginPath();
+                                ctx.arc(0, 0, radius * 1.8, 0, Math.PI * 2);
+                                ctx.fill();
+                                ctx.restore();
+
+                                // 2. Main Hexagon Body
+                                ctx.beginPath();
+                                for (let i = 0; i < 6; i++) {
+                                    const a = (i * 2 * Math.PI) / 6;
+                                    ctx.lineTo(radius * Math.cos(a) * pulseScale, radius * Math.sin(a) * pulseScale);
+                                }
+                                ctx.closePath();
+                                ctx.fillStyle = isCritical ? '#e74c3c' : '#f39c12';
+                                ctx.fill();
+                                ctx.strokeStyle = '#fff';
+                                ctx.lineWidth = 2;
+                                ctx.stroke();
+
+                                // 3. Radiation Symbol (Trefoil)
+                                ctx.save();
+                                ctx.scale(pulseScale, pulseScale);
+                                ctx.fillStyle = '#000';
+                                ctx.globalAlpha = 0.6;
+                                ctx.beginPath();
+                                ctx.arc(0, 0, radius * 0.2, 0, Math.PI * 2);
+                                ctx.fill();
+                                for (let i = 0; i < 3; i++) {
+                                    ctx.beginPath();
+                                    ctx.moveTo(0, 0);
+                                    const startA = (i * 120 - 30) * (Math.PI / 180);
+                                    const endA = (i * 120 + 30) * (Math.PI / 180);
+                                    ctx.arc(0, 0, radius * 0.8, startA, endA);
+                                    ctx.closePath();
+                                    ctx.fill();
+                                }
+                                ctx.restore();
+
+                                // 4. Integrated Countdown
+                                if (remainingTurns > 0) {
+                                    ctx.fillStyle = '#fff';
+                                    ctx.font = `bold ${radius * 0.9}px Orbitron, Arial`;
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.shadowBlur = 10;
+                                    ctx.shadowColor = '#000';
+                                    ctx.fillText(remainingTurns.toString(), 0, 0);
+                                }
+                                ctx.restore();
+
+                                // Detonation Radius Preview (Subtle Circle)
+                                if (entity.owner === myPlayerId) {
+                                    ctx.save();
+                                    ctx.setLineDash([5, 10]);
+                                    ctx.strokeStyle = 'rgba(255, 50, 50, 0.4)';
+                                    ctx.lineWidth = 2;
+                                    ctx.beginPath();
+                                    ctx.arc(entity.x, entity.y, ENTITY_STATS.NUKE.radiusFull, 0, Math.PI * 2);
+                                    ctx.stroke();
+                                    ctx.restore();
+                                }
                             } else {
                                 ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
                             }
@@ -722,6 +865,8 @@ const GameBoard = ({
                                     ctx.fill();
                                 }
                             }
+
+                            // Nuke Countdown logic moved to main rendering block
                         }
                     });
 
@@ -788,6 +933,18 @@ const GameBoard = ({
                                 ctx.beginPath();
                                 ctx.arc(targetX, targetY, 12, 0, Math.PI * 2);
                                 ctx.stroke();
+
+                                // Nuke AOE Preview during aiming
+                                if (selectedItemType === 'NUKE') {
+                                    ctx.save();
+                                    ctx.setLineDash([10, 15]);
+                                    ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+                                    ctx.lineWidth = 3;
+                                    ctx.beginPath();
+                                    ctx.arc(targetX, targetY, ENTITY_STATS.NUKE.radiusFull, 0, Math.PI * 2);
+                                    ctx.stroke();
+                                    ctx.restore();
+                                }
                             }
                         }
                     }
