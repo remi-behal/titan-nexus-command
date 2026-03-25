@@ -66,7 +66,7 @@ describe('GameState - Cluster Bomb', () => {
 
         const snapshots = game.resolveTurn(actions);
         const finalSnap = snapshots.find(s => s.type === 'FINAL');
-        
+
         // Check explosions in the round sub-ticks
         const explosions = [];
         snapshots.forEach(s => {
@@ -92,21 +92,21 @@ describe('GameState - Cluster Bomb', () => {
         explosions.forEach(ex => {
             expect(ex.x).toBeCloseTo(expectedX, 1);
             // Y should be centered around 500
-            expect(ex.y).toBeGreaterThanOrEqual(500 - ENTITY_STATS.CLUSTER_BOMB.spreadDistance/2 - 1);
-            expect(ex.y).toBeLessThanOrEqual(500 + ENTITY_STATS.CLUSTER_BOMB.spreadDistance/2 + 1);
+            expect(ex.y).toBeGreaterThanOrEqual(500 - ENTITY_STATS.CLUSTER_BOMB.spreadDistance / 2 - 1);
+            expect(ex.y).toBeLessThanOrEqual(500 + ENTITY_STATS.CLUSTER_BOMB.spreadDistance / 2 + 1);
         });
 
         // Check if Y coordinates are distinct
-        const ys = explosions.map(ex => Math.round(ex.y)).sort((a,b) => a-b);
-        for(let i=0; i < ys.length - 1; i++) {
-            expect(ys[i+1] - ys[i]).toBeGreaterThan(0);
+        const ys = explosions.map(ex => Math.round(ex.y)).sort((a, b) => a - b);
+        for (let i = 0; i < ys.length - 1; i++) {
+            expect(ys[i + 1] - ys[i]).toBeGreaterThan(0);
         }
     });
 
     it('should deal damage with sub-bombs', () => {
         game.entities = []; // Clear all hubs to prevent link decay issues
         const p1Hub = game.addEntity({ type: 'HUB', owner: 'player1', x: 500, y: 500, isStarter: true });
-        
+
         const launchDistance = GameState.calculateLaunchDistance(100);
         const expectedX = 500 + launchDistance;
 

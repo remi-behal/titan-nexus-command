@@ -655,7 +655,7 @@ export class GameState {
         let round = 0;
         let activeInProgress = true;
 
-        while (activeInProgress || this.entities.some(e => (e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE') && (e.roundsLeft === undefined || e.roundsLeft > 0))) {
+        while (activeInProgress || this.entities.some(e => e.type === 'NAPALM_FIRE' && (e.roundsLeft === undefined || e.roundsLeft > 0))) {
             round++;
             const roundActions = [];
 
@@ -685,7 +685,10 @@ export class GameState {
                 }
             });
 
-            const hasActiveHazards = this.entities.some(e => (e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE') && (e.roundsLeft === undefined || e.roundsLeft > 0));
+            const hasActiveHazards = this.entities.some(e =>
+                (e.type === 'NAPALM_FIRE' && (e.roundsLeft === undefined || e.roundsLeft > 0)) ||
+                (e.type === 'EXPLOSION_HAZARD' && round === 1)
+            );
             if (roundActions.length > 0 || hasActiveHazards) {
                 const subTicks = GLOBAL_STATS.ACTION_SUB_TICKS;
 
@@ -1409,6 +1412,17 @@ export class GameState {
                         e.flakTriggerTick = null;
                     }
                 });
+
+                // Update activeInProgress for next round
+                const hasActionsLeft = Object.keys(this.players).some(pid => {
+                    const actions = playerActionsMap[pid] || [];
+                    for (let i = 0; i < actions.length; i++) {
+                        if (!processedActions[pid].has(i)) return true;
+                    }
+                    return false;
+                });
+                const hasProjectiles = tempProjectiles.some(p => p.active);
+                activeInProgress = hasActionsLeft || hasProjectiles;
 
                 // Link Decay check after every round
                 this.checkLinkIntegrity(round);

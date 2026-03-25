@@ -42,8 +42,7 @@ describe('GameState - AOE Damage Refinement', () => {
 
         const hubAfter = game.entities.find(e => e.id === p2Hub.id);
         // Distance is 35. HUB size 40.
-        // Surface distance is 35-40 = -5.
-        // Current behavior: dist 35 > radiusFull 10 -> 0 damage.
+        // Surface distance is 35-40 = -5. (Hitting the side)
         expect(hubAfter.hp).toBe(ENTITY_STATS.HUB.hp - ENTITY_STATS.WEAPON.damageFull);
     });
 });

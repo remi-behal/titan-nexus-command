@@ -64,7 +64,7 @@ describe('Napalm Weapon Mechanics (Refined)', () => {
         const t2 = gs.entities.find(e => e.id === 'target2');
 
         expect(t1).toBeDefined();
-        expect(t1.hp).toBe(4); // Damaged because touching
+        expect(t1.hp).toBe(3); // Damaged twice (Round 1 + Round 2)
         expect(t2).toBeDefined();
         expect(t2.hp).toBe(5); // Safe (too far)
     });
