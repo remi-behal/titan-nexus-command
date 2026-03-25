@@ -556,16 +556,21 @@ export class GameState {
 
         // 0. Cleanup Expired Hazards & Map Scarring (Craters)
         this.entities = this.entities.filter(e => {
-            if (e.type === 'EXPLOSION_HAZARD' && e.expiresTurn < this.turn) {
+            const isHazard = e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE';
+            if (isHazard && e.expiresTurn < this.turn) {
                 if (!this.map.craters) this.map.craters = [];
                 // Leave a permanent mark on the map
-                this.map.craters.push({
-                    id: `crater-${Math.random().toString(36).substring(2, 7)}`,
-                    x: e.x,
-                    y: e.y,
-                    radius: 40
-                });
-                console.log(`[Scarring] Hazard at (${e.x}, ${e.y}) subsided, leaving a crater.`);
+                if (e.type === 'EXPLOSION_HAZARD') {
+                    this.map.craters.push({
+                        id: `crater-${Math.random().toString(36).substring(2, 7)}`,
+                        x: e.x,
+                        y: e.y,
+                        radius: 40
+                    });
+                    console.log(`[Scarring] Hazard at (${e.x}, ${e.y}) subsided, leaving a crater.`);
+                } else {
+                    console.log(`[Lifecycle] ${e.type} at (${e.x}, ${e.y}) subsided.`);
+                }
                 return false;
             }
             return true;
@@ -650,8 +655,7 @@ export class GameState {
         let round = 0;
         let activeInProgress = true;
 
-        const activeHazardsAtStart = this.entities.filter(e => e.type === 'EXPLOSION_HAZARD');
-        while (activeInProgress || (activeHazardsAtStart.length > 0 && round < 1)) {
+        while (activeInProgress || this.entities.some(e => (e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE') && (e.roundsLeft === undefined || e.roundsLeft > 0))) {
             round++;
             const roundActions = [];
 
@@ -681,7 +685,8 @@ export class GameState {
                 }
             });
 
-            if (roundActions.length > 0 || (activeHazardsAtStart.length > 0 && round <= 1)) {
+            const hasActiveHazards = this.entities.some(e => (e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE') && (e.roundsLeft === undefined || e.roundsLeft > 0));
+            if (roundActions.length > 0 || hasActiveHazards) {
                 const subTicks = GLOBAL_STATS.ACTION_SUB_TICKS;
 
                 // b. Sub-tick Simulation
@@ -699,13 +704,25 @@ export class GameState {
                         player.energy -= cost;
                         if (source.fuel !== undefined) source.fuel--;
 
-                        const rad = (action.angle * Math.PI) / 180;
-                        const launchDistance = GameState.calculateLaunchDistance(action.distance);
+                        let launchDistance = GameState.calculateLaunchDistance(action.distance);
                         const stats = ENTITY_STATS[action.itemType];
                         const velocity = stats.speed || GLOBAL_STATS.SPEED_TIERS.SLOW;
-                        const arrivalTick = Math.max(1, Math.floor(launchDistance / velocity));
+                        let actualLaunchDistance = launchDistance;
 
-                        console.log(`[Launch] ${action.playerId} launching ${action.itemType} from ${action.sourceId} to distance ${launchDistance} (arrivalTick: ${arrivalTick})`);
+                        // Napalm Refinement: Projectile stops 150px short of the target
+                        if (action.itemType === 'NAPALM') {
+                            // Bug 1: Enforce minRange (clamped to 200px from launcher)
+                            const effectiveLaunchDist = Math.max(stats.minRange || 0, launchDistance);
+                            actualLaunchDistance = Math.max(10, effectiveLaunchDist - 150);
+
+                            // If distance was clamped, we need to update launchDistance for originalTargetX/Y calc later
+                            launchDistance = effectiveLaunchDist;
+                        }
+
+                        const arrivalTick = Math.max(1, Math.floor(actualLaunchDistance / velocity));
+                        const rad = (action.angle * Math.PI) / 180;
+
+                        console.log(`[Launch] ${action.playerId} launching ${action.itemType} from ${action.sourceId} to distance ${actualLaunchDistance} (arrivalTick: ${arrivalTick})`);
                         tempProjectiles.push({
                             id: Math.random().toString(36).substring(2, 6),
                             type: action.itemType,
@@ -717,10 +734,13 @@ export class GameState {
                             currY: source.y,
                             currentAngle: action.angle,
                             sourceId: action.sourceId,
-                            intendedDx: Math.cos(rad) * launchDistance,
-                            intendedDy: Math.sin(rad) * launchDistance,
-                            totalDist: launchDistance,
-                            intendedDistance: launchDistance,
+                            intendedDx: Math.cos(rad) * actualLaunchDistance,
+                            intendedDy: Math.sin(rad) * actualLaunchDistance,
+                            // Store original target for fire extension logic
+                            originalTargetX: this.wrapX(source.x + Math.cos(rad) * launchDistance),
+                            originalTargetY: this.wrapY(source.y + Math.sin(rad) * launchDistance),
+                            totalDist: actualLaunchDistance,
+                            intendedDistance: actualLaunchDistance,
                             pullDistance: action.distance,
                             arrivalTick: arrivalTick,
                             velocity: velocity,
@@ -747,7 +767,7 @@ export class GameState {
                 const snapshotStep = Math.max(1, Math.floor(subTicks / 30)); // Dynamically scale snapshots
 
                 // OPTIMIZATION: Skip the expensive simulation loop and snapshot generation if nothing is moving
-                const hasActiveSimulation = tempProjectiles.length > 0 || roundActions.length > 0 || tempVisuals.length > 0;
+                const hasActiveSimulation = tempProjectiles.length > 0 || roundActions.length > 0 || tempVisuals.length > 0 || hasActiveHazards;
 
                 if (hasActiveSimulation) {
                     for (let t = 1; t <= subTicks; t++) {
@@ -1087,7 +1107,8 @@ export class GameState {
                                     proj.hitThisTick = true;
 
                                     const stats = ENTITY_STATS[proj.type];
-                                    if (stats?.damageFull === undefined || stats?.landAsStructure) {
+                                    // Bug 2: landAsStructure: false avoids duplicate entities for weapons like Napalm
+                                    if ((stats?.damageFull === undefined || stats?.landAsStructure) && stats?.landAsStructure !== false) {
                                         const data = {
                                             type: proj.type,
                                             owner: proj.owner,
@@ -1108,6 +1129,36 @@ export class GameState {
                                         console.log(`[Lifecycle] ${proj.owner} ${proj.type} landed at (${Math.round(proj.currX)}, ${Math.round(proj.currY)})`);
                                     }
 
+                                    // --- Napalm Special Logic (Always deploy fire on arrival) ---
+                                    if (proj.type === 'NAPALM') {
+                                        const nStats = ENTITY_STATS.NAPALM_FIRE;
+                                        this.addEntity({
+                                            type: 'NAPALM_FIRE',
+                                            owner: proj.owner,
+                                            x: proj.currX, // Impact point (base of stadium)
+                                            y: proj.currY,
+                                            startX: proj.currX, // Base
+                                            startY: proj.currY,
+                                            endX: proj.originalTargetX, // Tip (Original target)
+                                            endY: proj.originalTargetY,
+                                            roundsLeft: 2, // New internal round tracking
+                                            deployed: true,
+                                            isHazard: true,
+                                            hp: nStats.hp
+                                        });
+                                        console.log(`[Napalm] ${proj.id} deployed fire from (${Math.round(proj.currX)}, ${Math.round(proj.currY)}) to original target.`);
+
+                                        // Push specialized landing snapshot for visual feedback
+                                        snapshots.push({
+                                            type: 'LANDING',
+                                            tick: t,
+                                            round: round,
+                                            playerId: proj.owner,
+                                            itemType: proj.type,
+                                            state: this.getState()
+                                        });
+                                    }
+
                                     if (stats?.damageFull !== undefined && !stats?.landAsStructure && proj.hitThisTick) {
                                         const potentialTargets = [
                                             ...this.entities,
@@ -1121,15 +1172,29 @@ export class GameState {
                             }
 
                             // --- Post-Movement Hazard Collision ---
-                            const hazards = this.entities.filter(e => e.type === 'EXPLOSION_HAZARD');
-                            hazards.forEach(h => {
-                                const hStats = ENTITY_STATS.EXPLOSION_HAZARD;
-                                if (GameState.lineCircleIntersection(prevX, prevY, proj.currX, proj.currY, h.x, h.y, hStats.radius || 200, this.map.width, this.map.height)) {
-                                    console.log(`[Hazard] Projectile ${proj.id} incinerated by hazard at (${h.x}, ${h.y})`);
-                                    proj.active = false;
-                                    proj.hitThisTick = false; // Destroyed mid-air, no detonation
-                                }
-                            });
+                            if (proj.active) {
+                                const hazards = this.entities.filter(e => e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE');
+                                hazards.forEach(h => {
+                                    const hStats = ENTITY_STATS[h.type];
+                                    let isHit = false;
+
+                                    if (h.type === 'NAPALM_FIRE') {
+                                        const dist = GameState.getPointToSegmentDistance(proj.currX, proj.currY, h.startX, h.startY, h.endX, h.endY, this.map.width, this.map.height);
+                                        // Projectile incineration uses its radius (size or default)
+                                        if (dist <= (hStats.width / 2) + (ENTITY_STATS[proj.type]?.size || 8)) isHit = true;
+                                    } else {
+                                        if (GameState.lineCircleIntersection(prevX, prevY, proj.currX, proj.currY, h.x, h.y, hStats.radius || 200, this.map.width, this.map.height)) {
+                                            isHit = true;
+                                        }
+                                    }
+
+                                    if (isHit) {
+                                        console.log(`[Hazard] Projectile ${proj.id} incinerated by ${h.type} at (${Math.round(h.x)}, ${Math.round(h.y)})`);
+                                        proj.active = false;
+                                        proj.hitThisTick = false; // Destroyed mid-air, no detonation
+                                    }
+                                });
+                            }
                         });
 
                         // Second pass for Weapons to catch anything that landed this tick (AOE Damage)
@@ -1198,17 +1263,32 @@ export class GameState {
                 }
 
                 // --- Hazard Damage (Structures) ---
-                this.entities.filter(e => e.type === 'EXPLOSION_HAZARD').forEach(h => {
-                    const hStats = ENTITY_STATS.EXPLOSION_HAZARD;
+                this.entities.filter(e => e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE').forEach(h => {
+                    const hStats = ENTITY_STATS[h.type];
                     this.entities.forEach(ent => {
-                        if (ent.type === 'EXPLOSION_HAZARD') return;
-                        const dist = this.getToroidalDistance(h.x, h.y, ent.x, ent.y);
-                        if (dist <= hStats.radius) {
+                        if (ent.isHazard || ent.type === 'EXPLOSION_HAZARD' || ent.type === 'NAPALM_FIRE') return;
+
+                        let inRange = false;
+                        if (h.type === 'NAPALM_FIRE') {
+                            const dist = GameState.getPointToSegmentDistance(ent.x, ent.y, h.startX, h.startY, h.endX, h.endY, this.map.width, this.map.height);
+                            // Napalm Refinement: Collision if 'touching' (dist <= fireRadius + entSize)
+                            if (dist <= (hStats.width / 2) + (ent.size || 20)) inRange = true;
+                        } else {
+                            const dist = this.getToroidalDistance(h.x, h.y, ent.x, ent.y);
+                            if (dist <= (hStats.radius || 200)) inRange = true;
+                        }
+
+                        if (inRange) {
                             ent.hp -= hStats.damageTick;
-                            console.log(`[Hazard] ${ent.id} (${ent.type}) damaged by hazard at (${h.x}, ${h.y}). HP: ${ent.hp}`);
+                            console.log(`[Hazard] ${ent.id} (${ent.type}) damaged by ${h.type} in round ${round}. HP: ${ent.hp}`);
                             if (ent.hp <= 0) impacts.add(ent.id);
                         }
                     });
+
+                    // Napalm Refinement: Decrement roundsLeft at the end of every internal round
+                    if (h.type === 'NAPALM_FIRE') {
+                        if (h.roundsLeft !== undefined) h.roundsLeft--;
+                    }
                 });
 
                 // --- Link Collision Detection (Post-Simulation) ---
@@ -1342,6 +1422,9 @@ export class GameState {
                 activeInProgress = false;
             }
 
+            // Napalm Refinement: Remove any hazards that have run out of roundsLeft
+            this.entities = this.entities.filter(e => e.type !== 'NAPALM_FIRE' || e.roundsLeft > 0);
+
             // Safety break for infinite loops
             if (round > 20) break;
         }
@@ -1367,6 +1450,10 @@ export class GameState {
         } else if (alivePlayers.length === 0) {
             this.winner = 'DRAW';
         }
+
+        // Napalm Refinement: Purge ALL internal-round-based hazards at end of resolveTurn 
+        // they should never persist across Planning phases.
+        this.entities = this.entities.filter(e => e.type !== 'NAPALM_FIRE');
 
         this.turn += 1;
 
@@ -1452,12 +1539,23 @@ export class GameState {
     }
 
     /**
-     * Point-to-Segment Distance Math
+     * Point-to-Segment Distance Math (Toroidal Aware)
      * Returns the shortest physical distance from point (px, py) to line segment (x1, y1)-(x2, y2)
      */
-    static getPointToSegmentDistance(px, py, x1, y1, x2, y2) {
-        const proj = GameState.getPointOnSegment(px, py, x1, y1, x2, y2);
-        return Math.sqrt(Math.pow(px - proj.x, 2) + Math.pow(py - proj.y, 2));
+    static getPointToSegmentDistance(px, py, x1, y1, x2, y2, width = 2000, height = 2000) {
+        // Translate problem to be relative to (x1, y1) in a toroidal way
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        if (Math.abs(dx) > width / 2) dx = dx > 0 ? dx - width : dx + width;
+        if (Math.abs(dy) > height / 2) dy = dy > 0 ? dy - height : dy + height;
+
+        let ppx = px - x1;
+        let ppy = py - y1;
+        if (Math.abs(ppx) > width / 2) ppx = ppx > 0 ? ppx - width : ppx + width;
+        if (Math.abs(ppy) > height / 2) ppy = ppy > 0 ? ppy - height : ppy + height;
+
+        const proj = GameState.getPointOnSegment(ppx, ppy, 0, 0, dx, dy);
+        return Math.sqrt(Math.pow(ppx - proj.x, 2) + Math.pow(ppy - proj.y, 2));
     }
 
     /**

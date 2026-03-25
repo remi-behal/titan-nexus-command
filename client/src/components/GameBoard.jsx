@@ -494,7 +494,7 @@ const GameBoard = ({
                             ctx.lineWidth = 1;
                         }
 
-                        const isProjectile = (entity.type === 'PROJECTILE') || (ENTITY_STATS[entity.itemType || entity.type]?.damageFull !== undefined);
+                        const isProjectile = (entity.type === 'PROJECTILE' || entity.type === 'NAPALM') || (ENTITY_STATS[entity.itemType || entity.type]?.damageFull !== undefined);
                         const stats = ENTITY_STATS[entity.itemType || entity.type];
                         const radius = stats?.size || (isProjectile ? GLOBAL_STATS.PROJECTILE_RADIUS : 20);
 
@@ -645,6 +645,48 @@ const GameBoard = ({
                                 const r = radius * 0.5;
                                 ctx.beginPath();
                                 ctx.arc(entity.x + Math.cos(angle) * r, entity.y + Math.sin(angle) * r, radius * 0.4, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                            ctx.restore();
+                        } else if (entity.type === 'NAPALM_FIRE') {
+                            ctx.save();
+                            const stats = ENTITY_STATS.NAPALM_FIRE;
+                            const time = Date.now() / 1000;
+                            const pulse = 1 + Math.sin(time * 10) * 0.03;
+                            const width = stats.width * pulse;
+                            const radius = width / 2;
+
+                            // Calculate shortest toroidal vector to determine orientation
+                            const { dx, dy } = getToroidalDistVector(entity.startX, entity.startY, entity.endX, entity.endY, mapW, mapH);
+                            const angle = Math.atan2(dy, dx);
+                            const length = Math.sqrt(dx * dx + dy * dy);
+
+                            ctx.translate(entity.startX, entity.startY);
+                            ctx.rotate(angle);
+
+                            // Draw the stadium (Capsule)
+                            ctx.beginPath();
+                            ctx.arc(0, 0, radius, Math.PI / 2, (3 * Math.PI) / 2);
+                            ctx.lineTo(length, -radius);
+                            ctx.arc(length, 0, radius, (3 * Math.PI) / 2, Math.PI / 2);
+                            ctx.closePath();
+
+                            const grad = ctx.createLinearGradient(0, 0, length, 0);
+                            grad.addColorStop(0, 'rgba(255, 69, 0, 0.7)'); // Intense red-orange at tip
+                            grad.addColorStop(1, 'rgba(255, 140, 0, 0.4)'); // Fades toward tail
+                            ctx.fillStyle = grad;
+                            ctx.shadowBlur = 15;
+                            ctx.shadowColor = '#ff4500';
+                            ctx.fill();
+
+                            // Fire particles/licks inside
+                            ctx.globalAlpha = 0.3;
+                            ctx.fillStyle = '#ffaa00';
+                            for (let i = 0; i < 5; i++) {
+                                const px = (Math.sin(time * 5 + i * 0.7) * 0.4 + 0.5) * length;
+                                const py = (Math.cos(time * 3 + i * 1.1) * 0.2) * radius;
+                                ctx.beginPath();
+                                ctx.arc(px, py, radius * 0.4, 0, Math.PI * 2);
                                 ctx.fill();
                             }
                             ctx.restore();
@@ -920,7 +962,11 @@ const GameBoard = ({
                             ctx.restore();
 
                             if (showDebugPreview) {
-                                const launchDistance = GameState.calculateLaunchDistance(distance);
+                                let launchDistance = GameState.calculateLaunchDistance(distance);
+                                const stats = ENTITY_STATS[selectedItemType];
+                                if (stats?.minRange) {
+                                    launchDistance = Math.max(stats.minRange, launchDistance);
+                                }
                                 const ldx = Math.cos(launchAngle) * launchDistance;
                                 const ldy = Math.sin(launchAngle) * launchDistance;
                                 const targetX = ((hub.x + ldx % mapW) + mapW) % mapW;
@@ -942,6 +988,30 @@ const GameBoard = ({
                                     ctx.lineWidth = 3;
                                     ctx.beginPath();
                                     ctx.arc(targetX, targetY, ENTITY_STATS.NUKE.radiusFull, 0, Math.PI * 2);
+                                    ctx.stroke();
+                                    ctx.restore();
+                                }
+
+                                // Napalm AOE Preview during aiming
+                                if (selectedItemType === 'NAPALM') {
+                                    ctx.save();
+                                    const nStats = ENTITY_STATS.NAPALM_FIRE;
+                                    const { dx, dy } = getToroidalDistVector(hub.x, hub.y, targetX, targetY, mapW, mapH);
+                                    const angle = Math.atan2(dy, dx);
+                                    const radius = nStats.width / 2;
+
+                                    ctx.translate(targetX, targetY);
+                                    ctx.rotate(angle);
+                                    ctx.strokeStyle = 'rgba(255, 140, 0, 0.6)';
+                                    ctx.lineWidth = 2;
+                                    ctx.setLineDash([5, 5]);
+
+                                    ctx.beginPath();
+                                    // Remember: TargetX is the TIP, so we draw BACKWARDS (negative length)
+                                    ctx.arc(0, 0, radius, -Math.PI / 2, Math.PI / 2);
+                                    ctx.lineTo(-nStats.length, radius);
+                                    ctx.arc(-nStats.length, 0, radius, Math.PI / 2, -Math.PI / 2);
+                                    ctx.closePath();
                                     ctx.stroke();
                                     ctx.restore();
                                 }

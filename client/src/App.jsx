@@ -321,6 +321,9 @@ function App() {
           <option value="NUKE" disabled={pCurrent.energy < ENTITY_STATS.NUKE.cost}>
             Nuke ({ENTITY_STATS.NUKE.cost} E)
           </option>
+          <option value="NAPALM" disabled={pCurrent.energy < ENTITY_STATS.NAPALM.cost}>
+            Napalm ({ENTITY_STATS.NAPALM.cost} E)
+          </option>
           <option value="SUPER_BOMB" disabled={pCurrent.energy < (ENTITY_STATS.SUPER_BOMB?.cost || 10)}>
             Super Bomb [TEST] ({ENTITY_STATS.SUPER_BOMB?.cost || 10} E)
           </option>

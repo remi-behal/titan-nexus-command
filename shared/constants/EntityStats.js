@@ -160,6 +160,25 @@ export const ENTITY_STATS = {
         landAsStructure: true,
         deathEffect: 'DISINTEGRATE' // Silent death if destroyed early
     },
+    NAPALM: {
+        hp: 1,
+        cost: 35,
+        vision: 100,
+        size: 8,
+        speed: SPEED_TIERS.NORMAL,
+        minRange: 200,            // Bug 1: Prevent self-hits
+        landAsStructure: false,   // Bug 2: Don't leave a shell entity
+        deathEffect: 'DETONATE'
+    },
+    NAPALM_FIRE: {
+        hp: 9999,
+        duration: 2,
+        damageTick: 1,
+        length: 150,
+        width: 30,
+        isHazard: true,
+        vision: 0
+    },
     EXPLOSION_HAZARD: {
         radius: 200,
         damageTick: 1, // Damage taken by structures each round

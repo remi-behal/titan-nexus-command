@@ -68,3 +68,16 @@ A weapon that travels in a straight line but seperates before splitting into mul
 | **FAST** | 6 px/tick | Tick 133 |
 | **VERY_FAST** | 7 px/tick | Tick 114 |
 | **TELE_STRIKE** | 20 px/tick | Tick 40 |
+
+### Napalm - PLANNED [ ]
+#### Overview
+A specialized area-denial weapon. It launches as an interceptable canister that, upon arrival, releases a non-interceptable wave of fire in a straight line (stadium shape) extending forwards from the release point toward the source.
+#### Stats
+* **Range**: standard
+* **Health**: 1
+* **Launch Cost**: 35
+* **Damage**: 1 per round (lingering)
+* **Duration**: 2 rounds
+* **Type**: projectile -> lingering hazard
+* **Dimensions**: 150px length, 30px width (Capsule shape)
+* **Speed**: NORMAL (5 px/tick)
