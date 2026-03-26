@@ -121,4 +121,36 @@ describe('Reclaimer Tactical Weapon', () => {
         expect(gameState.entities.some(e => e.id === bridge.id)).toBe(false);
         expect(gameState.entities.some(e => e.id === ext.id)).toBe(false);
     });
+
+    it('should be non-interceptable by point defense systems', () => {
+        const hubP1 = gameState.entities.find(e => e.owner === P1 && e.isStarter);
+        const hubP2 = gameState.entities.find(e => e.owner === P2 && e.isStarter);
+
+        // Add Laser Point Defense for P2 (between P1 hub and P1 extractor)
+        const laserP2 = gameState.addEntity({ type: 'LASER_POINT_DEFENSE', owner: P2, x: 500, y: 500, deployed: true });
+        gameState.addLink(hubP2.id, laserP2.id, P2); // Keep it fueled/active
+
+        const targetExt = gameState.addEntity({ type: 'EXTRACTOR', owner: P1, x: 700, y: 500, deployed: true });
+        gameState.addLink(hubP1.id, targetExt.id, P1);
+
+        const actions = {
+            [P1]: [
+                {
+                    playerId: P1,
+                    sourceId: hubP1.id,
+                    itemType: 'RECLAIMER',
+                    angle: 0,
+                    distance: 210 // Path crosses over/near the laser at 500
+                }
+            ]
+        };
+
+        gameState.resolveTurn(actions);
+
+        // Reclaimer should NOT be intercepted and should reach target
+        expect(gameState.entities.some(e => e.id === targetExt.id)).toBe(false);
+        // Laser should still have its fuel (since it skipped the non-interceptable reclaimer)
+        const laserAfter = gameState.entities.find(e => e.id === laserP2.id);
+        expect(laserAfter.fuel).toBe(ENTITY_STATS.LASER_POINT_DEFENSE.fuel);
+    });
 });

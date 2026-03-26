@@ -793,6 +793,10 @@ export class GameState {
 
                                 tempProjectiles.forEach(proj => {
                                     if (!proj.active || proj.owner === def.owner) return;
+
+                                    const pStats = ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
+                                    if (pStats?.isInterceptable === false) return;
+
                                     const dist = this.getToroidalDistance(def.x, def.y, proj.currX, proj.currY);
                                     // Deterministic Tie-break: if distances are equal, pick by ID (lexicographical)
                                     if (dist < minDist || (dist === minDist && (!closestProj || proj.id < closestProj.id))) {
@@ -871,6 +875,9 @@ export class GameState {
                                 const stats = ENTITY_STATS.FLAK_DEFENSE;
                                 tempProjectiles.forEach(proj => {
                                     if (!proj.active || proj.hitByFlakDefense.has(def.id)) return;
+
+                                    const pStats = ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
+                                    if (pStats?.isInterceptable === false) return;
 
                                     const dist = this.getToroidalDistance(def.x, def.y, proj.currX, proj.currY);
                                     if (dist <= stats.range) {

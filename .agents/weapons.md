@@ -82,7 +82,7 @@ A specialized area-denial weapon. It launches as an interceptable canister that,
 * **Dimensions**: 150px length, 30px width (Capsule shape)
 * **Speed**: NORMAL (5 px/tick)
 
-### Reclaimer - Implemented [ ]
+### Reclaimer - Implemented [x]
 #### Overview
 A non-lethal tactical utility that reclaims friendly structures within its radius, refunding 50% of their cost. It is non-interceptable but costs 1 fuel to launch.
 #### Stats
