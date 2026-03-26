@@ -523,6 +523,11 @@ export class GameState {
             entity.detonationTurn = this.turn + 2;
         }
 
+        if (data.type === 'ECHO_ARTILLERY') {
+            entity.pendingEchos = []; // [{ x, y }] targets to fire at in the next round
+            entity.firedThisTurn = false;
+        }
+
         this.entities.push(entity);
         return entity;
     }
@@ -574,6 +579,14 @@ export class GameState {
                 return false;
             }
             return true;
+        });
+
+        // 0.5 Reset Echo Artillery for new turn
+        this.entities.forEach(ent => {
+            if (ent.type === 'ECHO_ARTILLERY') {
+                ent.firedThisTurn = false;
+                ent.pendingEchos = []; // Clear any leftover echos from previous turn
+            }
         });
 
         // 1. Generate Energy for all active players
@@ -655,10 +668,65 @@ export class GameState {
         let round = 0;
         let activeInProgress = true;
 
-        while (activeInProgress || this.entities.some(e => e.type === 'NAPALM_FIRE' && (e.roundsLeft === undefined || e.roundsLeft > 0))) {
+        while (activeInProgress ||
+            this.entities.some(e => e.type === 'NAPALM_FIRE' && (e.roundsLeft === undefined || e.roundsLeft > 0)) ||
+            this.entities.some(e => e.type === 'ECHO_ARTILLERY' && e.pendingEchos && e.pendingEchos.length > 0)) {
             round++;
             const roundActions = [];
+            const automaticProjectiles = [];
             const overloadedThisRound = new Set();
+
+            // Task 3: Collect Echo Artillery retaliation
+            this.entities.forEach(echo => {
+                if (echo.type === 'ECHO_ARTILLERY' && echo.pendingEchos && echo.pendingEchos.length > 0) {
+                    // Filter echos ready for this round (1-round delay)
+                    const readyEchos = echo.pendingEchos.filter(pea => pea.triggerRound < round);
+                    echo.pendingEchos = echo.pendingEchos.filter(pea => pea.triggerRound >= round);
+
+                    readyEchos.forEach(target => {
+                        const stats = ENTITY_STATS.WEAPON; // Standard Dumb Bomb
+                        const velocity = stats.speed || GLOBAL_STATS.SPEED_TIERS.NORMAL;
+
+                        // Calculate angle and distance to source structure
+                        const { dx, dy } = GameState.getToroidalVector(echo.x, echo.y, target.x, target.y, this.map.width, this.map.height);
+                        let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                        let distance = Math.sqrt(dx * dx + dy * dy);
+
+                        // TASK 3.2: Add Inaccuracy (Angular Deviation)
+                        angle += (Math.random() - 0.5) * 30; // ±15 degrees deviation
+                        distance *= (0.9 + Math.random() * 0.2); // ±10% distance deviation
+
+                        const rad = (angle * Math.PI) / 180;
+                        const arrivalTick = Math.max(1, Math.floor(distance / velocity));
+
+                        automaticProjectiles.push({
+                            id: Math.random().toString(36).substring(2, 6),
+                            type: 'WEAPON', // Echo Shell = Dumb Bomb
+                            itemType: 'WEAPON',
+                            owner: echo.owner,
+                            startX: echo.x,
+                            startY: echo.y,
+                            currX: echo.x,
+                            currY: echo.y,
+                            currentAngle: angle,
+                            sourceId: echo.id,
+                            intendedDx: Math.cos(rad) * distance,
+                            intendedDy: Math.sin(rad) * distance,
+                            originalTargetX: this.wrapX(echo.x + Math.cos(rad) * distance),
+                            originalTargetY: this.wrapY(echo.y + Math.sin(rad) * distance),
+                            totalDist: distance,
+                            intendedDistance: distance,
+                            arrivalTick: arrivalTick,
+                            velocity: velocity,
+                            totalDistanceMoved: 0,
+                            active: true,
+                            hp: stats.hp || 1,
+                            hitByFlakDefense: new Set()
+                        });
+                        console.log(`[Echo-Firing] Artillery ${echo.id} firing retaliation at (${Math.round(target.x)}, ${Math.round(target.y)})`);
+                    });
+                }
+            });
 
             // a. Collection: Find the next valid action for each UNIQUE hub of this player
             playerIds.forEach(pid => {
@@ -694,7 +762,7 @@ export class GameState {
                 const subTicks = GLOBAL_STATS.ACTION_SUB_TICKS;
 
                 // b. Sub-tick Simulation
-                const tempProjectiles = [];
+                const tempProjectiles = [...automaticProjectiles];
                 const impacts = new Set(); // IDs of entities to be destroyed at turn end
                 const tempVisuals = []; // Visual effects for this round (beams, explosions)
 
@@ -758,6 +826,18 @@ export class GameState {
                             hasSplit: false
                         });
                         console.log(`[Launch] ${action.playerId} fired ${action.itemType} from ${source.id}`);
+
+                        // Task 2.2: Detect enemy launches (Sound-based)
+                        this.entities.forEach(ent => {
+                            if (ent.type === 'ECHO_ARTILLERY' && ent.owner !== action.playerId && !ent.firedThisTurn) {
+                                const dist = this.getToroidalDistance(source.x, source.y, ent.x, ent.y);
+                                if (dist <= (ENTITY_STATS.ECHO_ARTILLERY.detectionRange || 800)) {
+                                    ent.pendingEchos.push({ x: source.x, y: source.y, triggerRound: round });
+                                    ent.firedThisTurn = true;
+                                    console.log(`[Echo-Detection] Artillery ${ent.id} detected launch by ${action.playerId} from (${Math.round(source.x)}, ${Math.round(source.y)})`);
+                                }
+                            }
+                        });
                     }
                 });
 
@@ -1439,8 +1519,8 @@ export class GameState {
                     }
                     return false;
                 });
-                const hasProjectiles = tempProjectiles.some(p => p.active);
-                activeInProgress = hasActionsLeft || hasProjectiles;
+                const hasPendingEchos = this.entities.some(e => e.type === 'ECHO_ARTILLERY' && e.pendingEchos && e.pendingEchos.length > 0);
+                activeInProgress = hasActionsLeft || hasProjectiles || hasPendingEchos;
 
                 // Link Decay check after every round
                 this.checkLinkIntegrity(round);
