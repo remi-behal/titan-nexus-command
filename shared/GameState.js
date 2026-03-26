@@ -658,6 +658,7 @@ export class GameState {
         while (activeInProgress || this.entities.some(e => e.type === 'NAPALM_FIRE' && (e.roundsLeft === undefined || e.roundsLeft > 0))) {
             round++;
             const roundActions = [];
+            const overloadedThisRound = new Set();
 
             // a. Collection: Find the next valid action for each UNIQUE hub of this player
             playerIds.forEach(pid => {
@@ -1173,6 +1174,11 @@ export class GameState {
                                         });
                                     }
 
+                                    if (proj.type === 'OVERLOAD' && proj.hitThisTick) {
+                                        this.triggerOverload(proj.currX, proj.currY, stats, tempVisuals, impacts, overloadedThisRound);
+                                        proj.hitThisTick = false;
+                                    }
+
                                     if (stats?.damageFull !== undefined && !stats?.landAsStructure && proj.hitThisTick) {
                                         const potentialTargets = [
                                             ...this.entities,
@@ -1182,6 +1188,7 @@ export class GameState {
                                         this.triggerExplosion(proj.currX, proj.currY, stats, tempVisuals, impacts, potentialTargets);
                                         proj.hitThisTick = false;
                                     }
+
                                 }
                             }
 
@@ -1495,7 +1502,63 @@ export class GameState {
         return snapshots;
     }
 
+    triggerOverload(x, y, stats, tempVisuals = [], impacts = new Set(), overloadedThisRound = new Set()) {
+        const affectedStructureIds = new Set();
+        const detectionRadius = stats.detectionRadius || 30;
+
+        // 1. Direct Structure Hits
+        this.entities.forEach(ent => {
+            if (ent.isHazard) return;
+            const dist = this.getToroidalDistance(x, y, ent.x, ent.y);
+            const size = ENTITY_STATS[ent.type]?.size || 20;
+            if (dist <= size + 5) { // Slight buffer for direct hits
+                affectedStructureIds.add(ent.id);
+                // Downstream hop: children of the hit structure
+                this.links.forEach(link => {
+                    if (link.from === ent.id) {
+                        affectedStructureIds.add(link.to);
+                    }
+                });
+            }
+        });
+
+        // 2. Link Hits (Downstream structure only)
+        this.links.forEach(link => {
+            const s1 = this.entities.find(e => e.id === link.from);
+            const s2 = this.entities.find(e => e.id === link.to);
+            if (!s1 || !s2) return;
+
+            const dist = GameState.getPointToSegmentDistance(x, y, s1.x, s1.y, s2.x, s2.y, this.map.width, this.map.height);
+            if (dist <= detectionRadius) {
+                affectedStructureIds.add(link.to); // Downstream only
+            }
+        });
+
+        // 3. Apply Damage (Limit: 1 HP per round)
+        affectedStructureIds.forEach(id => {
+            if (overloadedThisRound.has(id)) return; // Already hit this round
+
+            const target = this.entities.find(e => e.id === id);
+            if (target && target.hp > 0) {
+                target.hp -= 1;
+                overloadedThisRound.add(id);
+                if (target.hp <= 0) impacts.add(id);
+                console.log(`[Overload] ${id} took 1 chain damage. HP: ${target.hp}`);
+            }
+        });
+
+        // 4. Visuals (Uses the same EXPLOSION effect but typed as OVERLOAD for color)
+        tempVisuals.push({
+            type: 'EXPLOSION',
+            itemType: 'OVERLOAD',
+            x, y,
+            duration: 40,
+            radius: detectionRadius
+        });
+    }
+
     getState() {
+
         return {
             turn: this.turn,
             phase: this.phase,
