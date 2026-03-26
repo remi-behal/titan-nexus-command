@@ -186,8 +186,17 @@ export const ENTITY_STATS = {
         isHazard: true,
         vision: 0
     },
-    deathEffect: 'RECLAIM'
-},
+    RECLAIMER: {
+        hp: 1,
+        cost: 0,
+        vision: 100,
+        size: 8,
+        speed: SPEED_TIERS.NORMAL,
+        radiusFull: 75,
+        isInterceptable: false,
+        onlyFriendly: true,
+        deathEffect: 'RECLAIM'
+    },
     OVERLOAD: {
         hp: 1,
         cost: 40,
@@ -199,6 +208,7 @@ export const ENTITY_STATS = {
         deathEffect: 'DETONATE'
     }
 };
+
 
 
 export const RESOURCE_NODE_STATS = {
