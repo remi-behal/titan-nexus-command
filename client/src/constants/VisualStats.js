@@ -5,5 +5,11 @@ export const VISUAL_STATS = {
         AURA_RADIUS_SCALE: 2,       // Multiplier for base radius
         AURA_COLOR: 'rgba(191, 0, 255, 0.3)',
         AURA_DEFAULT_RADIUS: 20
+    },
+    OVERLOAD: {
+        color: '#bf00ff', // Electric Purple
+        secondaryColor: '#00ffff', // Cyan
+        particleCount: 20
     }
 };
+
