@@ -216,6 +216,8 @@ export const ENTITY_STATS = {
         size: 20,
         detectionRange: 800,
         isInterceptable: false,
+        accuracyDeviationAngle: 10, // ±5 degrees 
+        accuracyDeviationDistance: 0.1 // ±5% distance
     }
 };
 

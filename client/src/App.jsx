@@ -327,6 +327,9 @@ function App() {
           <option value="OVERLOAD" disabled={pCurrent.energy < ENTITY_STATS.OVERLOAD.cost}>
             Overload ({ENTITY_STATS.OVERLOAD.cost} E)
           </option>
+          <option value="ECHO_ARTILLERY" disabled={pCurrent.energy < ENTITY_STATS.ECHO_ARTILLERY.cost}>
+            Echo Artillery ({ENTITY_STATS.ECHO_ARTILLERY.cost} E)
+          </option>
 
           <option value="SUPER_BOMB" disabled={pCurrent.energy < (ENTITY_STATS.SUPER_BOMB?.cost || 10)}>
             Super Bomb [TEST] ({ENTITY_STATS.SUPER_BOMB?.cost || 10} E)

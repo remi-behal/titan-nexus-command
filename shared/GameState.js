@@ -692,9 +692,10 @@ export class GameState {
                         let angle = Math.atan2(dy, dx) * (180 / Math.PI);
                         let distance = Math.sqrt(dx * dx + dy * dy);
 
-                        // TASK 3.2: Add Inaccuracy (Angular Deviation)
-                        angle += (Math.random() - 0.5) * 30; // ±15 degrees deviation
-                        distance *= (0.9 + Math.random() * 0.2); // ±10% distance deviation
+                        // TASK 3.2: Add Inaccuracy (Deviation)
+                        const aStats = ENTITY_STATS.ECHO_ARTILLERY;
+                        angle += (Math.random() - 0.5) * (aStats.accuracyDeviationAngle || 0);
+                        distance *= (1 - (aStats.accuracyDeviationDistance || 0) / 2 + Math.random() * (aStats.accuracyDeviationDistance || 0));
 
                         const rad = (angle * Math.PI) / 180;
                         const arrivalTick = Math.max(1, Math.floor(distance / velocity));
@@ -758,7 +759,7 @@ export class GameState {
                 (e.type === 'NAPALM_FIRE' && (e.roundsLeft === undefined || e.roundsLeft > 0)) ||
                 (e.type === 'EXPLOSION_HAZARD' && round === 1)
             );
-            if (roundActions.length > 0 || hasActiveHazards) {
+            if (roundActions.length > 0 || hasActiveHazards || automaticProjectiles.length > 0) {
                 const subTicks = GLOBAL_STATS.ACTION_SUB_TICKS;
 
                 // b. Sub-tick Simulation
@@ -1520,6 +1521,7 @@ export class GameState {
                     return false;
                 });
                 const hasPendingEchos = this.entities.some(e => e.type === 'ECHO_ARTILLERY' && e.pendingEchos && e.pendingEchos.length > 0);
+                const hasProjectiles = tempProjectiles && tempProjectiles.some(p => p.active);
                 activeInProgress = hasActionsLeft || hasProjectiles || hasPendingEchos;
 
                 // Link Decay check after every round
