@@ -208,6 +208,14 @@ export const ENTITY_STATS = {
         isInterceptable: true,
         landAsStructure: false,
         deathEffect: 'DETONATE'
+    },
+    ECHO_ARTILLERY: {
+        hp: 2,
+        cost: 30,
+        vision: 200,
+        size: 20,
+        detectionRange: 800,
+        isInterceptable: false,
     }
 };
 

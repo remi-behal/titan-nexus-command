@@ -10,6 +10,10 @@ export const VISUAL_STATS = {
         color: '#bf00ff', // Electric Purple
         secondaryColor: '#00ffff', // Cyan
         particleCount: 20
+    },
+    ECHO_ARTILLERY: {
+        color: '#808080',
+        secondaryColor: '#ff8c00',
     }
 };
 
