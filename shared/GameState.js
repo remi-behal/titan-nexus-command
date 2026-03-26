@@ -655,7 +655,7 @@ export class GameState {
         let round = 0;
         let activeInProgress = true;
 
-        while (activeInProgress || this.entities.some(e => (e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE') && (e.roundsLeft === undefined || e.roundsLeft > 0))) {
+        while (activeInProgress || this.entities.some(e => e.type === 'NAPALM_FIRE' && (e.roundsLeft === undefined || e.roundsLeft > 0))) {
             round++;
             const roundActions = [];
 
@@ -685,7 +685,10 @@ export class GameState {
                 }
             });
 
-            const hasActiveHazards = this.entities.some(e => (e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE') && (e.roundsLeft === undefined || e.roundsLeft > 0));
+            const hasActiveHazards = this.entities.some(e =>
+                (e.type === 'NAPALM_FIRE' && (e.roundsLeft === undefined || e.roundsLeft > 0)) ||
+                (e.type === 'EXPLOSION_HAZARD' && round === 1)
+            );
             if (roundActions.length > 0 || hasActiveHazards) {
                 const subTicks = GLOBAL_STATS.ACTION_SUB_TICKS;
 
@@ -1106,9 +1109,13 @@ export class GameState {
                                     proj.active = false;
                                     proj.hitThisTick = true;
 
+                                    if (proj.type === 'RECLAIMER') {
+                                        this.handleReclaim(proj.currX, proj.currY, proj.owner, tempVisuals, impacts);
+                                    }
+
                                     const stats = ENTITY_STATS[proj.type];
                                     // Bug 2: landAsStructure: false avoids duplicate entities for weapons like Napalm
-                                    if ((stats?.damageFull === undefined || stats?.landAsStructure) && stats?.landAsStructure !== false) {
+                                    if ((stats?.damageFull === undefined && proj.type !== 'RECLAIMER' || stats?.landAsStructure) && stats?.landAsStructure !== false) {
                                         const data = {
                                             type: proj.type,
                                             owner: proj.owner,
@@ -1410,6 +1417,17 @@ export class GameState {
                     }
                 });
 
+                // Update activeInProgress for next round
+                const hasActionsLeft = Object.keys(this.players).some(pid => {
+                    const actions = playerActionsMap[pid] || [];
+                    for (let i = 0; i < actions.length; i++) {
+                        if (!processedActions[pid].has(i)) return true;
+                    }
+                    return false;
+                });
+                const hasProjectiles = tempProjectiles.some(p => p.active);
+                activeInProgress = hasActionsLeft || hasProjectiles;
+
                 // Link Decay check after every round
                 this.checkLinkIntegrity(round);
 
@@ -1586,6 +1604,48 @@ export class GameState {
      * @param {Set} impacts - Set to add destroyed entity IDs to
      * @param {array} potentialTargets - Array of entities/projectiles to check for damage
      */
+    /**
+     * Reclaims all friendly structures in a radius, refunding 50% cost.
+     */
+    handleReclaim(x, y, owner, tempVisuals = [], impacts = new Set()) {
+        const stats = ENTITY_STATS.RECLAIMER;
+        const radius = stats.radiusFull;
+
+        console.log(`[Reclaim] Triggered by ${owner} at (${Math.round(x)}, ${Math.round(y)}) with radius ${radius}`);
+
+        // Visual Effect
+        tempVisuals.push({
+            type: 'RECLAIM', // Client will handle this unique visual
+            x: x,
+            y: y,
+            duration: GLOBAL_STATS.EXPLOSION_DURATION,
+            radius: radius
+        });
+
+        this.entities.forEach(entity => {
+            if (entity.owner !== owner || entity.isHazard || entity.type === 'EXPLOSION_HAZARD') return;
+
+            const tStats = ENTITY_STATS[entity.type] || ENTITY_STATS[entity.itemType];
+            const dist = this.getToroidalDistance(entity.x, entity.y, x, y);
+            const effDist = Math.max(0, dist - (tStats?.size || 0));
+
+            if (effDist <= radius) {
+                const refund = Math.ceil((tStats?.cost || 0) * 0.5);
+                this.players[owner].energy += refund;
+                impacts.add(entity.id);
+
+                tempVisuals.push({
+                    type: 'SPARK',
+                    x: entity.x,
+                    y: entity.y,
+                    duration: 20
+                });
+
+                console.log(`[Reclaim] MATCH: Reclaimed ${entity.id} (${entity.type}). Refund: ${refund}. Total Energy: ${this.players[owner].energy}`);
+            }
+        });
+    }
+
     triggerExplosion(x, y, stats, tempVisuals = [], impacts = new Set(), potentialTargets = []) {
         console.log(`[Explosion] Triggered at (${Math.round(x)}, ${Math.round(y)}) with radius ${stats.radiusFull}`);
 

@@ -69,7 +69,7 @@ A weapon that travels in a straight line but seperates before splitting into mul
 | **VERY_FAST** | 7 px/tick | Tick 114 |
 | **TELE_STRIKE** | 20 px/tick | Tick 40 |
 
-### Napalm - PLANNED [ ]
+### Napalm - Implemented [x]
 #### Overview
 A specialized area-denial weapon. It launches as an interceptable canister that, upon arrival, releases a non-interceptable wave of fire in a straight line (stadium shape) extending forwards from the release point toward the source.
 #### Stats
@@ -81,3 +81,18 @@ A specialized area-denial weapon. It launches as an interceptable canister that,
 * **Type**: projectile -> lingering hazard
 * **Dimensions**: 150px length, 30px width (Capsule shape)
 * **Speed**: NORMAL (5 px/tick)
+
+### Reclaimer - Implemented [ ]
+#### Overview
+A non-lethal tactical utility that reclaims friendly structures within its radius, refunding 50% of their cost. It is non-interceptable but costs 1 fuel to launch.
+#### Stats
+* **Range**: standard
+* **Health**: 1
+* **Launch Cost**: 0
+* **Launch Fuel**: 1
+* **Type**: tactical projectile
+* **Damage type**: none (reclaim only)
+    * **Full Radius**: 75
+* **Speed**: NORMAL (5 px/tick)
+* **Status**: Non-interceptable, Harmless to enemies
+

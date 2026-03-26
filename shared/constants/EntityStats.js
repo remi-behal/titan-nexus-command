@@ -185,6 +185,17 @@ export const ENTITY_STATS = {
         hp: 9999,      // Immune to accidental deletion
         isHazard: true,
         vision: 0
+    },
+    RECLAIMER: {
+        hp: 1,
+        cost: 0,
+        vision: 100,
+        size: 8,
+        speed: SPEED_TIERS.NORMAL,
+        radiusFull: 75,
+        isInterceptable: false,
+        onlyFriendly: true,
+        deathEffect: 'RECLAIM'
     }
 };
 

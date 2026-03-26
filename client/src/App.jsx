@@ -327,6 +327,9 @@ function App() {
           <option value="SUPER_BOMB" disabled={pCurrent.energy < (ENTITY_STATS.SUPER_BOMB?.cost || 10)}>
             Super Bomb [TEST] ({ENTITY_STATS.SUPER_BOMB?.cost || 10} E)
           </option>
+          <option value="RECLAIMER">
+            Reclaimer (0 E, 1 Fuel)
+          </option>
         </select>
 
         {(() => {
