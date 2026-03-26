@@ -195,6 +195,7 @@ export const ENTITY_STATS = {
         radiusFull: 75,
         isInterceptable: false,
         onlyFriendly: true,
+        landAsStructure: false,
         deathEffect: 'RECLAIM'
     },
     OVERLOAD: {
@@ -205,6 +206,7 @@ export const ENTITY_STATS = {
         speed: SPEED_TIERS.NORMAL,
         detectionRadius: 30,
         isInterceptable: true,
+        landAsStructure: false,
         deathEffect: 'DETONATE'
     }
 };
