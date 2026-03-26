@@ -638,19 +638,21 @@ const GameBoard = ({
                         } else if (entity.type === 'EXPLOSION') {
                             ctx.save();
                             const explosionRadius = entity.radius || 40;
-                            ctx.strokeStyle = '#ff9900';
+                            const vStats = VISUAL_STATS[entity.itemType];
+                            ctx.strokeStyle = vStats?.color || '#ff9900';
                             ctx.lineWidth = 6;
                             ctx.beginPath();
                             ctx.arc(entity.x, entity.y, explosionRadius * 1.2, 0, Math.PI * 2);
                             ctx.stroke();
                             ctx.beginPath();
                             ctx.arc(entity.x, entity.y, explosionRadius, 0, Math.PI * 2);
-                            ctx.fillStyle = '#ff6600';
+                            ctx.fillStyle = vStats?.secondaryColor || '#ff6600';
                             ctx.shadowBlur = 20;
-                            ctx.shadowColor = '#ff3300';
+                            ctx.shadowColor = vStats?.color || '#ff3300';
                             ctx.fill();
                             ctx.restore();
-                        } else if (entity.type === 'EXPLOSION_HAZARD') {
+                        }
+                        else if (entity.type === 'EXPLOSION_HAZARD') {
                             ctx.save();
                             const radius = entity.radius || 200;
                             const time = Date.now() / 1000;
@@ -1022,16 +1024,22 @@ const GameBoard = ({
                                 ctx.arc(targetX, targetY, stats?.size || 12, 0, Math.PI * 2);
                                 ctx.stroke();
 
-                                // AOE Preview for explosive weapons (Nuke, Weapon, Super Bomb)
-                                if (stats?.radiusFull) {
+                                // AOE Preview for explosive weapons (Nuke, Weapon, Super Bomb, OVERLOAD)
+                                const explosionRadius = stats?.radiusFull || stats?.detectionRadius;
+                                if (explosionRadius) {
                                     ctx.save();
 
+                                    const vStats = VISUAL_STATS[selectedItemType];
+                                    const previewColor = selectedItemType === 'NUKE' ? 'rgba(255, 0, 0, 0.7)' :
+                                        (selectedItemType === 'RECLAIMER' ? 'rgba(0, 255, 255, 0.7)' :
+                                            (vStats?.color ? `${vStats.color}b3` : 'rgba(255, 255, 255, 0.5)'));
+
                                     // 1. Full Damage Inner Ring (Solid-ish)
-                                    ctx.strokeStyle = selectedItemType === 'NUKE' ? 'rgba(255, 0, 0, 0.7)' : (selectedItemType === 'RECLAIMER' ? 'rgba(0, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.5)');
-                                    ctx.lineWidth = (selectedItemType === 'NUKE' || selectedItemType === 'RECLAIMER') ? 3 : 2;
+                                    ctx.strokeStyle = previewColor;
+                                    ctx.lineWidth = (selectedItemType === 'NUKE' || selectedItemType === 'RECLAIMER' || selectedItemType === 'OVERLOAD') ? 3 : 2;
                                     ctx.setLineDash([10, 5]);
                                     ctx.beginPath();
-                                    ctx.arc(targetX, targetY, stats.radiusFull, 0, Math.PI * 2);
+                                    ctx.arc(targetX, targetY, explosionRadius, 0, Math.PI * 2);
                                     ctx.stroke();
 
                                     // 2. Splash Damage Outer Ring (Dashed/Subtle)
@@ -1046,6 +1054,7 @@ const GameBoard = ({
 
                                     ctx.restore();
                                 }
+
 
                                 // Napalm AOE Preview during aiming
                                 if (selectedItemType === 'NAPALM') {
