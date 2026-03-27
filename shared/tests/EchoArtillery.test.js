@@ -136,4 +136,52 @@ describe('Echo Artillery Functional Tests', () => {
 
         expect(totalP2Firings).toBe(1);
     });
+
+    it('should trigger a chain reaction (P1 (Hub) -> P2 Echo (Round 2) -> P1 Echo (Round 3))', () => {
+        const p1Hub = game.entities.find(e => e.owner === 'p1');
+        const p2Hub = game.entities.find(e => e.owner === 'p2');
+
+        // Add Echo Artillery for P1
+        const echoP1 = game.addEntity({
+            type: 'ECHO_ARTILLERY',
+            owner: 'p1',
+            x: p1Hub.x,
+            y: p1Hub.y + 50
+        });
+        game.addLink(p1Hub.id, echoP1.id, 'p1');
+
+        // Add Echo Artillery for P2 near P1's stuff
+        const echoP2 = game.addEntity({
+            type: 'ECHO_ARTILLERY',
+            owner: 'p2',
+            x: p1Hub.x + 100,
+            y: p1Hub.y
+        });
+        game.addLink(p2Hub.id, echoP2.id, 'p2');
+
+        const actions = {
+            p1: [{
+                playerId: 'p1',
+                sourceId: p1Hub.id,
+                itemType: 'WEAPON',
+                angle: 0,
+                distance: 100
+            }]
+        };
+
+        const snapshots = game.resolveTurn(actions);
+
+        // Round 1: P1 Hub fires manually.
+        // Round 2: P2 Echo fires (responding to Round 1 manual launch).
+        // Round 3: P1 Echo fires (responding to Round 2 automated launch from P2).
+
+        const wasFiringP2R2 = snapshots.some(s => s.type === 'ROUND_SUB' && s.round === 2 &&
+            s.state.entities.some(e => (e.type === 'WEAPON' || e.type === 'PROJECTILE') && e.owner === 'p2'));
+
+        const wasFiringP1R3 = snapshots.some(s => s.type === 'ROUND_SUB' && s.round === 3 &&
+            s.state.entities.some(e => (e.type === 'WEAPON' || e.type === 'PROJECTILE') && e.owner === 'p1'));
+
+        expect(wasFiringP2R2).toBe(true);
+        expect(wasFiringP1R3).toBe(true);
+    });
 });

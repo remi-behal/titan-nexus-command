@@ -692,7 +692,7 @@ export class GameState {
                         let angle = Math.atan2(dy, dx) * (180 / Math.PI);
                         let distance = Math.sqrt(dx * dx + dy * dy);
 
-                        // TASK 3.2: Add Inaccuracy (Deviation)
+                        // Add Inaccuracy (Deviation)
                         const aStats = ENTITY_STATS.ECHO_ARTILLERY;
                         angle += (Math.random() - 0.5) * (aStats.accuracyDeviationAngle || 0);
                         distance *= (1 - (aStats.accuracyDeviationDistance || 0) / 2 + Math.random() * (aStats.accuracyDeviationDistance || 0));
@@ -725,6 +725,9 @@ export class GameState {
                             hitByFlakDefense: new Set()
                         });
                         console.log(`[Echo-Firing] Artillery ${echo.id} firing retaliation at (${Math.round(target.x)}, ${Math.round(target.y)})`);
+
+                        // TASK 5: Automated launches also trigger other Echo Artilleries
+                        this.triggerEchoArtillery(echo.x, echo.y, echo.owner, round);
                     });
                 }
             });
@@ -828,17 +831,8 @@ export class GameState {
                         });
                         console.log(`[Launch] ${action.playerId} fired ${action.itemType} from ${source.id}`);
 
-                        // Task 2.2: Detect enemy launches (Sound-based)
-                        this.entities.forEach(ent => {
-                            if (ent.type === 'ECHO_ARTILLERY' && ent.owner !== action.playerId && !ent.firedThisTurn) {
-                                const dist = this.getToroidalDistance(source.x, source.y, ent.x, ent.y);
-                                if (dist <= (ENTITY_STATS.ECHO_ARTILLERY.detectionRange || 800)) {
-                                    ent.pendingEchos.push({ x: source.x, y: source.y, triggerRound: round });
-                                    ent.firedThisTurn = true;
-                                    console.log(`[Echo-Detection] Artillery ${ent.id} detected launch by ${action.playerId} from (${Math.round(source.x)}, ${Math.round(source.y)})`);
-                                }
-                            }
-                        });
+                        // Task 5: Use extracted detection logic for manual launches
+                        this.triggerEchoArtillery(source.x, source.y, action.playerId, round);
                     }
                 });
 
@@ -1877,5 +1871,22 @@ export class GameState {
             };
         }
         return null;
+    }
+
+    /**
+     * Internal Echo Artillery logic: Detect a launch and schedule a response.
+     * Used by both manual and automated launches.
+     */
+    triggerEchoArtillery(sourceX, sourceY, launcherId, round) {
+        this.entities.forEach(ent => {
+            if (ent.type === 'ECHO_ARTILLERY' && ent.owner !== launcherId && !ent.firedThisTurn) {
+                const dist = this.getToroidalDistance(sourceX, sourceY, ent.x, ent.y);
+                if (dist <= (ENTITY_STATS.ECHO_ARTILLERY.detectionRange || 800)) {
+                    ent.pendingEchos.push({ x: sourceX, y: sourceY, triggerRound: round });
+                    ent.firedThisTurn = true;
+                    console.log(`[Echo-Detection] Artillery ${ent.id} detected launch by ${launcherId} from (${Math.round(sourceX)}, ${Math.round(sourceY)})`);
+                }
+            }
+        });
     }
 }
