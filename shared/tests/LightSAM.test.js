@@ -13,7 +13,7 @@ describe('Light SAM Defense Logic', () => {
     });
 
     it('should auto-launch a SAM at an enemy projectile in range (id:52)', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
 
         // Add a Light SAM defense for Player 1
         const samDefense = game.addEntity({
@@ -28,13 +28,16 @@ describe('Light SAM Defense Logic', () => {
         // Setup an enemy weapon flying towards the defense zone
         const actions = {
             player1: [],
-            player2: [{
-                playerId: 'player2',
-                sourceId: game.entities.find(e => e.owner === 'player2' && e.type === 'HUB').id,
-                itemType: 'WEAPON',
-                angle: 180, // Launch LEFT
-                distance: 500 // Will land at 750 - 500 = 250, passing through defense area (350)
-            }]
+            player2: [
+                {
+                    playerId: 'player2',
+                    sourceId: game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB')
+                        .id,
+                    itemType: 'WEAPON',
+                    angle: 180, // Launch LEFT
+                    distance: 500 // Will land at 750 - 500 = 250, passing through defense area (350)
+                }
+            ]
         };
 
         // Note: The weapon launch itself will happen in ROUND_START.
@@ -43,9 +46,13 @@ describe('Light SAM Defense Logic', () => {
 
         // Check if a projectile of type SAM_MISSILE was created by player 1 in any sub-round snapshot
         let samMissileFound = false;
-        snapshots.forEach(s => {
+        snapshots.forEach((s) => {
             if (s.type === 'ROUND_SUB' && s.state.entities) {
-                if (s.state.entities.some(e => e.itemType === 'SAM_MISSILE' && e.owner === 'player1')) {
+                if (
+                    s.state.entities.some(
+                        (e) => e.itemType === 'SAM_MISSILE' && e.owner === 'player1'
+                    )
+                ) {
                     samMissileFound = true;
                 }
             }
@@ -56,7 +63,7 @@ describe('Light SAM Defense Logic', () => {
     });
 
     it('should successfully intercept and destroy an enemy projectile (Task 4)', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
 
         game.addEntity({
             type: 'LIGHT_SAM_DEFENSE',
@@ -69,13 +76,16 @@ describe('Light SAM Defense Logic', () => {
 
         const actions = {
             player1: [],
-            player2: [{
-                playerId: 'player2',
-                sourceId: game.entities.find(e => e.owner === 'player2' && e.type === 'HUB').id,
-                itemType: 'WEAPON',
-                angle: 180,
-                distance: 500
-            }]
+            player2: [
+                {
+                    playerId: 'player2',
+                    sourceId: game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB')
+                        .id,
+                    itemType: 'WEAPON',
+                    angle: 180,
+                    distance: 500
+                }
+            ]
         };
 
         const snapshots = game.resolveTurn(actions);
@@ -83,9 +93,11 @@ describe('Light SAM Defense Logic', () => {
         // Verification: The weapon should have been destroyed (active: false) in a later snapshot
         // And we should see an explosion or a point where the weapon is no longer active
         let weaponIntercepted = false;
-        snapshots.forEach(s => {
+        snapshots.forEach((s) => {
             if (s.type === 'ROUND_SUB') {
-                const weapon = s.state.entities.find(e => e.itemType === 'WEAPON' && e.owner === 'player2');
+                const weapon = s.state.entities.find(
+                    (e) => e.itemType === 'WEAPON' && e.owner === 'player2'
+                );
                 if (!weapon || !weapon.active) {
                     weaponIntercepted = true;
                 }
@@ -96,7 +108,6 @@ describe('Light SAM Defense Logic', () => {
     });
 
     it('should accelerate faster than standard homing missiles (Task 3)', () => {
-
         // Spawn a SAM
         const samStats = ENTITY_STATS.SAM_MISSILE;
 
@@ -113,7 +124,7 @@ describe('Light SAM Defense Logic', () => {
     });
 
     it('should have NO vision and not scout (Task 5)', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
         p1Hub.vision = 0; // Blind the hub
 
         const sam = {
@@ -132,7 +143,7 @@ describe('Light SAM Defense Logic', () => {
     });
 
     it('should NOT launch if defense is undeployed', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
 
         const samDefense = game.addEntity({
             type: 'LIGHT_SAM_DEFENSE',
@@ -145,18 +156,23 @@ describe('Light SAM Defense Logic', () => {
 
         const actions = {
             player1: [],
-            player2: [{
-                playerId: 'player2',
-                sourceId: game.entities.find(e => e.owner === 'player2' && e.type === 'HUB').id,
-                itemType: 'WEAPON',
-                angle: 180,
-                distance: 200
-            }]
+            player2: [
+                {
+                    playerId: 'player2',
+                    sourceId: game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB')
+                        .id,
+                    itemType: 'WEAPON',
+                    angle: 180,
+                    distance: 200
+                }
+            ]
         };
 
         game.resolveTurn(actions);
 
-        const samMissile = game.entities.find(p => p.itemType === 'SAM_MISSILE' && p.owner === 'player1');
+        const samMissile = game.entities.find(
+            (p) => p.itemType === 'SAM_MISSILE' && p.owner === 'player1'
+        );
         expect(samMissile).toBeUndefined();
         expect(samDefense.fuel).toBe(1);
     });

@@ -11,13 +11,15 @@ describe('GameState - Win/Draw Conditions', () => {
     });
 
     it('should result in a DRAW if both hubs are destroyed in the same round', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'p1' && e.type === 'HUB');
-        const p2Hub = game.entities.find(e => e.owner === 'p2' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'p1' && e.type === 'HUB');
+        const p2Hub = game.entities.find((e) => e.owner === 'p2' && e.type === 'HUB');
 
         // Move them close for easy targeting
         // p1Hub at (250,500), p2Hub at (550,500)
-        p1Hub.x = 250; p1Hub.y = 500;
-        p2Hub.x = 550; p2Hub.y = 500;
+        p1Hub.x = 250;
+        p1Hub.y = 500;
+        p2Hub.x = 550;
+        p2Hub.y = 500;
 
         // Both fire weapons at each other (deals 2 damage, hubs have 5)
         p1Hub.hp = 1;
@@ -26,8 +28,18 @@ describe('GameState - Win/Draw Conditions', () => {
         // Both fire weapons at each other
         // Dist 300, weapon reaches ~310 with default launch speed/drag params
         const actions = {
-            p1: [{ playerId: 'p1', sourceId: p1Hub.id, itemType: 'WEAPON', angle: 0, distance: 160 }],
-            p2: [{ playerId: 'p2', sourceId: p2Hub.id, itemType: 'WEAPON', angle: 180, distance: 160 }]
+            p1: [
+                { playerId: 'p1', sourceId: p1Hub.id, itemType: 'WEAPON', angle: 0, distance: 160 }
+            ],
+            p2: [
+                {
+                    playerId: 'p2',
+                    sourceId: p2Hub.id,
+                    itemType: 'WEAPON',
+                    angle: 180,
+                    distance: 160
+                }
+            ]
         };
 
         game.resolveTurn(actions);
@@ -38,14 +50,18 @@ describe('GameState - Win/Draw Conditions', () => {
     });
 
     it('should result in a DRAW if all players lose all their hubs by the end of the turn (even in different rounds)', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'p1' && e.type === 'HUB');
-        const p2Hub1 = game.entities.find(e => e.owner === 'p2' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'p1' && e.type === 'HUB');
+        const p2Hub1 = game.entities.find((e) => e.owner === 'p2' && e.type === 'HUB');
 
         // Add a second hub for P2 so they can survive Round 1 and strike back in Round 2
         game.addEntity({ type: 'HUB', owner: 'p2', x: 800, y: 500, deployed: true, hp: 1 });
 
-        p1Hub.x = 250; p1Hub.y = 500; p1Hub.hp = 1;
-        p2Hub1.x = 550; p2Hub1.y = 500; p2Hub1.hp = 1;
+        p1Hub.x = 250;
+        p1Hub.y = 500;
+        p1Hub.hp = 1;
+        p2Hub1.x = 550;
+        p2Hub1.y = 500;
+        p2Hub1.hp = 1;
 
         // Round 1: P1 kills P2's Hub 1.
         // Round 2: P2's Hub 2 kills P1's Only Hub.
@@ -57,10 +73,16 @@ describe('GameState - Win/Draw Conditions', () => {
         const actions = {
             p1: [
                 { playerId: 'p1', sourceId: p1Hub.id, itemType: 'WEAPON', angle: 0, distance: 162 }, // Hits P2-Hub1 (550) in R1
-                { playerId: 'p1', sourceId: p1Hub.id, itemType: 'WEAPON', angle: 0, distance: 237 }  // Hits P2-Hub2 (800) in R2
+                { playerId: 'p1', sourceId: p1Hub.id, itemType: 'WEAPON', angle: 0, distance: 237 } // Hits P2-Hub2 (800) in R2
             ],
             p2: [
-                { playerId: 'p2', sourceId: p2Hub1.id, itemType: 'WEAPON', angle: 180, distance: 162 } // Hits P1-Hub (250) in R1
+                {
+                    playerId: 'p2',
+                    sourceId: p2Hub1.id,
+                    itemType: 'WEAPON',
+                    angle: 180,
+                    distance: 162
+                } // Hits P1-Hub (250) in R1
             ]
         };
 

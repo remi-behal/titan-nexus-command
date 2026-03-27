@@ -13,7 +13,7 @@ describe('SAM Interceptor Isolation', () => {
     });
 
     it('should intercept a homing missile and survive (id:215)', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
 
         const samDefense = game.addEntity({
             type: 'LIGHT_SAM_DEFENSE',
@@ -28,13 +28,16 @@ describe('SAM Interceptor Isolation', () => {
         // Player 2 launches a homing missile
         const actions = {
             player1: [],
-            player2: [{
-                playerId: 'player2',
-                sourceId: game.entities.find(e => e.owner === 'player2' && e.type === 'HUB').id,
-                itemType: 'HOMING_MISSILE',
-                angle: 180,
-                distance: 500
-            }]
+            player2: [
+                {
+                    playerId: 'player2',
+                    sourceId: game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB')
+                        .id,
+                    itemType: 'HOMING_MISSILE',
+                    angle: 180,
+                    distance: 500
+                }
+            ]
         };
 
         const snapshots = game.resolveTurn(actions);
@@ -47,16 +50,20 @@ describe('SAM Interceptor Isolation', () => {
         // Wait, if the SAM detonates, it's removed. But the SAM defense structure should be fine.
 
         let homingMissileIntercepted = false;
-        snapshots.forEach(s => {
+        snapshots.forEach((s) => {
             if (s.type === 'ROUND_SUB') {
-                const hm = s.state.entities.find(e => e.itemType === 'HOMING_MISSILE' && e.owner === 'player2');
+                const hm = s.state.entities.find(
+                    (e) => e.itemType === 'HOMING_MISSILE' && e.owner === 'player2'
+                );
                 if (!hm || !hm.active) homingMissileIntercepted = true;
             }
         });
 
         expect(homingMissileIntercepted).toBe(true);
 
-        const samDefenseFinal = game.entities.find(e => e.type === 'LIGHT_SAM_DEFENSE' && e.owner === 'player1');
+        const samDefenseFinal = game.entities.find(
+            (e) => e.type === 'LIGHT_SAM_DEFENSE' && e.owner === 'player1'
+        );
         expect(samDefenseFinal).toBeDefined();
         expect(samDefenseFinal.hp).toBeGreaterThan(0);
     });

@@ -1,6 +1,6 @@
 /**
  * ExperimentalStats.js
- * 
+ *
  * Temporary definitions for items currently being tested.
  * To remove: Delete this file and its references in EntityStats.js.
  */
@@ -16,8 +16,8 @@ export const EXPERIMENTAL_STATS = {
         damageHalf: 10,
         radiusHalf: 20,
         vision: 100,
-        size: 15,           // Large projectile for visual distinction
-        speed: SPEED_TIERS.VERY_FAST,           // VERY FAST (7 px/tick)
+        size: 15, // Large projectile for visual distinction
+        speed: SPEED_TIERS.VERY_FAST, // VERY FAST (7 px/tick)
         deathEffect: 'DETONATE'
     }
 };

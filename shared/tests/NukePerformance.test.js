@@ -11,7 +11,7 @@ describe('Nuke Resolution Performance', () => {
 
     it('should resolve a nuke detonation turn with minimal snapshots if no other actions exist', () => {
         // 1. Setup a Nuke about to detonate
-        const nuke = game.addEntity({
+        const _nuke = game.addEntity({
             type: 'NUKE',
             x: 500,
             y: 500,
@@ -24,24 +24,24 @@ describe('Nuke Resolution Performance', () => {
         const snapshots = game.resolveTurn({ p1: [], p2: [] });
 
         // 3. Analyze snapshots
-        const detonationSnaps = snapshots.filter(s => s.type === 'DETONATION');
-        const roundSnaps = snapshots.filter(s => s.type === 'ROUND');
-        const subSnaps = snapshots.filter(s => s.type === 'ROUND_SUB');
+        const detonationSnaps = snapshots.filter((s) => s.type === 'DETONATION');
+        const roundSnaps = snapshots.filter((s) => s.type === 'ROUND');
+        const subSnaps = snapshots.filter((s) => s.type === 'ROUND_SUB');
 
-        console.log(`[Perf] Snapshots generated:`);
+        console.log('[Perf] Snapshots generated:');
         console.log(` - DETONATION: ${detonationSnaps.length}`);
         console.log(` - ROUND: ${roundSnaps.length}`);
         console.log(` - ROUND_SUB: ${subSnaps.length}`);
         console.log(` - TOTAL: ${snapshots.length}`);
 
-        // Expectations: 
+        // Expectations:
         // 1 DETONATION
         // 1 ROUND (because we force 1 for the hazard)
         // 0 ROUND_SUB (ideally, if nothing moved)
         expect(detonationSnaps.length).toBe(1);
         expect(roundSnaps.length).toBe(1);
 
-        // This is the current "bloat": 
+        // This is the current "bloat":
         // If this is > 0 when no projectiles are moving, it's inefficient.
         // Currently it will be around 20.
         expect(subSnaps.length).toBeLessThan(5);

@@ -5,14 +5,15 @@ A browser-based, simultaneous turn-based multiplayer game set on the surface of 
 ## 🚀 Quick Start
 
 1. **Install Dependencies**:
-   ```bash
-   npm run install:all
-   ```
+
+    ```bash
+    npm run install:all
+    ```
 
 2. **Run Development Mode** (Starts both Client & Server):
-   ```bash
-   npm run dev
-   ```
+    ```bash
+    npm run dev
+    ```
 
 ## 📂 Project Structure
 

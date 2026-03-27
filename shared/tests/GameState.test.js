@@ -1,6 +1,6 @@
 /**
  * GameState.test.js
- * 
+ *
  * Unit tests for the core game engine.
  * These tests validate the "headless" game logic without any UI or network dependencies.
  */
@@ -108,12 +108,12 @@ describe('GameState - Toroidal Map', () => {
         const clickX = 200;
         const mapW = 1000;
 
-        const gameCoord = ((cameraX + clickX) % mapW + mapW) % mapW;
+        const gameCoord = (((cameraX + clickX) % mapW) + mapW) % mapW;
         expect(gameCoord).toBe(100);
 
         // Simulate camera panned to x=-100 (which is 900)
         const cameraX2 = -100;
-        const gameCoord2 = ((cameraX2 + clickX) % mapW + mapW) % mapW;
+        const gameCoord2 = (((cameraX2 + clickX) % mapW) + mapW) % mapW;
         expect(gameCoord2).toBe(100);
     });
 
@@ -141,8 +141,8 @@ describe('GameState - Game Initialization', () => {
     it('should create starter hubs for each player', () => {
         game.initializeGame(['player1', 'player2']);
 
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
-        const p2Hub = game.entities.find(e => e.owner === 'player2' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
+        const p2Hub = game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB');
 
         expect(p1Hub).toBeDefined();
         expect(p1Hub.isStarter).toBe(true);
@@ -158,7 +158,7 @@ describe('GameState - Game Initialization', () => {
 
     it('should initialize resource nodes using templates from EntityStats', () => {
         game.initializeGame(['player1']);
-        const superNode = game.map.resources.find(r => r.isSuper);
+        const superNode = game.map.resources.find((r) => r.isSuper);
         expect(superNode.value).toBe(15);
         expect(superNode.color).toBe('#bf00ff');
     });
@@ -173,13 +173,13 @@ describe('GameState - Link Integrity', () => {
     });
 
     it('should preserve structures connected to starter hub', () => {
-        const starter = game.entities.find(e => e.isStarter && e.owner === 'player1');
+        const starter = game.entities.find((e) => e.isStarter && e.owner === 'player1');
         const connected = game.addEntity({ type: 'HUB', owner: 'player1', x: 300, y: 300 });
         game.addLink(starter.id, connected.id, 'player1');
 
         game.checkLinkIntegrity();
 
-        expect(game.entities.find(e => e.id === connected.id)).toBeDefined();
+        expect(game.entities.find((e) => e.id === connected.id)).toBeDefined();
     });
 
     it('should destroy orphaned structures', () => {
@@ -187,11 +187,11 @@ describe('GameState - Link Integrity', () => {
 
         game.checkLinkIntegrity();
 
-        expect(game.entities.find(e => e.id === orphan.id)).toBeUndefined();
+        expect(game.entities.find((e) => e.id === orphan.id)).toBeUndefined();
     });
 
     it('should destroy structures when intermediate link is broken', () => {
-        const starter = game.entities.find(e => e.isStarter && e.owner === 'player1');
+        const starter = game.entities.find((e) => e.isStarter && e.owner === 'player1');
         const middle = game.addEntity({ type: 'HUB', owner: 'player1', x: 300, y: 300 });
         const end = game.addEntity({ type: 'HUB', owner: 'player1', x: 400, y: 400 });
 
@@ -199,11 +199,11 @@ describe('GameState - Link Integrity', () => {
         game.addLink(middle.id, end.id, 'player1');
 
         // Remove the middle hub
-        game.entities = game.entities.filter(e => e.id !== middle.id);
+        game.entities = game.entities.filter((e) => e.id !== middle.id);
         game.checkLinkIntegrity();
 
         // End hub should be destroyed because it lost connection to starter
-        expect(game.entities.find(e => e.id === end.id)).toBeUndefined();
+        expect(game.entities.find((e) => e.id === end.id)).toBeUndefined();
     });
 });
 
@@ -228,20 +228,22 @@ describe('GameState - Turn Resolution', () => {
     });
 
     it('should deduct energy for launches', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
         const initialEnergy = game.players['player1'].energy;
         const cost = ENTITY_STATS['WEAPON'].cost;
         const hubIncome = ENTITY_STATS.HUB.energyGen;
         const ubi = GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
 
         const actions = {
-            player1: [{
-                playerId: 'player1',
-                sourceId: p1Hub.id,
-                itemType: 'WEAPON',
-                angle: 0,
-                distance: 100
-            }],
+            player1: [
+                {
+                    playerId: 'player1',
+                    sourceId: p1Hub.id,
+                    itemType: 'WEAPON',
+                    angle: 0,
+                    distance: 100
+                }
+            ],
             player2: []
         };
 
@@ -251,16 +253,18 @@ describe('GameState - Turn Resolution', () => {
     });
 
     it('should consume fuel when launching from hub', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
 
         const actions = {
-            player1: [{
-                playerId: 'player1',
-                sourceId: p1Hub.id,
-                itemType: 'HUB',
-                angle: 0,
-                distance: 100
-            }],
+            player1: [
+                {
+                    playerId: 'player1',
+                    sourceId: p1Hub.id,
+                    itemType: 'HUB',
+                    angle: 0,
+                    distance: 100
+                }
+            ],
             player2: []
         };
 
@@ -272,22 +276,24 @@ describe('GameState - Turn Resolution', () => {
     });
 
     it('should replenish fuel at end of turn', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
 
         const actions = {
-            player1: [{
-                playerId: 'player1',
-                sourceId: p1Hub.id,
-                itemType: 'HUB',
-                angle: 0,
-                distance: 100
-            }],
+            player1: [
+                {
+                    playerId: 'player1',
+                    sourceId: p1Hub.id,
+                    itemType: 'HUB',
+                    angle: 0,
+                    distance: 100
+                }
+            ],
             player2: []
         };
 
         game.resolveTurn(actions);
 
-        const hubAfter = game.entities.find(e => e.id === p1Hub.id);
+        const hubAfter = game.entities.find((e) => e.id === p1Hub.id);
         expect(hubAfter.fuel).toBe(hubAfter.maxFuel);
     });
 
@@ -310,7 +316,7 @@ describe('GameState - Win Conditions', () => {
 
     it('should declare winner when one player has no hubs', () => {
         // Remove player2's hub
-        game.entities = game.entities.filter(e => e.owner !== 'player2');
+        game.entities = game.entities.filter((e) => e.owner !== 'player2');
 
         game.resolveTurn({ player1: [], player2: [] });
 
@@ -356,8 +362,8 @@ describe('GameState - Collision Detection', () => {
     });
 
     it('should detect weapon impact on enemy hub', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
-        const p2Hub = game.entities.find(e => e.owner === 'player2' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
+        const p2Hub = game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB');
 
         // Calculate angle and distance to hit p2Hub from p1Hub
         const dx = p2Hub.x - p1Hub.x;
@@ -367,30 +373,41 @@ describe('GameState - Collision Detection', () => {
 
         // Find the pull distance that gives us the needed launch distance
         // We'll use a distance that should hit (accounting for the power curve)
-        const pullDistance = Math.pow(distance / GLOBAL_STATS.MAX_LAUNCH, 1 / GLOBAL_STATS.POWER_EXPONENT) * GLOBAL_STATS.MAX_PULL;
+        const pullDistance =
+            Math.pow(distance / GLOBAL_STATS.MAX_LAUNCH, 1 / GLOBAL_STATS.POWER_EXPONENT) *
+            GLOBAL_STATS.MAX_PULL;
 
         const actions = {
-            player1: [{
-                playerId: 'player1',
-                sourceId: p1Hub.id,
-                itemType: 'WEAPON',
-                angle: angle,
-                distance: pullDistance
-            }],
+            player1: [
+                {
+                    playerId: 'player1',
+                    sourceId: p1Hub.id,
+                    itemType: 'WEAPON',
+                    angle: angle,
+                    distance: pullDistance
+                }
+            ],
             player2: []
         };
 
         game.resolveTurn(actions);
 
         // p2Hub should NOT be destroyed (it has 5 HP, weapon deals 2 AOE damage)
-        const p2HubAfter = game.entities.find(e => e.id === p2Hub.id);
+        const p2HubAfter = game.entities.find((e) => e.id === p2Hub.id);
         expect(p2HubAfter).toBeDefined();
         expect(p2HubAfter.hp).toBe(3);
 
         // However, if we hit an UNDEPLOYED entity (1 HP), it should be destroyed
-        const undeployed = game.addEntity({ type: 'HUB', owner: 'player2', x: p2Hub.x, y: p2Hub.y, deployed: false, hp: 1 });
+        const undeployed = game.addEntity({
+            type: 'HUB',
+            owner: 'player2',
+            x: p2Hub.x,
+            y: p2Hub.y,
+            deployed: false,
+            hp: 1
+        });
         game.resolveTurn(actions);
-        expect(game.entities.find(e => e.id === undeployed.id)).toBeUndefined();
+        expect(game.entities.find((e) => e.id === undeployed.id)).toBeUndefined();
     });
 });
 
@@ -404,7 +421,7 @@ describe('GameState - Launch Direction Consistency', () => {
     });
 
     it('should maintain direction for high-power launches (>50% map width)', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
         p1Hub.x = 250;
         p1Hub.y = 500;
 
@@ -414,16 +431,20 @@ describe('GameState - Launch Direction Consistency', () => {
         // At 50% progress, it should be at 250 + 400 = 650.
         // The "shortest path" would be 250 -> 150 -> 50 (traveling LEFT 200 units).
 
-        const pullDistance = Math.pow(800 / GLOBAL_STATS.MAX_LAUNCH, 1 / GLOBAL_STATS.POWER_EXPONENT) * GLOBAL_STATS.MAX_PULL;
+        const pullDistance =
+            Math.pow(800 / GLOBAL_STATS.MAX_LAUNCH, 1 / GLOBAL_STATS.POWER_EXPONENT) *
+            GLOBAL_STATS.MAX_PULL;
 
         const actions = {
-            player1: [{
-                playerId: 'player1',
-                sourceId: p1Hub.id,
-                itemType: 'HUB',
-                angle: 0, // RIGHT
-                distance: pullDistance
-            }],
+            player1: [
+                {
+                    playerId: 'player1',
+                    sourceId: p1Hub.id,
+                    itemType: 'HUB',
+                    angle: 0, // RIGHT
+                    distance: pullDistance
+                }
+            ],
             player2: []
         };
 
@@ -431,10 +452,10 @@ describe('GameState - Launch Direction Consistency', () => {
 
         // Find a snapshot around the midpoint of the sub-round (subTicks = 200, capture every step)
         // SubTick 96 is close to halfway and a multiple of our dynamic snapshot step (6)
-        const midSnapshot = snapshots.find(s => s.type === 'ROUND_SUB' && s.subTick === 96);
+        const midSnapshot = snapshots.find((s) => s.type === 'ROUND_SUB' && s.subTick === 96);
         expect(midSnapshot).toBeDefined();
 
-        const projectile = midSnapshot.state.entities.find(e => e.type === 'PROJECTILE');
+        const projectile = midSnapshot.state.entities.find((e) => e.type === 'PROJECTILE');
         expect(projectile).toBeDefined();
 
         // Expected X: 250 + (800 * 0.48) = 634
@@ -452,12 +473,12 @@ describe('GameState - Fog of War', () => {
     });
 
     it('should show own entities as visible', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
         expect(game.isPositionVisible('player1', p1Hub.x, p1Hub.y)).toBe(true);
     });
 
     it('should hide enemy entities out of vision', () => {
-        const p2Hub = game.entities.find(e => e.owner === 'player2' && e.type === 'HUB');
+        const p2Hub = game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB');
 
         // p2Hub is at 750, p1Hub is at 250. Vision radius of HUB is 400.
         // Distance is 500, so it should be hidden.
@@ -465,20 +486,25 @@ describe('GameState - Fog of War', () => {
     });
 
     it('should show enemy entities within vision', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
         // Place an enemy hub near player 1
-        const enemyNear = game.addEntity({ type: 'HUB', owner: 'player2', x: p1Hub.x + 100, y: p1Hub.y });
+        const enemyNear = game.addEntity({
+            type: 'HUB',
+            owner: 'player2',
+            x: p1Hub.x + 100,
+            y: p1Hub.y
+        });
 
         expect(game.isPositionVisible('player1', enemyNear.x, enemyNear.y)).toBe(true);
     });
 
     it('should filter getVisibleState for specific player', () => {
-        const p2Hub = game.entities.find(e => e.owner === 'player2' && e.type === 'HUB');
+        const p2Hub = game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB');
 
         const visibleState = game.getVisibleState('player1');
 
         // Player 2's remote hub should be filtered out
-        const p2HubInState = visibleState.entities.find(e => e.id === p2Hub.id);
+        const p2HubInState = visibleState.entities.find((e) => e.id === p2Hub.id);
         expect(p2HubInState).toBeUndefined();
     });
 
@@ -492,17 +518,18 @@ describe('GameState - Fog of War', () => {
         dummyState.entities.push({ id: 'dummy', owner: 'player2', x: 0, y: 0, type: 'HUB' });
 
         const filtered = game.getVisibleState('player1', dummyState);
-        expect(filtered.entities.find(e => e.id === 'dummy')).toBeUndefined();
+        expect(filtered.entities.find((e) => e.id === 'dummy')).toBeUndefined();
     });
 
     it('should show link even if endpoints are hidden but link segment is visible', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1');
         // Player 1 at (250, 500). Vision radius 400.
-        p1Hub.x = 250; p1Hub.y = 500;
+        p1Hub.x = 250;
+        p1Hub.y = 500;
 
         // Two enemy hubs outside vision (at y=0 and y=1000)
         // Link between them passes through (250, 500) which is in vision
-        const enemyA = game.addEntity({ type: 'HUB', owner: 'player2', x: 250, y: 0 });    // 500 away
+        const enemyA = game.addEntity({ type: 'HUB', owner: 'player2', x: 250, y: 0 }); // 500 away
         const enemyB = game.addEntity({ type: 'HUB', owner: 'player2', x: 250, y: 1000 }); // 500 away
         game.addLink(enemyA.id, enemyB.id, 'player2');
 
@@ -512,8 +539,8 @@ describe('GameState - Fog of War', () => {
         expect(visibleState.links.length).toBe(1);
 
         // Endpoints MUST be included in the entities list so the link can be drawn...
-        const entA = visibleState.entities.find(e => e.id === enemyA.id);
-        const entB = visibleState.entities.find(e => e.id === enemyB.id);
+        const entA = visibleState.entities.find((e) => e.id === enemyA.id);
+        const entB = visibleState.entities.find((e) => e.id === enemyB.id);
         expect(entA).toBeDefined();
         expect(entB).toBeDefined();
 
@@ -523,8 +550,9 @@ describe('GameState - Fog of War', () => {
     });
 
     it('should mark entities as scouted ONLY if they are in active vision radius', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1');
-        p1Hub.x = 250; p1Hub.y = 500; // Vision covers y in [100, 900]
+        const p1Hub = game.entities.find((e) => e.owner === 'player1');
+        p1Hub.x = 250;
+        p1Hub.y = 500; // Vision covers y in [100, 900]
 
         // Enemy Hub A: Just outside vision (y=50)
         // Enemy Hub B: Well inside vision (y=500)
@@ -534,11 +562,11 @@ describe('GameState - Fog of War', () => {
 
         const visibleState = game.getVisibleState('player1');
 
-        const entA = visibleState.entities.find(e => e.id === enemyA.id);
-        const entB = visibleState.entities.find(e => e.id === enemyB.id);
+        const entA = visibleState.entities.find((e) => e.id === enemyA.id);
+        const entB = visibleState.entities.find((e) => e.id === enemyB.id);
 
         expect(entA.scouted).toBe(false); // Inside the dark, only seen via link
-        expect(entB.scouted).toBe(true);  // Actively seen
+        expect(entB.scouted).toBe(true); // Actively seen
     });
 });
 
@@ -552,7 +580,7 @@ describe('GameState - Multi-Action Turns', () => {
     });
 
     it('should process multiple actions for the same player in one resolution', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
 
         // Define two legal actions
         const actions = {
@@ -579,8 +607,8 @@ describe('GameState - Multi-Action Turns', () => {
 
         // Track all unique projectiles seen across the entire resolution
         const allProjectiles = new Set();
-        snapshots.forEach(s => {
-            s.state.entities.forEach(e => {
+        snapshots.forEach((s) => {
+            s.state.entities.forEach((e) => {
                 if (e.type === 'PROJECTILE') allProjectiles.add(e.id);
             });
         });
@@ -592,35 +620,39 @@ describe('GameState - Multi-Action Turns', () => {
         const cost = ENTITY_STATS.HUB.cost + ENTITY_STATS.WEAPON.cost;
         const income = ENTITY_STATS.HUB.energyGen + GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
 
-        expect(finalSnap.state.players.player1.energy).toBe(GLOBAL_STATS.STARTING_ENERGY + income - cost);
+        expect(finalSnap.state.players.player1.energy).toBe(
+            GLOBAL_STATS.STARTING_ENERGY + income - cost
+        );
     });
 
     it('should NOT include future entities in the early snapshots (ENERGY phase)', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
         const initialEntityCount = game.entities.length;
 
         const actions = {
-            player1: [{
-                playerId: 'player1',
-                sourceId: p1Hub.id,
-                itemType: 'HUB',
-                angle: 90,
-                distance: 100
-            }],
+            player1: [
+                {
+                    playerId: 'player1',
+                    sourceId: p1Hub.id,
+                    itemType: 'HUB',
+                    angle: 90,
+                    distance: 100
+                }
+            ],
             player2: []
         };
 
         const snapshots = game.resolveTurn(actions);
 
         // The first snapshot should be ENERGY
-        const energySnap = snapshots.find(s => s.type === 'ENERGY');
+        const energySnap = snapshots.find((s) => s.type === 'ENERGY');
         expect(energySnap).toBeDefined();
 
         // It should ONLY have the initial entities (the hubs existing before resolution)
         expect(energySnap.state.entities.length).toBe(initialEntityCount);
 
         // The result Hub should only appear at the END of the round
-        const finalSnap = snapshots.find(s => s.type === 'FINAL');
+        const finalSnap = snapshots.find((s) => s.type === 'FINAL');
         expect(finalSnap.state.entities.length).toBe(initialEntityCount + 1);
     });
 });
@@ -632,12 +664,8 @@ describe('GameState - Map Hazards (Phase 6)', () => {
         game = new GameState();
         game.initializeGame(['player1']);
         // Add a single lake and some mountains for testing
-        game.map.lakes = [
-            { id: 'lake_test', x: 500, y: 500, radius: 100 }
-        ];
-        game.map.mountains = [
-            { id: 'mtn_test', x: 1200, y: 500, radius: 100 }
-        ];
+        game.map.lakes = [{ id: 'lake_test', x: 500, y: 500, radius: 100 }];
+        game.map.mountains = [{ id: 'mtn_test', x: 1200, y: 500, radius: 100 }];
     });
 
     it('should destroy an entity that lands in a lake', () => {
@@ -647,8 +675,9 @@ describe('GameState - Map Hazards (Phase 6)', () => {
     });
 
     it('should destroy the destination entity if a link crosses a lake', () => {
-        const starter = game.entities.find(e => e.isStarter && e.owner === 'player1');
-        starter.x = 200; starter.y = 500;
+        const starter = game.entities.find((e) => e.isStarter && e.owner === 'player1');
+        starter.x = 200;
+        starter.y = 500;
         const target = game.addEntity({ type: 'HUB', owner: 'player1', x: 800, y: 500, hp: 10 });
         game.addLink(starter.id, target.id, 'player1');
         game.checkMapHazards();
@@ -662,8 +691,9 @@ describe('GameState - Map Hazards (Phase 6)', () => {
     });
 
     it('should NOT destroy a link that crosses a mountain', () => {
-        const starter = game.entities.find(e => e.isStarter && e.owner === 'player1');
-        starter.x = 1000; starter.y = 500;
+        const starter = game.entities.find((e) => e.isStarter && e.owner === 'player1');
+        starter.x = 1000;
+        starter.y = 500;
         const target = game.addEntity({ type: 'HUB', owner: 'player1', x: 1400, y: 500, hp: 10 });
         game.addLink(starter.id, target.id, 'player1');
         game.checkMapHazards();

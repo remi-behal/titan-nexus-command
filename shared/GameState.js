@@ -1,6 +1,6 @@
 /**
  * GameState.js
- * 
+ *
  * This class represents the "Single Source of Truth" for your game world.
  * It is designed to be "headless", meaning it doesn't care about rendering
  * or UI. This makes it easy to move to the server later!
@@ -81,7 +81,7 @@ export class GameState {
         let t = 0;
         if (lensq > 0) {
             // Project origin (circle center) onto the line segment: t = dot(-P1, D) / |D|^2
-            t = Math.max(0, Math.min(1, ((-p1x) * d_x + (-p1y) * d_y) / lensq));
+            t = Math.max(0, Math.min(1, (-p1x * d_x + -p1y * d_y) / lensq));
         }
 
         const closestX = p1x + t * d_x;
@@ -125,13 +125,20 @@ export class GameState {
         if (!playerId || playerId === 'spectator') return true;
 
         const sourceEntities = entities || this.entities;
-        return sourceEntities.some(e => {
+        return sourceEntities.some((e) => {
             if (e.owner !== playerId) return false;
 
             // Correctly identify stat key for buildings vs projectiles
-            const statKey = (e.type === 'PROJECTILE' || e.type === 'WEAPON' || e.type === 'HOMING_MISSILE' || e.type === 'SAM_MISSILE') && e.itemType ? e.itemType : e.type;
+            const statKey =
+                (e.type === 'PROJECTILE' ||
+                    e.type === 'WEAPON' ||
+                    e.type === 'HOMING_MISSILE' ||
+                    e.type === 'SAM_MISSILE') &&
+                e.itemType
+                    ? e.itemType
+                    : e.type;
             const stats = ENTITY_STATS[statKey];
-            const radius = e.vision !== undefined ? e.vision : (stats?.vision || 0);
+            const radius = e.vision !== undefined ? e.vision : stats?.vision || 0;
             if (radius === 0) return false;
 
             const dist = this.getToroidalDistance(e.x, e.y, x, y);
@@ -139,8 +146,19 @@ export class GameState {
 
             // Projectile-Specific Vision Override: 60 degree cone
             // NOTE: A projectile ALWAYS sees its own position (dist < 1)
-            if (dist > 1 && (e.type === 'PROJECTILE' || e.type === 'HOMING_MISSILE') && (e.itemType === 'HOMING_MISSILE' || e.type === 'HOMING_MISSILE')) {
-                const vec = this.constructor.getToroidalVector(e.x, e.y, x, y, this.map.width, this.map.height);
+            if (
+                dist > 1 &&
+                (e.type === 'PROJECTILE' || e.type === 'HOMING_MISSILE') &&
+                (e.itemType === 'HOMING_MISSILE' || e.type === 'HOMING_MISSILE')
+            ) {
+                const vec = this.constructor.getToroidalVector(
+                    e.x,
+                    e.y,
+                    x,
+                    y,
+                    this.map.width,
+                    this.map.height
+                );
                 const angleToPoint = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
 
                 let diff = angleToPoint - (e.currentAngle || 0);
@@ -161,13 +179,13 @@ export class GameState {
         if (!playerId || playerId === 'spectator') return [];
 
         return this.entities
-            .filter(e => e.owner === playerId)
-            .map(e => ({
+            .filter((e) => e.owner === playerId)
+            .map((e) => ({
                 x: e.x,
                 y: e.y,
                 radius: ENTITY_STATS[e.type]?.vision || 0
             }))
-            .filter(c => c.radius > 0);
+            .filter((c) => c.radius > 0);
     }
 
     /**
@@ -179,7 +197,6 @@ export class GameState {
         const state = baseState ? JSON.parse(JSON.stringify(baseState)) : this.getState();
         if (!playerId || playerId === 'spectator') return state;
 
-
         const isVisible = (x, y) => {
             return this.isPositionVisible(playerId, x, y, state.entities);
         };
@@ -189,9 +206,9 @@ export class GameState {
         // Filter links: visible if either end is visible, or if any segment is visible
         const sourceEntities = baseState ? baseState.entities : this.entities;
 
-        state.links = state.links.filter(l => {
-            const fullFrom = sourceEntities.find(e => e.id === l.from);
-            const fullTo = sourceEntities.find(e => e.id === l.to);
+        state.links = state.links.filter((l) => {
+            const fullFrom = sourceEntities.find((e) => e.id === l.from);
+            const fullTo = sourceEntities.find((e) => e.id === l.to);
             if (!fullFrom || !fullTo) return false;
 
             // Check endpoints
@@ -212,8 +229,10 @@ export class GameState {
             } else {
                 dx = fullTo.x - fullFrom.x;
                 dy = fullTo.y - fullFrom.y;
-                if (Math.abs(dx) > state.map.width / 2) dx = dx > 0 ? dx - state.map.width : dx + state.map.width;
-                if (Math.abs(dy) > state.map.height / 2) dy = dy > 0 ? dy - state.map.height : dy + state.map.height;
+                if (Math.abs(dx) > state.map.width / 2)
+                    dx = dx > 0 ? dx - state.map.width : dx + state.map.width;
+                if (Math.abs(dy) > state.map.height / 2)
+                    dy = dy > 0 ? dy - state.map.height : dy + state.map.height;
             }
 
             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -234,19 +253,21 @@ export class GameState {
         });
 
         // Filter entities: own entities always visible, others only if in vision OR required by a visible link
-        state.entities = sourceEntities.map(e => {
-            const isOwn = e.owner === playerId;
-            const inVision = isVisible(e.x, e.y);
-            const isLinkEndpoint = entitiesRequiredByLinks.has(e.id);
+        state.entities = sourceEntities
+            .map((e) => {
+                const isOwn = e.owner === playerId;
+                const inVision = isVisible(e.x, e.y);
+                const isLinkEndpoint = entitiesRequiredByLinks.has(e.id);
 
-            if (isOwn || inVision || isLinkEndpoint) {
-                return {
-                    ...e,
-                    scouted: isOwn || inVision // Only true if actively seen or owned
-                };
-            }
-            return null;
-        }).filter(e => e !== null);
+                if (isOwn || inVision || isLinkEndpoint) {
+                    return {
+                        ...e,
+                        scouted: isOwn || inVision // Only true if actively seen or owned
+                    };
+                }
+                return null;
+            })
+            .filter((e) => e !== null);
 
         return state;
     }
@@ -270,7 +291,7 @@ export class GameState {
             };
 
             // Create initial Hub for each player
-            const startX = 250 + (index * 500); // Spread at 25% and 75% width
+            const startX = 250 + index * 500; // Spread at 25% and 75% width
             const startY = 500;
 
             this.addEntity({
@@ -286,16 +307,14 @@ export class GameState {
         // Mock resource nodes (Standard: 5 bonus, Super: 15 bonus)
         const { STANDARD, SUPER } = RESOURCE_NODE_STATS;
         this.map.resources = [
-            { id: 'res1', x: 500, y: 250, ...STANDARD },   // Top quadrant
-            { id: 'res2', x: 1500, y: 750, ...STANDARD },  // Bottom quadrant
-            { id: 'res3', x: 1000, y: 500, ...SUPER },     // Super node (Center)
-            { id: 'res4', x: 1000, y: 1500, ...STANDARD }  // Far side
+            { id: 'res1', x: 500, y: 250, ...STANDARD }, // Top quadrant
+            { id: 'res2', x: 1500, y: 750, ...STANDARD }, // Bottom quadrant
+            { id: 'res3', x: 1000, y: 500, ...SUPER }, // Super node (Center)
+            { id: 'res4', x: 1000, y: 1500, ...STANDARD } // Far side
         ];
 
         // Seed a test lake (Phase 6)
-        this.map.lakes = [
-            { id: 'lake1', x: 1000, y: 560, radius: 100 }
-        ];
+        this.map.lakes = [{ id: 'lake1', x: 1000, y: 560, radius: 100 }];
 
         // Seed a mountain range (Phase 6)
         this.map.mountains = [
@@ -306,15 +325,15 @@ export class GameState {
     }
 
     /**
-     * Link Decay: Any structure not connected (via links) to 
+     * Link Decay: Any structure not connected (via links) to
      * its player's starter hub is destroyed.
      */
     checkLinkIntegrity(round = 0) {
         const toDestroy = new Set();
 
-        Object.keys(this.players).forEach(pid => {
+        Object.keys(this.players).forEach((pid) => {
             const connected = new Set();
-            const starter = this.entities.find(e => e.owner === pid && e.isStarter);
+            const starter = this.entities.find((e) => e.owner === pid && e.isStarter);
 
             if (starter) {
                 const queue = [starter.id];
@@ -323,13 +342,13 @@ export class GameState {
                 while (queue.length > 0) {
                     const currentId = queue.shift();
                     // Find all entities linked to this one
-                    this.links.forEach(link => {
+                    this.links.forEach((link) => {
                         let neighborId = null;
                         if (link.from === currentId) neighborId = link.to;
                         if (link.to === currentId) neighborId = link.from;
 
                         if (neighborId && !connected.has(neighborId)) {
-                            const neighbor = this.entities.find(e => e.id === neighborId);
+                            const neighbor = this.entities.find((e) => e.id === neighborId);
                             if (neighbor && neighbor.owner === pid) {
                                 connected.add(neighborId);
                                 queue.push(neighborId);
@@ -338,24 +357,34 @@ export class GameState {
                     });
                 }
             } else {
-                console.log(`[Link Decay] Player ${pid} has no starter hub. All structures orphaned.`);
+                console.log(
+                    `[Link Decay] Player ${pid} has no starter hub. All structures orphaned.`
+                );
             }
 
             // Mark for destruction all entities owned by this player that aren't in 'connected'
-            this.entities.forEach(e => {
+            this.entities.forEach((e) => {
                 // Hazards are temporary and don't need to be linked to the hub
-                const isOrphan = (e.owner === pid && !connected.has(e.id) && !e.isHazard && e.type !== 'EXPLOSION_HAZARD');
+                const isOrphan =
+                    e.owner === pid &&
+                    !connected.has(e.id) &&
+                    !e.isHazard &&
+                    e.type !== 'EXPLOSION_HAZARD';
                 if (isOrphan) {
-                    console.log(`[LinkDecay-DEBUG] Round ${round}: Orphaned structure ${e.id} (${e.type})`);
+                    console.log(
+                        `[LinkDecay-DEBUG] Round ${round}: Orphaned structure ${e.id} (${e.type})`
+                    );
                     toDestroy.add(e.id);
                 }
             });
         });
 
         if (toDestroy.size > 0) {
-            console.log(`[Link Decay] Destroying orphaned entities: ${Array.from(toDestroy).join(', ')}`);
-            this.entities = this.entities.filter(e => !toDestroy.has(e.id));
-            this.links = this.links.filter(l => !toDestroy.has(l.from) && !toDestroy.has(l.to));
+            console.log(
+                `[Link Decay] Destroying orphaned entities: ${Array.from(toDestroy).join(', ')}`
+            );
+            this.entities = this.entities.filter((e) => !toDestroy.has(e.id));
+            this.links = this.links.filter((l) => !toDestroy.has(l.from) && !toDestroy.has(l.to));
         }
     }
 
@@ -366,22 +395,23 @@ export class GameState {
     checkMapHazards(tempVisuals = []) {
         // 1. Process Lakes
         if (this.map.lakes && this.map.lakes.length > 0) {
-
-            this.map.lakes.forEach(lake => {
+            this.map.lakes.forEach((lake) => {
                 // Stage 1: Entity Drowning
-                this.entities.forEach(entity => {
+                this.entities.forEach((entity) => {
                     const dist = this.getToroidalDistance(entity.x, entity.y, lake.x, lake.y);
                     if (dist < lake.radius) {
                         entity.hp = 0;
-                        console.log(`[Lake] ${entity.id} (${entity.type}) drowned at (${Math.round(entity.x)}, ${Math.round(entity.y)})`);
+                        console.log(
+                            `[Lake] ${entity.id} (${entity.type}) drowned at (${Math.round(entity.x)}, ${Math.round(entity.y)})`
+                        );
                     }
                 });
 
                 // Stage 2: Link Blockage
                 const linksToDestroy = new Set();
-                this.links.forEach(link => {
-                    const s1 = this.entities.find(e => e.id === link.from);
-                    const s2 = this.entities.find(e => e.id === link.to);
+                this.links.forEach((link) => {
+                    const s1 = this.entities.find((e) => e.id === link.from);
+                    const s2 = this.entities.find((e) => e.id === link.to);
                     if (!s1 || !s2) return;
 
                     const segments = GameState.getLinkSegments(
@@ -391,13 +421,27 @@ export class GameState {
                         this.map.height
                     );
 
-                    segments.forEach(seg => {
-                        const dist = GameState.getPointToSegmentDistance(lake.x, lake.y, seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y);
+                    segments.forEach((seg) => {
+                        const dist = GameState.getPointToSegmentDistance(
+                            lake.x,
+                            lake.y,
+                            seg.p1.x,
+                            seg.p1.y,
+                            seg.p2.x,
+                            seg.p2.y
+                        );
                         if (dist < lake.radius) {
                             linksToDestroy.add(link.to);
 
                             // Add visual effect at the point where link segments are closest to lake center
-                            const proj = GameState.getPointOnSegment(lake.x, lake.y, seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y);
+                            const proj = GameState.getPointOnSegment(
+                                lake.x,
+                                lake.y,
+                                seg.p1.x,
+                                seg.p1.y,
+                                seg.p2.x,
+                                seg.p2.y
+                            );
                             tempVisuals.push({
                                 type: 'LINK_COLLISION',
                                 x: proj.x,
@@ -405,13 +449,15 @@ export class GameState {
                                 duration: 30
                             });
 
-                            console.log(`[Lake] Link ${link.from}->${link.to} crosses lake volume! Breaking.`);
+                            console.log(
+                                `[Lake] Link ${link.from}->${link.to} crosses lake volume! Breaking.`
+                            );
                         }
                     });
                 });
 
-                linksToDestroy.forEach(id => {
-                    const ent = this.entities.find(e => e.id === id);
+                linksToDestroy.forEach((id) => {
+                    const ent = this.entities.find((e) => e.id === id);
                     if (ent) ent.hp = 0;
                 });
             });
@@ -419,13 +465,15 @@ export class GameState {
 
         // 2. Process Mountains
         if (this.map.mountains && this.map.mountains.length > 0) {
-            this.map.mountains.forEach(mtn => {
+            this.map.mountains.forEach((mtn) => {
                 // Entity Crashing (Wait for landing)
-                this.entities.forEach(entity => {
+                this.entities.forEach((entity) => {
                     const dist = this.getToroidalDistance(entity.x, entity.y, mtn.x, mtn.y);
                     if (dist < mtn.radius) {
                         entity.hp = 0;
-                        console.log(`[Mountain] ${entity.id} (${entity.type}) crashed into mountain at (${Math.round(entity.x)}, ${Math.round(entity.y)})`);
+                        console.log(
+                            `[Mountain] ${entity.id} (${entity.type}) crashed into mountain at (${Math.round(entity.x)}, ${Math.round(entity.y)})`
+                        );
                     }
                 });
                 // Note: Links CAN cross mountains, so no link check here.
@@ -434,12 +482,14 @@ export class GameState {
 
         // 3. Process Craters (Permanent scars)
         if (this.map.craters && this.map.craters.length > 0) {
-            this.map.craters.forEach(crater => {
-                this.entities.forEach(entity => {
+            this.map.craters.forEach((crater) => {
+                this.entities.forEach((entity) => {
                     const dist = this.getToroidalDistance(entity.x, entity.y, crater.x, crater.y);
                     if (dist < crater.radius) {
                         entity.hp = 0;
-                        console.log(`[Crater] ${entity.id} (${entity.type}) crashed into crater at (${Math.round(entity.x)}, ${Math.round(entity.y)})`);
+                        console.log(
+                            `[Crater] ${entity.id} (${entity.type}) crashed into crater at (${Math.round(entity.x)}, ${Math.round(entity.y)})`
+                        );
                     }
                 });
             });
@@ -452,37 +502,51 @@ export class GameState {
      * Rule B: Crash on existing structure (destroy landing, damage existing)
      */
     checkStructureCollisions(tempVisuals = []) {
-        const newEntities = this.entities.filter(e => e.deployed === false);
-        const existingEntities = this.entities.filter(e => e.deployed !== false);
+        const newEntities = this.entities.filter((e) => e.deployed === false);
+        const existingEntities = this.entities.filter((e) => e.deployed !== false);
         const toDestroy = new Set();
 
-        newEntities.forEach(newEnt => {
+        newEntities.forEach((newEnt) => {
             const nr = ENTITY_STATS[newEnt.type]?.size || 20;
 
             // 1. Rule B: Crash on existing structure (already deployed)
-            existingEntities.forEach(oldEnt => {
+            existingEntities.forEach((oldEnt) => {
                 const or = ENTITY_STATS[oldEnt.type]?.size || 20;
                 const dist = this.getToroidalDistance(newEnt.x, newEnt.y, oldEnt.x, oldEnt.y);
-                if (dist < (nr + or)) {
+                if (dist < nr + or) {
                     toDestroy.add(newEnt.id);
                     oldEnt.hp -= 1; // 1 Crash damage to existing
-                    tempVisuals.push({ type: 'LINK_COLLISION', x: oldEnt.x, y: oldEnt.y, duration: 30 });
-                    console.log(`[Collision] Rule B: ${newEnt.type} crashed into ${oldEnt.type} upon landing!`);
+                    tempVisuals.push({
+                        type: 'LINK_COLLISION',
+                        x: oldEnt.x,
+                        y: oldEnt.y,
+                        duration: 30
+                    });
+                    console.log(
+                        `[Collision] Rule B: ${newEnt.type} crashed into ${oldEnt.type} upon landing!`
+                    );
                 }
             });
 
             // 2. Rule A: Simultaneous landing overlap (Other new structures)
-            newEntities.forEach(otherNew => {
+            newEntities.forEach((otherNew) => {
                 if (newEnt.id === otherNew.id) return;
                 const or = ENTITY_STATS[otherNew.type]?.size || 20;
                 const dist = this.getToroidalDistance(newEnt.x, newEnt.y, otherNew.x, otherNew.y);
 
-                if (dist < (nr + or)) {
+                if (dist < nr + or) {
                     toDestroy.add(newEnt.id);
                     toDestroy.add(otherNew.id);
 
                     // Add visual effect at the midpoint (toroidal-aware)
-                    const vector = GameState.getToroidalVector(newEnt.x, newEnt.y, otherNew.x, otherNew.y, this.map.width, this.map.height);
+                    const vector = GameState.getToroidalVector(
+                        newEnt.x,
+                        newEnt.y,
+                        otherNew.x,
+                        otherNew.y,
+                        this.map.width,
+                        this.map.height
+                    );
                     tempVisuals.push({
                         type: 'LINK_COLLISION',
                         x: this.wrapX(newEnt.x + vector.dx / 2),
@@ -490,13 +554,15 @@ export class GameState {
                         duration: 30
                     });
 
-                    console.log(`[Collision] Rule A: ${newEnt.type} and ${otherNew.type} overlapped upon landing!`);
+                    console.log(
+                        `[Collision] Rule A: ${newEnt.type} and ${otherNew.type} overlapped upon landing!`
+                    );
                 }
             });
         });
 
-        toDestroy.forEach(id => {
-            const ent = this.entities.find(e => e.id === id);
+        toDestroy.forEach((id) => {
+            const ent = this.entities.find((e) => e.id === id);
             if (ent) ent.hp = 0;
         });
     }
@@ -543,7 +609,7 @@ export class GameState {
     }
 
     /**
-     * This is where the magic happens. 
+     * This is where the magic happens.
      * It processes all inputs and updates the state for the next turn.
      */
     /**
@@ -560,7 +626,7 @@ export class GameState {
         }
 
         // 0. Cleanup Expired Hazards & Map Scarring (Craters)
-        this.entities = this.entities.filter(e => {
+        this.entities = this.entities.filter((e) => {
             const isHazard = e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE';
             if (isHazard && e.expiresTurn < this.turn) {
                 if (!this.map.craters) this.map.craters = [];
@@ -572,7 +638,9 @@ export class GameState {
                         y: e.y,
                         radius: 40
                     });
-                    console.log(`[Scarring] Hazard at (${e.x}, ${e.y}) subsided, leaving a crater.`);
+                    console.log(
+                        `[Scarring] Hazard at (${e.x}, ${e.y}) subsided, leaving a crater.`
+                    );
                 } else {
                     console.log(`[Lifecycle] ${e.type} at (${e.x}, ${e.y}) subsided.`);
                 }
@@ -582,7 +650,7 @@ export class GameState {
         });
 
         // 0.5 Reset Echo Artillery for new turn
-        this.entities.forEach(ent => {
+        this.entities.forEach((ent) => {
             if (ent.type === 'ECHO_ARTILLERY') {
                 ent.firedThisTurn = false;
                 ent.pendingEchos = []; // Clear any leftover echos from previous turn
@@ -590,13 +658,13 @@ export class GameState {
         });
 
         // 1. Generate Energy for all active players
-        Object.keys(this.players).forEach(pid => {
+        Object.keys(this.players).forEach((pid) => {
             if (!this.players[pid].alive) return;
 
             let turnIncome = GLOBAL_STATS.ENERGY_INCOME_PER_TURN; // Base UBI
 
             // Add income from entities (Hubs and Extractors)
-            this.entities.forEach(entity => {
+            this.entities.forEach((entity) => {
                 if (entity.owner === pid) {
                     const stats = ENTITY_STATS[entity.type];
                     if (stats && stats.energyGen) {
@@ -606,13 +674,17 @@ export class GameState {
                         // We check if the extractor is within the capture radius of any resource node.
                         if (entity.type === 'EXTRACTOR') {
                             // Find the closest node in range (toroidal-aware)
-                            const node = this.map.resources.find(res =>
-                                this.getToroidalDistance(entity.x, entity.y, res.x, res.y) <= GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS
+                            const node = this.map.resources.find(
+                                (res) =>
+                                    this.getToroidalDistance(entity.x, entity.y, res.x, res.y) <=
+                                    GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS
                             );
                             if (node) {
                                 // The node's 'value' acts as a multiplier or flat bonus to energy production
                                 entityIncome += node.value || 0;
-                                console.log(`[Economy] Extractor ${entity.id} on node ${node.id} generated ${entityIncome} total.`);
+                                console.log(
+                                    `[Economy] Extractor ${entity.id} on node ${node.id} generated ${entityIncome} total.`
+                                );
                             }
                         }
 
@@ -629,7 +701,7 @@ export class GameState {
         const nukeImpacts = new Set();
         const nukeVisuals = [];
         const possibleNukes = [...this.entities];
-        possibleNukes.forEach(e => {
+        possibleNukes.forEach((e) => {
             if (e.type === 'NUKE' && e.detonationTurn <= this.turn) {
                 console.log(`[Lifecycle] Nuke ${e.id} detonating on Turn ${this.turn}!`);
                 const stats = ENTITY_STATS.NUKE;
@@ -649,10 +721,11 @@ export class GameState {
             }
         });
 
-
         if (nukeImpacts.size > 0) {
-            this.entities = this.entities.filter(e => !nukeImpacts.has(e.id));
-            this.links = this.links.filter(l => !nukeImpacts.has(l.from) && !nukeImpacts.has(l.to));
+            this.entities = this.entities.filter((e) => !nukeImpacts.has(e.id));
+            this.links = this.links.filter(
+                (l) => !nukeImpacts.has(l.from) && !nukeImpacts.has(l.to)
+            );
             snapshots.push({
                 type: 'DETONATION',
                 state: this.getState(),
@@ -663,39 +736,61 @@ export class GameState {
         // 2. Process Actions with Entity-Autonomous "One-per-Hub-per-Round" Logic
         const playerIds = Object.keys(this.players);
         const processedActions = {}; // Indices of actions already resolved or discarded
-        playerIds.forEach(pid => processedActions[pid] = new Set());
+        playerIds.forEach((pid) => (processedActions[pid] = new Set()));
 
         let round = 0;
         let activeInProgress = true;
 
-        while (activeInProgress ||
-            this.entities.some(e => e.type === 'NAPALM_FIRE' && (e.roundsLeft === undefined || e.roundsLeft > 0)) ||
-            this.entities.some(e => e.type === 'ECHO_ARTILLERY' && e.pendingEchos && e.pendingEchos.length > 0)) {
+        while (
+            activeInProgress ||
+            this.entities.some(
+                (e) => e.type === 'NAPALM_FIRE' && (e.roundsLeft === undefined || e.roundsLeft > 0)
+            ) ||
+            this.entities.some(
+                (e) => e.type === 'ECHO_ARTILLERY' && e.pendingEchos && e.pendingEchos.length > 0
+            )
+        ) {
             round++;
             const roundActions = [];
             const automaticProjectiles = [];
             const overloadedThisRound = new Set();
 
             // Task 3: Collect Echo Artillery retaliation
-            this.entities.forEach(echo => {
-                if (echo.type === 'ECHO_ARTILLERY' && echo.pendingEchos && echo.pendingEchos.length > 0) {
+            this.entities.forEach((echo) => {
+                if (
+                    echo.type === 'ECHO_ARTILLERY' &&
+                    echo.pendingEchos &&
+                    echo.pendingEchos.length > 0
+                ) {
                     // Filter echos ready for this round (1-round delay)
-                    const readyEchos = echo.pendingEchos.filter(pea => pea.triggerRound < round);
-                    echo.pendingEchos = echo.pendingEchos.filter(pea => pea.triggerRound >= round);
+                    const readyEchos = echo.pendingEchos.filter((pea) => pea.triggerRound < round);
+                    echo.pendingEchos = echo.pendingEchos.filter(
+                        (pea) => pea.triggerRound >= round
+                    );
 
-                    readyEchos.forEach(target => {
+                    readyEchos.forEach((target) => {
                         const stats = ENTITY_STATS.WEAPON; // Standard Dumb Bomb
                         const velocity = stats.speed || GLOBAL_STATS.SPEED_TIERS.NORMAL;
 
                         // Calculate angle and distance to source structure
-                        const { dx, dy } = GameState.getToroidalVector(echo.x, echo.y, target.x, target.y, this.map.width, this.map.height);
+                        const { dx, dy } = GameState.getToroidalVector(
+                            echo.x,
+                            echo.y,
+                            target.x,
+                            target.y,
+                            this.map.width,
+                            this.map.height
+                        );
                         let angle = Math.atan2(dy, dx) * (180 / Math.PI);
                         let distance = Math.sqrt(dx * dx + dy * dy);
 
                         // Add Inaccuracy (Deviation)
                         const aStats = ENTITY_STATS.ECHO_ARTILLERY;
                         angle += (Math.random() - 0.5) * (aStats.accuracyDeviationAngle || 0);
-                        distance *= (1 - (aStats.accuracyDeviationDistance || 0) / 2 + Math.random() * (aStats.accuracyDeviationDistance || 0));
+                        distance *=
+                            1 -
+                            (aStats.accuracyDeviationDistance || 0) / 2 +
+                            Math.random() * (aStats.accuracyDeviationDistance || 0);
 
                         const rad = (angle * Math.PI) / 180;
                         const arrivalTick = Math.max(1, Math.floor(distance / velocity));
@@ -724,7 +819,9 @@ export class GameState {
                             hp: stats.hp || 1,
                             hitByFlakDefense: new Set()
                         });
-                        console.log(`[Echo-Firing] Artillery ${echo.id} firing retaliation at (${Math.round(target.x)}, ${Math.round(target.y)})`);
+                        console.log(
+                            `[Echo-Firing] Artillery ${echo.id} firing retaliation at (${Math.round(target.x)}, ${Math.round(target.y)})`
+                        );
 
                         // TASK 5: Automated launches also trigger other Echo Artilleries
                         this.triggerEchoArtillery(echo.x, echo.y, echo.owner, round);
@@ -733,7 +830,7 @@ export class GameState {
             });
 
             // a. Collection: Find the next valid action for each UNIQUE hub of this player
-            playerIds.forEach(pid => {
+            playerIds.forEach((pid) => {
                 const actions = playerActionsMap[pid] || [];
                 const hubsFiredThisRound = new Set();
 
@@ -741,7 +838,7 @@ export class GameState {
                     if (processedActions[pid].has(i)) continue;
 
                     const action = actions[i];
-                    const source = this.entities.find(e => e.id === action.sourceId);
+                    const source = this.entities.find((e) => e.id === action.sourceId);
 
                     // Discard invalid actions (source destroyed or out of fuel)
                     if (!source || (source.fuel !== undefined && source.fuel <= 0)) {
@@ -758,9 +855,11 @@ export class GameState {
                 }
             });
 
-            const hasActiveHazards = this.entities.some(e =>
-                (e.type === 'NAPALM_FIRE' && (e.roundsLeft === undefined || e.roundsLeft > 0)) ||
-                (e.type === 'EXPLOSION_HAZARD' && round === 1)
+            const hasActiveHazards = this.entities.some(
+                (e) =>
+                    (e.type === 'NAPALM_FIRE' &&
+                        (e.roundsLeft === undefined || e.roundsLeft > 0)) ||
+                    (e.type === 'EXPLOSION_HAZARD' && round === 1)
             );
             if (roundActions.length > 0 || hasActiveHazards || automaticProjectiles.length > 0) {
                 const subTicks = GLOBAL_STATS.ACTION_SUB_TICKS;
@@ -771,9 +870,9 @@ export class GameState {
                 const tempVisuals = []; // Visual effects for this round (beams, explosions)
 
                 // 1. Initialize launches
-                roundActions.forEach(action => {
+                roundActions.forEach((action) => {
                     const player = this.players[action.playerId];
-                    const source = this.entities.find(e => e.id === action.sourceId);
+                    const source = this.entities.find((e) => e.id === action.sourceId);
                     const cost = ENTITY_STATS[action.itemType]?.cost || 0;
 
                     if (player.energy >= cost && source) {
@@ -788,17 +887,25 @@ export class GameState {
                         // Napalm Refinement: Projectile stops 150px short of the target
                         if (action.itemType === 'NAPALM') {
                             // Bug 1: Enforce minRange (clamped to 200px from launcher)
-                            const effectiveLaunchDist = Math.max(stats.minRange || 0, launchDistance);
+                            const effectiveLaunchDist = Math.max(
+                                stats.minRange || 0,
+                                launchDistance
+                            );
                             actualLaunchDistance = Math.max(10, effectiveLaunchDist - 150);
 
                             // If distance was clamped, we need to update launchDistance for originalTargetX/Y calc later
                             launchDistance = effectiveLaunchDist;
                         }
 
-                        const arrivalTick = Math.max(1, Math.floor(actualLaunchDistance / velocity));
+                        const arrivalTick = Math.max(
+                            1,
+                            Math.floor(actualLaunchDistance / velocity)
+                        );
                         const rad = (action.angle * Math.PI) / 180;
 
-                        console.log(`[Launch] ${action.playerId} launching ${action.itemType} from ${action.sourceId} to distance ${actualLaunchDistance} (arrivalTick: ${arrivalTick})`);
+                        console.log(
+                            `[Launch] ${action.playerId} launching ${action.itemType} from ${action.sourceId} to distance ${actualLaunchDistance} (arrivalTick: ${arrivalTick})`
+                        );
                         tempProjectiles.push({
                             id: Math.random().toString(36).substring(2, 6),
                             type: action.itemType,
@@ -824,12 +931,17 @@ export class GameState {
                             searchMode: false,
                             targetId: null,
                             lockFound: false,
-                            hp: (stats.damageFull !== undefined || stats.isInterceptor) ? (stats.hp || 1) : GLOBAL_STATS.UNDEPLOYED_HP,
+                            hp:
+                                stats.damageFull !== undefined || stats.isInterceptor
+                                    ? stats.hp || 1
+                                    : GLOBAL_STATS.UNDEPLOYED_HP,
                             active: true,
                             hitByFlakDefense: new Set(), // Track unique flak hits per round
                             hasSplit: false
                         });
-                        console.log(`[Launch] ${action.playerId} fired ${action.itemType} from ${source.id}`);
+                        console.log(
+                            `[Launch] ${action.playerId} fired ${action.itemType} from ${source.id}`
+                        );
 
                         // Task 5: Use extracted detection logic for manual launches
                         this.triggerEchoArtillery(source.x, source.y, action.playerId, round);
@@ -846,13 +958,20 @@ export class GameState {
                 const snapshotStep = Math.max(1, Math.floor(subTicks / 30)); // Dynamically scale snapshots
 
                 // OPTIMIZATION: Skip the expensive simulation loop and snapshot generation if nothing is moving
-                const hasActiveSimulation = tempProjectiles.length > 0 || roundActions.length > 0 || tempVisuals.length > 0 || hasActiveHazards;
+                const hasActiveSimulation =
+                    tempProjectiles.length > 0 ||
+                    roundActions.length > 0 ||
+                    tempVisuals.length > 0 ||
+                    hasActiveHazards;
 
                 if (hasActiveSimulation) {
                     for (let t = 1; t <= subTicks; t++) {
                         // --- Interception Logic ---
-                        this.entities.forEach(def => {
-                            const isDefense = def.type === 'LASER_POINT_DEFENSE' || def.type === 'LIGHT_SAM_DEFENSE' || def.type === 'FLAK_DEFENSE';
+                        this.entities.forEach((def) => {
+                            const isDefense =
+                                def.type === 'LASER_POINT_DEFENSE' ||
+                                def.type === 'LIGHT_SAM_DEFENSE' ||
+                                def.type === 'FLAK_DEFENSE';
                             if (isDefense && def.fuel > 0 && def.deployed !== false) {
                                 // ROF Limit: 1 interception per round
                                 if (def.lastRoundFired === round) return;
@@ -867,15 +986,25 @@ export class GameState {
                                 const stats = ENTITY_STATS[def.type];
                                 let minDist = stats.range;
 
-                                tempProjectiles.forEach(proj => {
+                                tempProjectiles.forEach((proj) => {
                                     if (!proj.active || proj.owner === def.owner) return;
 
-                                    const pStats = ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
+                                    const pStats =
+                                        ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
                                     if (pStats?.isInterceptable === false) return;
 
-                                    const dist = this.getToroidalDistance(def.x, def.y, proj.currX, proj.currY);
+                                    const dist = this.getToroidalDistance(
+                                        def.x,
+                                        def.y,
+                                        proj.currX,
+                                        proj.currY
+                                    );
                                     // Deterministic Tie-break: if distances are equal, pick by ID (lexicographical)
-                                    if (dist < minDist || (dist === minDist && (!closestProj || proj.id < closestProj.id))) {
+                                    if (
+                                        dist < minDist ||
+                                        (dist === minDist &&
+                                            (!closestProj || proj.id < closestProj.id))
+                                    ) {
                                         minDist = dist;
                                         closestProj = proj;
                                     }
@@ -891,7 +1020,14 @@ export class GameState {
                                         def.fuel--;
 
                                         // Calculate toroidal-aware visual coordinates
-                                        const vec = this.constructor.getToroidalVector(def.x, def.y, closestProj.currX, closestProj.currY, this.map.width, this.map.height);
+                                        const vec = this.constructor.getToroidalVector(
+                                            def.x,
+                                            def.y,
+                                            closestProj.currX,
+                                            closestProj.currY,
+                                            this.map.width,
+                                            this.map.height
+                                        );
 
                                         // Create visual beam
                                         tempVisuals.push({
@@ -902,25 +1038,45 @@ export class GameState {
                                             targetY: def.y + vec.dy,
                                             duration: Math.max(5, Math.floor(subTicks / 8))
                                         });
-                                        console.log(`[Intercept] ${def.id} (Laser) blocked projectile from ${closestProj.owner}`);
+                                        console.log(
+                                            `[Intercept] ${def.id} (Laser) blocked projectile from ${closestProj.owner}`
+                                        );
                                     } else if (def.type === 'FLAK_DEFENSE') {
                                         // Flak Activation!
                                         def.flakActive = true;
                                         def.flakTriggerTick = t;
                                         def.fuel--;
 
-                                        const vec = this.constructor.getToroidalVector(def.x, def.y, closestProj.currX, closestProj.currY, this.map.width, this.map.height);
-                                        def.flakAngle = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+                                        const vec = this.constructor.getToroidalVector(
+                                            def.x,
+                                            def.y,
+                                            closestProj.currX,
+                                            closestProj.currY,
+                                            this.map.width,
+                                            this.map.height
+                                        );
+                                        def.flakAngle =
+                                            Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
 
-                                        console.log(`[Flak Activation] ${def.id} triggered at ${Math.round(def.flakAngle)} degrees`);
+                                        console.log(
+                                            `[Flak Activation] ${def.id} triggered at ${Math.round(def.flakAngle)} degrees`
+                                        );
                                     } else if (def.type === 'LIGHT_SAM_DEFENSE') {
                                         // SAM Intercept!
                                         def.fuel--;
 
                                         // Spawn SAM Missile
                                         const samStats = ENTITY_STATS.SAM_MISSILE;
-                                        const vec = this.constructor.getToroidalVector(def.x, def.y, closestProj.currX, closestProj.currY, this.map.width, this.map.height);
-                                        const initialAngle = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+                                        const vec = this.constructor.getToroidalVector(
+                                            def.x,
+                                            def.y,
+                                            closestProj.currX,
+                                            closestProj.currY,
+                                            this.map.width,
+                                            this.map.height
+                                        );
+                                        const initialAngle =
+                                            Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
 
                                         const samMissile = {
                                             id: 'sam_' + Math.random().toString(36).substr(2, 9),
@@ -941,7 +1097,9 @@ export class GameState {
                                         };
 
                                         tempProjectiles.push(samMissile);
-                                        console.log(`[SAM Launch] ${def.id} fired SAM at ${closestProj.id}`);
+                                        console.log(
+                                            `[SAM Launch] ${def.id} fired SAM at ${closestProj.id}`
+                                        );
                                     }
                                 }
                             }
@@ -949,16 +1107,30 @@ export class GameState {
                             // --- Persistent Flak Damage Logic ---
                             if (def.type === 'FLAK_DEFENSE' && def.flakActive) {
                                 const stats = ENTITY_STATS.FLAK_DEFENSE;
-                                tempProjectiles.forEach(proj => {
+                                tempProjectiles.forEach((proj) => {
                                     if (!proj.active || proj.hitByFlakDefense.has(def.id)) return;
 
-                                    const pStats = ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
+                                    const pStats =
+                                        ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
                                     if (pStats?.isInterceptable === false) return;
 
-                                    const dist = this.getToroidalDistance(def.x, def.y, proj.currX, proj.currY);
+                                    const dist = this.getToroidalDistance(
+                                        def.x,
+                                        def.y,
+                                        proj.currX,
+                                        proj.currY
+                                    );
                                     if (dist <= stats.range) {
-                                        const vec = this.constructor.getToroidalVector(def.x, def.y, proj.currX, proj.currY, this.map.width, this.map.height);
-                                        const angleToProj = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+                                        const vec = this.constructor.getToroidalVector(
+                                            def.x,
+                                            def.y,
+                                            proj.currX,
+                                            proj.currY,
+                                            this.map.width,
+                                            this.map.height
+                                        );
+                                        const angleToProj =
+                                            Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
 
                                         let diff = angleToProj - (def.flakAngle || 0);
                                         while (diff > 180) diff -= 360;
@@ -977,11 +1149,15 @@ export class GameState {
                                                 duration: 15
                                             });
 
-                                            console.log(`[Flak Hit] Proj ${proj.id} hit by ${def.id}. HP: ${proj.hp}`);
+                                            console.log(
+                                                `[Flak Hit] Proj ${proj.id} hit by ${def.id}. HP: ${proj.hp}`
+                                            );
 
                                             if (proj.hp <= 0) {
                                                 proj.active = false;
-                                                const pStats = ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
+                                                const pStats =
+                                                    ENTITY_STATS[proj.type] ||
+                                                    ENTITY_STATS[proj.itemType];
                                                 if (pStats?.deathEffect === 'DETONATE') {
                                                     proj.hitThisTick = true;
                                                 }
@@ -992,7 +1168,7 @@ export class GameState {
                             }
                         });
 
-                        tempProjectiles.forEach(proj => {
+                        tempProjectiles.forEach((proj) => {
                             if (!proj.active) return;
 
                             const prevX = proj.currX;
@@ -1002,7 +1178,10 @@ export class GameState {
                                 const stats = ENTITY_STATS[proj.type];
 
                                 // 1. Lifecycle Check: Ignite seeker at 50% distance
-                                if (!proj.searchMode && proj.totalDistanceMoved >= proj.intendedDistance * 0.5) {
+                                if (
+                                    !proj.searchMode &&
+                                    proj.totalDistanceMoved >= proj.intendedDistance * 0.5
+                                ) {
                                     proj.searchMode = true;
                                 }
 
@@ -1011,15 +1190,33 @@ export class GameState {
                                     let minDist = Infinity;
                                     let closestTarget = null;
 
-                                    this.entities.forEach(ent => {
+                                    this.entities.forEach((ent) => {
                                         if (ent.owner === proj.owner) return;
-                                        if (ent.type === 'WEAPON' || ent.type === 'PROJECTILE' || ent.type === 'RESOURCE') return;
+                                        if (
+                                            ent.type === 'WEAPON' ||
+                                            ent.type === 'PROJECTILE' ||
+                                            ent.type === 'RESOURCE'
+                                        )
+                                            return;
 
-                                        const dist = this.getToroidalDistance(proj.currX, proj.currY, ent.x, ent.y);
+                                        const dist = this.getToroidalDistance(
+                                            proj.currX,
+                                            proj.currY,
+                                            ent.x,
+                                            ent.y
+                                        );
                                         if (dist > stats.homingRange) return;
 
-                                        const vec = this.constructor.getToroidalVector(proj.currX, proj.currY, ent.x, ent.y, this.map.width, this.map.height);
-                                        const angleToTarget = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+                                        const vec = this.constructor.getToroidalVector(
+                                            proj.currX,
+                                            proj.currY,
+                                            ent.x,
+                                            ent.y,
+                                            this.map.width,
+                                            this.map.height
+                                        );
+                                        const angleToTarget =
+                                            Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
                                         let diff = angleToTarget - proj.currentAngle;
                                         while (diff > 180) diff -= 360;
                                         while (diff < -180) diff += 360;
@@ -1040,39 +1237,56 @@ export class GameState {
 
                                 // 3. Tracking Logic
                                 if (proj.targetId) {
-                                    let target = this.entities.find(e => e.id === proj.targetId);
+                                    let target = this.entities.find((e) => e.id === proj.targetId);
                                     if (!target && ENTITY_STATS[proj.type]?.isInterceptor) {
-                                        target = tempProjectiles.find(p => p.id === proj.targetId && p.active);
+                                        target = tempProjectiles.find(
+                                            (p) => p.id === proj.targetId && p.active
+                                        );
                                     }
 
                                     if (target && (target.hp > 0 || target.active)) {
                                         // Accelerate if target is still active
                                         if (proj.velocity < stats.maxSpeed) {
-                                            proj.velocity = Math.min(stats.maxSpeed, proj.velocity + stats.acceleration);
+                                            proj.velocity = Math.min(
+                                                stats.maxSpeed,
+                                                proj.velocity + stats.acceleration
+                                            );
                                         }
 
-                                        const targetX = target.x !== undefined ? target.x : target.currX;
-                                        const targetY = target.y !== undefined ? target.y : target.currY;
+                                        const targetX =
+                                            target.x !== undefined ? target.x : target.currX;
+                                        const targetY =
+                                            target.y !== undefined ? target.y : target.currY;
 
                                         // Save last known coordinates for persistence
                                         proj.targetX = targetX;
                                         proj.targetY = targetY;
 
-                                        const vec = this.constructor.getToroidalVector(proj.currX, proj.currY, targetX, targetY, this.map.width, this.map.height);
-                                        const angleToTarget = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+                                        const vec = this.constructor.getToroidalVector(
+                                            proj.currX,
+                                            proj.currY,
+                                            targetX,
+                                            targetY,
+                                            this.map.width,
+                                            this.map.height
+                                        );
+                                        const angleToTarget =
+                                            Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
 
                                         let diff = angleToTarget - proj.currentAngle;
                                         while (diff > 180) diff -= 360;
                                         while (diff < -180) diff += 360;
 
-                                        // Stability Hysteresis: If the target crosses the halfway point of the toroidal map, 
-                                        // the "shortest path" angle can suddenly flip 180 degrees. We detect this 
+                                        // Stability Hysteresis: If the target crosses the halfway point of the toroidal map,
+                                        // the "shortest path" angle can suddenly flip 180 degrees. We detect this
                                         // and ignore the snap to avoid seeker oscillation.
                                         if (Math.abs(diff) > 170) {
                                             diff = 0;
                                         }
 
-                                        const turn = Math.sign(diff) * Math.min(Math.abs(diff), stats.turnRadius);
+                                        const turn =
+                                            Math.sign(diff) *
+                                            Math.min(Math.abs(diff), stats.turnRadius);
                                         proj.currentAngle += turn;
                                     } else {
                                         proj.lockFound = false; // Target lost, stop hunting but keep flying straight
@@ -1080,7 +1294,10 @@ export class GameState {
                                 } else if (proj.searchMode) {
                                     // Passive acceleration during search phase
                                     if (proj.velocity < stats.maxSpeed) {
-                                        proj.velocity = Math.min(stats.maxSpeed, proj.velocity + stats.acceleration);
+                                        proj.velocity = Math.min(
+                                            stats.maxSpeed,
+                                            proj.velocity + stats.acceleration
+                                        );
                                     }
                                 }
 
@@ -1092,7 +1309,8 @@ export class GameState {
                                 proj.totalDistanceMoved += moveDist;
 
                                 // 5. Impact & Fuel Checks
-                                const fuelLimit = (proj.intendedDistance * 0.5) + (stats.homingFuel || 400);
+                                const fuelLimit =
+                                    proj.intendedDistance * 0.5 + (stats.homingFuel || 400);
                                 if (proj.totalDistanceMoved >= fuelLimit) {
                                     proj.active = false;
                                     proj.hitThisTick = true; // Trigger detonation logic
@@ -1100,18 +1318,27 @@ export class GameState {
 
                                 // Immediate proximity trigger ONLY if targeting something
                                 if (proj.targetId) {
-                                    let target = this.entities.find(e => e.id === proj.targetId);
+                                    let target = this.entities.find((e) => e.id === proj.targetId);
                                     if (!target && ENTITY_STATS[proj.type]?.isInterceptor) {
-                                        target = tempProjectiles.find(p => p.id === proj.targetId && p.active);
+                                        target = tempProjectiles.find(
+                                            (p) => p.id === proj.targetId && p.active
+                                        );
                                     }
 
                                     if (target && (target.hp > 0 || target.active)) {
                                         const tx = target.x !== undefined ? target.x : target.currX;
                                         const ty = target.y !== undefined ? target.y : target.currY;
-                                        const actualDist = this.getToroidalDistance(proj.currX, proj.currY, tx, ty);
+                                        const actualDist = this.getToroidalDistance(
+                                            proj.currX,
+                                            proj.currY,
+                                            tx,
+                                            ty
+                                        );
 
                                         // Surface-to-Surface trigger: detonate when "touching" the building's edge
-                                        const targetStats = ENTITY_STATS[target.type] || ENTITY_STATS[target.itemType];
+                                        const targetStats =
+                                            ENTITY_STATS[target.type] ||
+                                            ENTITY_STATS[target.itemType];
                                         const hitDist = (targetStats?.size || 10) + 2;
 
                                         if (actualDist <= hitDist) {
@@ -1120,7 +1347,12 @@ export class GameState {
                                         }
                                     } else if (proj.targetX !== undefined) {
                                         // Target lost: detonate at last known coordinates
-                                        const actualDist = this.getToroidalDistance(proj.currX, proj.currY, proj.targetX, proj.targetY);
+                                        const actualDist = this.getToroidalDistance(
+                                            proj.currX,
+                                            proj.currY,
+                                            proj.targetX,
+                                            proj.targetY
+                                        );
                                         if (actualDist <= 15) {
                                             proj.active = false;
                                             proj.hitThisTick = true;
@@ -1132,7 +1364,11 @@ export class GameState {
 
                                 // --- Cluster Bomb Special Logic ---
                                 const clusterStats = ENTITY_STATS.CLUSTER_BOMB;
-                                if (proj.type === 'CLUSTER_BOMB' && !proj.hasSplit && t >= proj.arrivalTick * clusterStats.splitTickRatio) {
+                                if (
+                                    proj.type === 'CLUSTER_BOMB' &&
+                                    !proj.hasSplit &&
+                                    t >= proj.arrivalTick * clusterStats.splitTickRatio
+                                ) {
                                     proj.active = false;
                                     proj.hasSplit = true;
 
@@ -1140,7 +1376,10 @@ export class GameState {
                                     const originalTargetY = proj.startY + proj.intendedDy;
 
                                     // Calculate perpendicular unit vector
-                                    const dist = Math.sqrt(proj.intendedDx * proj.intendedDx + proj.intendedDy * proj.intendedDy);
+                                    const dist = Math.sqrt(
+                                        proj.intendedDx * proj.intendedDx +
+                                            proj.intendedDy * proj.intendedDy
+                                    );
                                     const px = -proj.intendedDy / dist;
                                     const py = proj.intendedDx / dist;
 
@@ -1149,12 +1388,14 @@ export class GameState {
                                     const step = totalSpread / (count - 1 || 1);
 
                                     for (let i = 0; i < count; i++) {
-                                        const offset = (i * step) - (totalSpread / 2);
+                                        const offset = i * step - totalSpread / 2;
                                         const subTargetX = originalTargetX + offset * px;
                                         const subTargetY = originalTargetY + offset * py;
 
-                                        const splitX = proj.startX + proj.intendedDx * (t / proj.arrivalTick);
-                                        const splitY = proj.startY + proj.intendedDy * (t / proj.arrivalTick);
+                                        const splitX =
+                                            proj.startX + proj.intendedDx * (t / proj.arrivalTick);
+                                        const splitY =
+                                            proj.startY + proj.intendedDy * (t / proj.arrivalTick);
 
                                         // Math to ensure sub-bomb arrives at subTargetX/Y at proj.arrivalTick
                                         // using the standard progress = t / arrivalTick formula.
@@ -1176,15 +1417,21 @@ export class GameState {
                                             hitByFlakDefense: new Set() // Fresh flak state for sub-bombs
                                         });
                                     }
-                                    console.log(`[Cluster] ${proj.id} split into ${count} sub-bombs at tick ${t}`);
+                                    console.log(
+                                        `[Cluster] ${proj.id} split into ${count} sub-bombs at tick ${t}`
+                                    );
                                 }
 
                                 const progress = t / proj.arrivalTick;
 
                                 if (t < proj.arrivalTick) {
                                     // Use explicit intended vector to avoid "Shortest Path" directional flips
-                                    proj.currX = this.wrapX(proj.startX + proj.intendedDx * progress);
-                                    proj.currY = this.wrapY(proj.startY + proj.intendedDy * progress);
+                                    proj.currX = this.wrapX(
+                                        proj.startX + proj.intendedDx * progress
+                                    );
+                                    proj.currY = this.wrapY(
+                                        proj.startY + proj.intendedDy * progress
+                                    );
                                 } else if (t === proj.arrivalTick) {
                                     // Final arrival precisely at arrivalTick
                                     proj.currX = this.wrapX(proj.startX + proj.intendedDx);
@@ -1193,12 +1440,23 @@ export class GameState {
                                     proj.hitThisTick = true;
 
                                     if (proj.type === 'RECLAIMER') {
-                                        this.handleReclaim(proj.currX, proj.currY, proj.owner, tempVisuals, impacts);
+                                        this.handleReclaim(
+                                            proj.currX,
+                                            proj.currY,
+                                            proj.owner,
+                                            tempVisuals,
+                                            impacts
+                                        );
                                     }
 
                                     const stats = ENTITY_STATS[proj.type];
                                     // Bug 2: landAsStructure: false avoids duplicate entities for weapons like Napalm
-                                    if ((stats?.damageFull === undefined && proj.type !== 'RECLAIMER' || stats?.landAsStructure) && stats?.landAsStructure !== false) {
+                                    if (
+                                        ((stats?.damageFull === undefined &&
+                                            proj.type !== 'RECLAIMER') ||
+                                            stats?.landAsStructure) &&
+                                        stats?.landAsStructure !== false
+                                    ) {
                                         const data = {
                                             type: proj.type,
                                             owner: proj.owner,
@@ -1211,12 +1469,36 @@ export class GameState {
                                             hp: GLOBAL_STATS.UNDEPLOYED_HP
                                         };
                                         const newEnt = this.addEntity(data);
-                                        console.log('--- LANDING ---', newEnt.type, newEnt.id, 'at', newEnt.x, newEnt.y);
-                                        if (data.sourceId && data.intendedDx !== undefined && data.intendedDy !== undefined) {
-                                            this.addLink(data.sourceId, newEnt.id, data.owner, data.intendedDx, data.intendedDy);
-                                            console.log('--- LINK CREATED ---', data.sourceId, '->', newEnt.id);
+                                        console.log(
+                                            '--- LANDING ---',
+                                            newEnt.type,
+                                            newEnt.id,
+                                            'at',
+                                            newEnt.x,
+                                            newEnt.y
+                                        );
+                                        if (
+                                            data.sourceId &&
+                                            data.intendedDx !== undefined &&
+                                            data.intendedDy !== undefined
+                                        ) {
+                                            this.addLink(
+                                                data.sourceId,
+                                                newEnt.id,
+                                                data.owner,
+                                                data.intendedDx,
+                                                data.intendedDy
+                                            );
+                                            console.log(
+                                                '--- LINK CREATED ---',
+                                                data.sourceId,
+                                                '->',
+                                                newEnt.id
+                                            );
                                         }
-                                        console.log(`[Lifecycle] ${proj.owner} ${proj.type} landed at (${Math.round(proj.currX)}, ${Math.round(proj.currY)})`);
+                                        console.log(
+                                            `[Lifecycle] ${proj.owner} ${proj.type} landed at (${Math.round(proj.currX)}, ${Math.round(proj.currY)})`
+                                        );
                                     }
 
                                     // --- Napalm Special Logic (Always deploy fire on arrival) ---
@@ -1236,7 +1518,9 @@ export class GameState {
                                             isHazard: true,
                                             hp: nStats.hp
                                         });
-                                        console.log(`[Napalm] ${proj.id} deployed fire from (${Math.round(proj.currX)}, ${Math.round(proj.currY)}) to original target.`);
+                                        console.log(
+                                            `[Napalm] ${proj.id} deployed fire from (${Math.round(proj.currX)}, ${Math.round(proj.currY)}) to original target.`
+                                        );
 
                                         // Push specialized landing snapshot for visual feedback
                                         snapshots.push({
@@ -1250,42 +1534,88 @@ export class GameState {
                                     }
 
                                     if (proj.type === 'OVERLOAD' && proj.hitThisTick) {
-                                        this.triggerOverload(proj.currX, proj.currY, stats, tempVisuals, impacts, overloadedThisRound);
+                                        this.triggerOverload(
+                                            proj.currX,
+                                            proj.currY,
+                                            stats,
+                                            tempVisuals,
+                                            impacts,
+                                            overloadedThisRound
+                                        );
                                         proj.hitThisTick = false;
                                     }
 
-                                    if (stats?.damageFull !== undefined && !stats?.landAsStructure && proj.hitThisTick) {
+                                    if (
+                                        stats?.damageFull !== undefined &&
+                                        !stats?.landAsStructure &&
+                                        proj.hitThisTick
+                                    ) {
                                         const potentialTargets = [
                                             ...this.entities,
-                                            ...tempProjectiles.filter(p => p.active)
+                                            ...tempProjectiles.filter((p) => p.active)
                                         ];
 
-                                        this.triggerExplosion(proj.currX, proj.currY, stats, tempVisuals, impacts, potentialTargets);
+                                        this.triggerExplosion(
+                                            proj.currX,
+                                            proj.currY,
+                                            stats,
+                                            tempVisuals,
+                                            impacts,
+                                            potentialTargets
+                                        );
                                         proj.hitThisTick = false;
                                     }
-
                                 }
                             }
 
                             // --- Post-Movement Hazard Collision ---
                             if (proj.active) {
-                                const hazards = this.entities.filter(e => e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE');
-                                hazards.forEach(h => {
+                                const hazards = this.entities.filter(
+                                    (e) => e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE'
+                                );
+                                hazards.forEach((h) => {
                                     const hStats = ENTITY_STATS[h.type];
                                     let isHit = false;
 
                                     if (h.type === 'NAPALM_FIRE') {
-                                        const dist = GameState.getPointToSegmentDistance(proj.currX, proj.currY, h.startX, h.startY, h.endX, h.endY, this.map.width, this.map.height);
+                                        const dist = GameState.getPointToSegmentDistance(
+                                            proj.currX,
+                                            proj.currY,
+                                            h.startX,
+                                            h.startY,
+                                            h.endX,
+                                            h.endY,
+                                            this.map.width,
+                                            this.map.height
+                                        );
                                         // Projectile incineration uses its radius (size or default)
-                                        if (dist <= (hStats.width / 2) + (ENTITY_STATS[proj.type]?.size || 8)) isHit = true;
+                                        if (
+                                            dist <=
+                                            hStats.width / 2 + (ENTITY_STATS[proj.type]?.size || 8)
+                                        )
+                                            isHit = true;
                                     } else {
-                                        if (GameState.lineCircleIntersection(prevX, prevY, proj.currX, proj.currY, h.x, h.y, hStats.radius || 200, this.map.width, this.map.height)) {
+                                        if (
+                                            GameState.lineCircleIntersection(
+                                                prevX,
+                                                prevY,
+                                                proj.currX,
+                                                proj.currY,
+                                                h.x,
+                                                h.y,
+                                                hStats.radius || 200,
+                                                this.map.width,
+                                                this.map.height
+                                            )
+                                        ) {
                                             isHit = true;
                                         }
                                     }
 
                                     if (isHit) {
-                                        console.log(`[Hazard] Projectile ${proj.id} incinerated by ${h.type} at (${Math.round(h.x)}, ${Math.round(h.y)})`);
+                                        console.log(
+                                            `[Hazard] Projectile ${proj.id} incinerated by ${h.type} at (${Math.round(h.x)}, ${Math.round(h.y)})`
+                                        );
                                         proj.active = false;
                                         proj.hitThisTick = false; // Destroyed mid-air, no detonation
                                     }
@@ -1296,15 +1626,27 @@ export class GameState {
                         // Second pass for Weapons to catch anything that landed this tick (AOE Damage)
                         // This block is now redundant for non-seeker projectiles as the logic is moved above.
                         // It remains for seekers that might detonate at arrivalTick.
-                        tempProjectiles.forEach(proj => {
+                        tempProjectiles.forEach((proj) => {
                             const stats = ENTITY_STATS[proj.type];
-                            if (stats?.damageFull !== undefined && !stats?.landAsStructure && proj.hitThisTick && (t === proj.arrivalTick || stats.isSeeker)) {
+                            if (
+                                stats?.damageFull !== undefined &&
+                                !stats?.landAsStructure &&
+                                proj.hitThisTick &&
+                                (t === proj.arrivalTick || stats.isSeeker)
+                            ) {
                                 const potentialTargets = [
                                     ...this.entities,
-                                    ...tempProjectiles.filter(p => p.active)
+                                    ...tempProjectiles.filter((p) => p.active)
                                 ];
 
-                                this.triggerExplosion(proj.currX, proj.currY, stats, tempVisuals, impacts, potentialTargets);
+                                this.triggerExplosion(
+                                    proj.currX,
+                                    proj.currY,
+                                    stats,
+                                    tempVisuals,
+                                    impacts,
+                                    potentialTargets
+                                );
                                 proj.hitThisTick = false;
                             }
                         });
@@ -1321,23 +1663,25 @@ export class GameState {
 
                         if (t % snapshotStep === 0 || t === subTicks) {
                             // OPTIMIZATION: Only push sub-tick snapshot if something is actually happening (visuals or active missiles)
-                            if (tempProjectiles.some(p => p.active) || tempVisuals.length > 0) {
+                            if (tempProjectiles.some((p) => p.active) || tempVisuals.length > 0) {
                                 const snapshotState = this.getState();
                                 snapshotState.entities = [
                                     ...snapshotState.entities,
-                                    ...tempProjectiles.filter(p => p.active).map(p => ({
-                                        id: `proj-${p.id}`,
-                                        type: 'PROJECTILE',
-                                        itemType: p.type, // Map internal type to itemType for snapshot
-                                        owner: p.owner,
-                                        x: p.currX,
-                                        y: p.currY,
-                                        currentAngle: p.currentAngle,
-                                        searchMode: p.searchMode,
-                                        lockFound: p.lockFound,
-                                        targetId: p.targetId
-                                    })),
-                                    ...tempVisuals.map(v => ({
+                                    ...tempProjectiles
+                                        .filter((p) => p.active)
+                                        .map((p) => ({
+                                            id: `proj-${p.id}`,
+                                            type: 'PROJECTILE',
+                                            itemType: p.type, // Map internal type to itemType for snapshot
+                                            owner: p.owner,
+                                            x: p.currX,
+                                            y: p.currY,
+                                            currentAngle: p.currentAngle,
+                                            searchMode: p.searchMode,
+                                            lockFound: p.lockFound,
+                                            targetId: p.targetId
+                                        })),
+                                    ...tempVisuals.map((v) => ({
                                         id: `viz-${Math.random()}`,
                                         type: v.type,
                                         x: v.x,
@@ -1359,40 +1703,58 @@ export class GameState {
                 }
 
                 // --- Hazard Damage (Structures) ---
-                this.entities.filter(e => e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE').forEach(h => {
-                    const hStats = ENTITY_STATS[h.type];
-                    this.entities.forEach(ent => {
-                        if (ent.isHazard || ent.type === 'EXPLOSION_HAZARD' || ent.type === 'NAPALM_FIRE') return;
+                this.entities
+                    .filter((e) => e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE')
+                    .forEach((h) => {
+                        const hStats = ENTITY_STATS[h.type];
+                        this.entities.forEach((ent) => {
+                            if (
+                                ent.isHazard ||
+                                ent.type === 'EXPLOSION_HAZARD' ||
+                                ent.type === 'NAPALM_FIRE'
+                            )
+                                return;
 
-                        let inRange = false;
+                            let inRange = false;
+                            if (h.type === 'NAPALM_FIRE') {
+                                const dist = GameState.getPointToSegmentDistance(
+                                    ent.x,
+                                    ent.y,
+                                    h.startX,
+                                    h.startY,
+                                    h.endX,
+                                    h.endY,
+                                    this.map.width,
+                                    this.map.height
+                                );
+                                // Napalm Refinement: Collision if 'touching' (dist <= fireRadius + entSize)
+                                if (dist <= hStats.width / 2 + (ent.size || 20)) inRange = true;
+                            } else {
+                                const dist = this.getToroidalDistance(h.x, h.y, ent.x, ent.y);
+                                if (dist <= (hStats.radius || 200)) inRange = true;
+                            }
+
+                            if (inRange) {
+                                ent.hp -= hStats.damageTick;
+                                console.log(
+                                    `[Hazard] ${ent.id} (${ent.type}) damaged by ${h.type} in round ${round}. HP: ${ent.hp}`
+                                );
+                                if (ent.hp <= 0) impacts.add(ent.id);
+                            }
+                        });
+
+                        // Napalm Refinement: Decrement roundsLeft at the end of every internal round
                         if (h.type === 'NAPALM_FIRE') {
-                            const dist = GameState.getPointToSegmentDistance(ent.x, ent.y, h.startX, h.startY, h.endX, h.endY, this.map.width, this.map.height);
-                            // Napalm Refinement: Collision if 'touching' (dist <= fireRadius + entSize)
-                            if (dist <= (hStats.width / 2) + (ent.size || 20)) inRange = true;
-                        } else {
-                            const dist = this.getToroidalDistance(h.x, h.y, ent.x, ent.y);
-                            if (dist <= (hStats.radius || 200)) inRange = true;
-                        }
-
-                        if (inRange) {
-                            ent.hp -= hStats.damageTick;
-                            console.log(`[Hazard] ${ent.id} (${ent.type}) damaged by ${h.type} in round ${round}. HP: ${ent.hp}`);
-                            if (ent.hp <= 0) impacts.add(ent.id);
+                            if (h.roundsLeft !== undefined) h.roundsLeft--;
                         }
                     });
 
-                    // Napalm Refinement: Decrement roundsLeft at the end of every internal round
-                    if (h.type === 'NAPALM_FIRE') {
-                        if (h.roundsLeft !== undefined) h.roundsLeft--;
-                    }
-                });
-
                 // --- Link Collision Detection (Post-Simulation) ---
-                const newEntitiesThisRound = this.entities.filter(e => e.deployed === false);
+                const newEntitiesThisRound = this.entities.filter((e) => e.deployed === false);
                 const destroyedThisCheck = new Set();
 
-                newEntitiesThisRound.forEach(newEnt => {
-                    const source = this.entities.find(e => e.id === newEnt.sourceId);
+                newEntitiesThisRound.forEach((newEnt) => {
+                    const source = this.entities.find((e) => e.id === newEnt.sourceId);
                     if (!source) return;
 
                     const newSegments = GameState.getLinkSegments(
@@ -1403,12 +1765,12 @@ export class GameState {
                     );
 
                     // 1. Check against ALL existing/already deployed links
-                    this.links.forEach(existingLink => {
+                    this.links.forEach((existingLink) => {
                         // Skip if this link belongs to the new segment we are currently checking
                         if (existingLink.to === newEnt.id) return;
 
-                        const s1 = this.entities.find(e => e.id === existingLink.from);
-                        const s2 = this.entities.find(e => e.id === existingLink.to);
+                        const s1 = this.entities.find((e) => e.id === existingLink.from);
+                        const s2 = this.entities.find((e) => e.id === existingLink.to);
                         if (!s1 || !s2) return;
 
                         const existingSegments = GameState.getLinkSegments(
@@ -1418,16 +1780,28 @@ export class GameState {
                             this.map.height
                         );
 
-                        newSegments.forEach(nSeg => {
-                            existingSegments.forEach(eSeg => {
+                        newSegments.forEach((nSeg) => {
+                            existingSegments.forEach((eSeg) => {
                                 const intersect = GameState.doSegmentsIntersect(nSeg, eSeg);
                                 if (intersect) {
                                     // Guard: Ignore if intersection is within source hub radius
-                                    const distFromSource = this.getToroidalDistance(source.x, source.y, intersect.x, intersect.y);
-                                    if (distFromSource > (ENTITY_STATS.HUB.size + 5)) {
+                                    const distFromSource = this.getToroidalDistance(
+                                        source.x,
+                                        source.y,
+                                        intersect.x,
+                                        intersect.y
+                                    );
+                                    if (distFromSource > ENTITY_STATS.HUB.size + 5) {
                                         destroyedThisCheck.add(newEnt.id);
-                                        tempVisuals.push({ type: 'LINK_COLLISION', x: intersect.x, y: intersect.y, duration: 30 });
-                                        console.log(`[Collision] New ${newEnt.type} link crossed existing link!`);
+                                        tempVisuals.push({
+                                            type: 'LINK_COLLISION',
+                                            x: intersect.x,
+                                            y: intersect.y,
+                                            duration: 30
+                                        });
+                                        console.log(
+                                            `[Collision] New ${newEnt.type} link crossed existing link!`
+                                        );
                                     }
                                 }
                             });
@@ -1435,9 +1809,11 @@ export class GameState {
                     });
 
                     // 2. Check against OTHER newly formed links this round (Simultaneous Conflict)
-                    newEntitiesThisRound.forEach(otherNewEnt => {
+                    newEntitiesThisRound.forEach((otherNewEnt) => {
                         if (newEnt.id === otherNewEnt.id) return;
-                        const otherSource = this.entities.find(e => e.id === otherNewEnt.sourceId);
+                        const otherSource = this.entities.find(
+                            (e) => e.id === otherNewEnt.sourceId
+                        );
                         if (!otherSource) return;
 
                         const otherSegments = GameState.getLinkSegments(
@@ -1447,16 +1823,28 @@ export class GameState {
                             this.map.height
                         );
 
-                        newSegments.forEach(nSeg => {
-                            otherSegments.forEach(oSeg => {
+                        newSegments.forEach((nSeg) => {
+                            otherSegments.forEach((oSeg) => {
                                 const intersect = GameState.doSegmentsIntersect(nSeg, oSeg);
                                 if (intersect) {
-                                    const distFromSource = this.getToroidalDistance(source.x, source.y, intersect.x, intersect.y);
-                                    if (distFromSource > (ENTITY_STATS.HUB.size + 5)) {
+                                    const distFromSource = this.getToroidalDistance(
+                                        source.x,
+                                        source.y,
+                                        intersect.x,
+                                        intersect.y
+                                    );
+                                    if (distFromSource > ENTITY_STATS.HUB.size + 5) {
                                         destroyedThisCheck.add(newEnt.id);
                                         destroyedThisCheck.add(otherNewEnt.id);
-                                        tempVisuals.push({ type: 'LINK_COLLISION', x: intersect.x, y: intersect.y, duration: 30 });
-                                        console.log('[Collision] Simultaneous links crossed! Both destroyed.');
+                                        tempVisuals.push({
+                                            type: 'LINK_COLLISION',
+                                            x: intersect.x,
+                                            y: intersect.y,
+                                            duration: 30
+                                        });
+                                        console.log(
+                                            '[Collision] Simultaneous links crossed! Both destroyed.'
+                                        );
                                     }
                                 }
                             });
@@ -1464,8 +1852,8 @@ export class GameState {
                     });
                 });
 
-                destroyedThisCheck.forEach(id => {
-                    const ent = this.entities.find(e => e.id === id);
+                destroyedThisCheck.forEach((id) => {
+                    const ent = this.entities.find((e) => e.id === id);
                     if (ent) {
                         ent.hp = 0;
                         impacts.add(id);
@@ -1479,18 +1867,21 @@ export class GameState {
                 this.checkStructureCollisions(tempVisuals);
 
                 // Clean up all destroyed entities this round
-                this.entities.forEach(e => {
+                this.entities.forEach((e) => {
                     if (e.hp <= 0) impacts.add(e.id);
                 });
 
                 if (impacts.size > 0) {
-                    this.entities = this.entities.filter(e => !impacts.has(e.id));
-                    this.links = this.links.filter(l => !impacts.has(l.from) && !impacts.has(l.to));
+                    this.entities = this.entities.filter((e) => !impacts.has(e.id));
+                    this.links = this.links.filter(
+                        (l) => !impacts.has(l.from) && !impacts.has(l.to)
+                    );
                 }
 
                 // Final Deployment Phase: Restore HP and enable surviving structures
-                this.entities.forEach(e => {
-                    if (e.deployed === false && e.hp > 0) { // Only deploy if not destroyed by collision
+                this.entities.forEach((e) => {
+                    if (e.deployed === false && e.hp > 0) {
+                        // Only deploy if not destroyed by collision
                         e.deployed = true;
                         e.hp = ENTITY_STATS[e.type]?.hp || GLOBAL_STATS.DEFAULT_HP; // Restore full HP
                         console.log(`[Round ${round}]${e.type} ${e.id} fully deployed.`);
@@ -1498,7 +1889,7 @@ export class GameState {
                 });
 
                 // Clean up flak state for this round
-                this.entities.forEach(e => {
+                this.entities.forEach((e) => {
                     if (e.type === 'FLAK_DEFENSE') {
                         e.flakActive = false;
                         e.flakAngle = null;
@@ -1507,15 +1898,18 @@ export class GameState {
                 });
 
                 // Update activeInProgress for next round
-                const hasActionsLeft = Object.keys(this.players).some(pid => {
+                const hasActionsLeft = Object.keys(this.players).some((pid) => {
                     const actions = playerActionsMap[pid] || [];
                     for (let i = 0; i < actions.length; i++) {
                         if (!processedActions[pid].has(i)) return true;
                     }
                     return false;
                 });
-                const hasPendingEchos = this.entities.some(e => e.type === 'ECHO_ARTILLERY' && e.pendingEchos && e.pendingEchos.length > 0);
-                const hasProjectiles = tempProjectiles && tempProjectiles.some(p => p.active);
+                const hasPendingEchos = this.entities.some(
+                    (e) =>
+                        e.type === 'ECHO_ARTILLERY' && e.pendingEchos && e.pendingEchos.length > 0
+                );
+                const hasProjectiles = tempProjectiles && tempProjectiles.some((p) => p.active);
                 activeInProgress = hasActionsLeft || hasProjectiles || hasPendingEchos;
 
                 // Link Decay check after every round
@@ -1531,42 +1925,44 @@ export class GameState {
             }
 
             // Napalm Refinement: Remove any hazards that have run out of roundsLeft
-            this.entities = this.entities.filter(e => e.type !== 'NAPALM_FIRE' || e.roundsLeft > 0);
+            this.entities = this.entities.filter(
+                (e) => e.type !== 'NAPALM_FIRE' || e.roundsLeft > 0
+            );
 
             // Safety break for infinite loops
             if (round > 20) break;
         }
 
         // 3. Final HP Cleanup & Status Update
-        this.entities = this.entities.filter(e => e.hp > 0);
-        this.links = this.links.filter(l => {
-            const fromEnt = this.entities.find(e => e.id === l.from);
-            const toEnt = this.entities.find(e => e.id === l.to);
+        this.entities = this.entities.filter((e) => e.hp > 0);
+        this.links = this.links.filter((l) => {
+            const fromEnt = this.entities.find((e) => e.id === l.from);
+            const toEnt = this.entities.find((e) => e.id === l.to);
             return fromEnt && toEnt;
         });
 
-        Object.keys(this.players).forEach(pid => {
-            const hasHub = this.entities.some(e => e.owner === pid && e.type === 'HUB');
+        Object.keys(this.players).forEach((pid) => {
+            const hasHub = this.entities.some((e) => e.owner === pid && e.type === 'HUB');
             if (!hasHub) {
                 this.players[pid].alive = false;
             }
         });
 
-        const alivePlayers = Object.keys(this.players).filter(pid => this.players[pid].alive);
+        const alivePlayers = Object.keys(this.players).filter((pid) => this.players[pid].alive);
         if (alivePlayers.length === 1) {
             this.winner = alivePlayers[0];
         } else if (alivePlayers.length === 0) {
             this.winner = 'DRAW';
         }
 
-        // Napalm Refinement: Purge ALL internal-round-based hazards at end of resolveTurn 
+        // Napalm Refinement: Purge ALL internal-round-based hazards at end of resolveTurn
         // they should never persist across Planning phases.
-        this.entities = this.entities.filter(e => e.type !== 'NAPALM_FIRE');
+        this.entities = this.entities.filter((e) => e.type !== 'NAPALM_FIRE');
 
         this.turn += 1;
 
         // Replenish Fuel for the next turn's planning phase
-        this.entities.forEach(e => {
+        this.entities.forEach((e) => {
             if (e.fuel !== undefined) {
                 const regen = ENTITY_STATS[e.type]?.fuelRegen || 0;
                 e.fuel = Math.min(e.maxFuel, e.fuel + regen);
@@ -1578,19 +1974,27 @@ export class GameState {
         return snapshots;
     }
 
-    triggerOverload(x, y, stats, tempVisuals = [], impacts = new Set(), overloadedThisRound = new Set()) {
+    triggerOverload(
+        x,
+        y,
+        stats,
+        tempVisuals = [],
+        impacts = new Set(),
+        overloadedThisRound = new Set()
+    ) {
         const affectedStructureIds = new Set();
         const detectionRadius = stats.detectionRadius || 30;
 
         // 1. Direct Structure Hits
-        this.entities.forEach(ent => {
+        this.entities.forEach((ent) => {
             if (ent.isHazard) return;
             const dist = this.getToroidalDistance(x, y, ent.x, ent.y);
             const size = ENTITY_STATS[ent.type]?.size || 20;
-            if (dist <= size + 5) { // Slight buffer for direct hits
+            if (dist <= size + 5) {
+                // Slight buffer for direct hits
                 affectedStructureIds.add(ent.id);
                 // Downstream hop: children of the hit structure
-                this.links.forEach(link => {
+                this.links.forEach((link) => {
                     if (link.from === ent.id) {
                         affectedStructureIds.add(link.to);
                     }
@@ -1599,22 +2003,31 @@ export class GameState {
         });
 
         // 2. Link Hits (Downstream structure only)
-        this.links.forEach(link => {
-            const s1 = this.entities.find(e => e.id === link.from);
-            const s2 = this.entities.find(e => e.id === link.to);
+        this.links.forEach((link) => {
+            const s1 = this.entities.find((e) => e.id === link.from);
+            const s2 = this.entities.find((e) => e.id === link.to);
             if (!s1 || !s2) return;
 
-            const dist = GameState.getPointToSegmentDistance(x, y, s1.x, s1.y, s2.x, s2.y, this.map.width, this.map.height);
+            const dist = GameState.getPointToSegmentDistance(
+                x,
+                y,
+                s1.x,
+                s1.y,
+                s2.x,
+                s2.y,
+                this.map.width,
+                this.map.height
+            );
             if (dist <= detectionRadius) {
                 affectedStructureIds.add(link.to); // Downstream only
             }
         });
 
         // 3. Apply Damage (Limit: 1 HP per round)
-        affectedStructureIds.forEach(id => {
+        affectedStructureIds.forEach((id) => {
             if (overloadedThisRound.has(id)) return; // Already hit this round
 
-            const target = this.entities.find(e => e.id === id);
+            const target = this.entities.find((e) => e.id === id);
             if (target && target.hp > 0) {
                 target.hp -= 1;
                 overloadedThisRound.add(id);
@@ -1627,20 +2040,20 @@ export class GameState {
         tempVisuals.push({
             type: 'EXPLOSION',
             itemType: 'OVERLOAD',
-            x, y,
+            x,
+            y,
             duration: 40,
             radius: detectionRadius
         });
     }
 
     getState() {
-
         return {
             turn: this.turn,
             phase: this.phase,
             players: JSON.parse(JSON.stringify(this.players)),
-            entities: this.entities.map(e => ({ ...e })),
-            links: this.links.map(l => ({ ...l })),
+            entities: this.entities.map((e) => ({ ...e })),
+            links: this.links.map((l) => ({ ...l })),
             map: this.map,
             winner: this.winner
         };
@@ -1664,8 +2077,8 @@ export class GameState {
         }
 
         const segments = [];
-        const wrapX = (Math.abs(dx) > width / 2);
-        const wrapY = (Math.abs(dy) > height / 2);
+        const wrapX = Math.abs(dx) > width / 2;
+        const wrapY = Math.abs(dy) > height / 2;
 
         if (!wrapX && !wrapY) {
             segments.push({ p1: { ...p1 }, p2: { ...p2 } });
@@ -1674,7 +2087,7 @@ export class GameState {
             // We use the effective vector to trace the path and split at 0/width or 0/height
 
             // For simplicity in a prototype:
-            // High-res sampling is robust but slow. 
+            // High-res sampling is robust but slow.
             // Euclidean splitting:
             if (wrapX && !wrapY) {
                 const xEdge = edx > 0 ? width : 0;
@@ -1694,7 +2107,7 @@ export class GameState {
                 segments.push({ p1: { x: xEdge, y: height - yEdge }, p2: { ...p2 } });
             } else {
                 // Double wrap (rare corner case)
-                // Just use the two main endpoints for now to avoid overcomplicating 
+                // Just use the two main endpoints for now to avoid overcomplicating
                 // but let's at least handle the primary segments
                 segments.push({ p1: { ...p1 }, p2: { ...p1 } }); // Placeholder for quad split
             }
@@ -1743,8 +2156,8 @@ export class GameState {
 
     /**
      * Trigger an AOE explosion at (x, y) with given stats.
-     * @param {number} x 
-     * @param {number} y 
+     * @param {number} x
+     * @param {number} y
      * @param {object} stats - EntityStats for the exploding item
      * @param {array} tempVisuals - Array to push visual effects to
      * @param {Set} impacts - Set to add destroyed entity IDs to
@@ -1757,7 +2170,9 @@ export class GameState {
         const stats = ENTITY_STATS.RECLAIMER;
         const radius = stats.radiusFull;
 
-        console.log(`[Reclaim] Triggered by ${owner} at (${Math.round(x)}, ${Math.round(y)}) with radius ${radius}`);
+        console.log(
+            `[Reclaim] Triggered by ${owner} at (${Math.round(x)}, ${Math.round(y)}) with radius ${radius}`
+        );
 
         // Visual Effect
         tempVisuals.push({
@@ -1768,8 +2183,9 @@ export class GameState {
             radius: radius
         });
 
-        this.entities.forEach(entity => {
-            if (entity.owner !== owner || entity.isHazard || entity.type === 'EXPLOSION_HAZARD') return;
+        this.entities.forEach((entity) => {
+            if (entity.owner !== owner || entity.isHazard || entity.type === 'EXPLOSION_HAZARD')
+                return;
 
             const tStats = ENTITY_STATS[entity.type] || ENTITY_STATS[entity.itemType];
             const dist = this.getToroidalDistance(entity.x, entity.y, x, y);
@@ -1787,13 +2203,17 @@ export class GameState {
                     duration: 20
                 });
 
-                console.log(`[Reclaim] MATCH: Reclaimed ${entity.id} (${entity.type}). Refund: ${refund}. Total Energy: ${this.players[owner].energy}`);
+                console.log(
+                    `[Reclaim] MATCH: Reclaimed ${entity.id} (${entity.type}). Refund: ${refund}. Total Energy: ${this.players[owner].energy}`
+                );
             }
         });
     }
 
     triggerExplosion(x, y, stats, tempVisuals = [], impacts = new Set(), potentialTargets = []) {
-        console.log(`[Explosion] Triggered at (${Math.round(x)}, ${Math.round(y)}) with radius ${stats.radiusFull}`);
+        console.log(
+            `[Explosion] Triggered at (${Math.round(x)}, ${Math.round(y)}) with radius ${stats.radiusFull}`
+        );
 
         // 1. Visual Effect
         tempVisuals.push({
@@ -1808,7 +2228,7 @@ export class GameState {
         const FULL_RADIUS = stats.radiusFull;
         const HALF_RADIUS = stats.radiusHalf;
 
-        potentialTargets.forEach(target => {
+        potentialTargets.forEach((target) => {
             // Hazards and the map features themselves are immune to damage
             if (target.isHazard || target.type === 'EXPLOSION_HAZARD') return;
             const tStats = ENTITY_STATS[target.type] || ENTITY_STATS[target.itemType];
@@ -1828,17 +2248,21 @@ export class GameState {
             if (damage > 0) {
                 target.hp -= damage;
                 const status = target.deployed === false ? 'UNDEPLOYED' : 'DEPLOYED';
-                const targetName = target.id ? `${target.id} (${target.type})` : `Projectile ${target.type}`;
-                console.log(`[AOE Damage] ${targetName} [${status}] took ${damage} damage. Current HP: ${target.hp}`);
+                const targetName = target.id
+                    ? `${target.id} (${target.type})`
+                    : `Projectile ${target.type}`;
+                console.log(
+                    `[AOE Damage] ${targetName} [${status}] took ${damage} damage. Current HP: ${target.hp}`
+                );
 
                 if (target.hp <= 0) {
-                    if (target.id && this.entities.some(e => e.id === target.id)) {
+                    if (target.id && this.entities.some((e) => e.id === target.id)) {
                         impacts.add(target.id);
                     } else {
                         // Handle projectile destruction in flight
                         target.active = false;
                         if (tStats?.deathEffect === 'DETONATE') {
-                            // Note: We don't chain explosions here to prevent recursion loops, 
+                            // Note: We don't chain explosions here to prevent recursion loops,
                             // but we mark it so it can detonate in ITS turn if appropriate.
                             target.hitThisTick = true;
                         }
@@ -1853,10 +2277,14 @@ export class GameState {
      * Returns {x, y} or null
      */
     static doSegmentsIntersect(s1, s2) {
-        const x1 = s1.p1.x, y1 = s1.p1.y;
-        const x2 = s1.p2.x, y2 = s1.p2.y;
-        const x3 = s2.p1.x, y3 = s2.p1.y;
-        const x4 = s2.p2.x, y4 = s2.p2.y;
+        const x1 = s1.p1.x,
+            y1 = s1.p1.y;
+        const x2 = s1.p2.x,
+            y2 = s1.p2.y;
+        const x3 = s2.p1.x,
+            y3 = s2.p1.y;
+        const x4 = s2.p2.x,
+            y4 = s2.p2.y;
 
         const den = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
         if (den === 0) return null; // Parallel
@@ -1878,13 +2306,15 @@ export class GameState {
      * Used by both manual and automated launches.
      */
     triggerEchoArtillery(sourceX, sourceY, launcherId, round) {
-        this.entities.forEach(ent => {
+        this.entities.forEach((ent) => {
             if (ent.type === 'ECHO_ARTILLERY' && ent.owner !== launcherId && !ent.firedThisTurn) {
                 const dist = this.getToroidalDistance(sourceX, sourceY, ent.x, ent.y);
                 if (dist <= (ENTITY_STATS.ECHO_ARTILLERY.detectionRange || 800)) {
                     ent.pendingEchos.push({ x: sourceX, y: sourceY, triggerRound: round });
                     ent.firedThisTurn = true;
-                    console.log(`[Echo-Detection] Artillery ${ent.id} detected launch by ${launcherId} from (${Math.round(sourceX)}, ${Math.round(sourceY)})`);
+                    console.log(
+                        `[Echo-Detection] Artillery ${ent.id} detected launch by ${launcherId} from (${Math.round(sourceX)}, ${Math.round(sourceY)})`
+                    );
                 }
             }
         });

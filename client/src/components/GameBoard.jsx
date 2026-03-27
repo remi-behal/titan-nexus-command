@@ -6,7 +6,7 @@ import { shouldHighlightRing } from '../utils/uiLogic.js';
 
 /**
  * GameBoard Component
- *  
+ *
  * Takes the 'gameState' and renders it using HTML5 Canvas.
  * Implements client-side interpolation (Lerp) for smooth movement.
  */
@@ -32,7 +32,6 @@ const GameBoard = ({
     const [panStart, setPanStart] = useState({ x: 0, y: 0 });
     const ZOOM_LEVEL = 2; // 50% zoom in
 
-
     const HUB_RADIUS = ENTITY_STATS.HUB.size;
     const SLING_RING_RADIUS = GLOBAL_STATS.SLING_RING_RADIUS;
     const RING_INTERACTION_BUFFER = GLOBAL_STATS.RING_INTERACTION_BUFFER;
@@ -43,13 +42,14 @@ const GameBoard = ({
 
     const getStrengthColor = (ratio) => {
         // Linear transition: Green (0,255,0) -> Orange (255,165,0) -> Red (255,0,0)
-        let r, g = 0;
+        let r,
+            g = 0;
         const b = 0;
         if (ratio < 0.5) {
             // Green to Orange
             const segmentRatio = ratio * 2;
             r = Math.floor(255 * segmentRatio);
-            g = Math.floor(255 - (90 * segmentRatio));
+            g = Math.floor(255 - 90 * segmentRatio);
         } else {
             // Orange to Red
             const segmentRatio = (ratio - 0.5) * 2;
@@ -83,9 +83,19 @@ const GameBoard = ({
         return { dx, dy };
     };
 
-    const drawToroidalLine = (ctx, x1, y1, x2, y2, width, height, forceDx = null, forceDy = null) => {
-        const dx = forceDx !== null ? forceDx : (x2 - x1);
-        const dy = forceDy !== null ? forceDy : (y2 - y1);
+    const drawToroidalLine = (
+        ctx,
+        x1,
+        y1,
+        x2,
+        y2,
+        width,
+        height,
+        forceDx = null,
+        forceDy = null
+    ) => {
+        const dx = forceDx !== null ? forceDx : x2 - x1;
+        const dy = forceDy !== null ? forceDy : y2 - y1;
 
         // In a 3x3 tiled renderer, we only need to draw the line once per tile.
         // The tiling itself handles the wrapping representation.
@@ -112,24 +122,28 @@ const GameBoard = ({
 
             // Define current vision circles for re-scouting check
             const currentVisionCircles = gameState.entities
-                .filter(e => e.owner === myPlayerId)
-                .map(e => ({
+                .filter((e) => e.owner === myPlayerId)
+                .map((e) => ({
                     x: e.x,
                     y: e.y,
                     radius: ENTITY_STATS[e.itemType || e.type]?.vision || 0
                 }))
-                .filter(v => v.radius > 0);
+                .filter((v) => v.radius > 0);
 
             const isInVision = (x, y) => {
                 if (!myPlayerId || myPlayerId === 'spectator') return true;
 
                 // First check current circular vision for buildings
-                if (currentVisionCircles.some(v => getToroidalDist(v.x, v.y, x, y, mapW, mapH) <= v.radius)) {
+                if (
+                    currentVisionCircles.some(
+                        (v) => getToroidalDist(v.x, v.y, x, y, mapW, mapH) <= v.radius
+                    )
+                ) {
                     return true;
                 }
 
                 // Then check specialized cone vision for projectiles
-                return gameState.entities.some(e => {
+                return gameState.entities.some((e) => {
                     if (e.owner !== myPlayerId) return false;
                     const stats = ENTITY_STATS[e.itemType || e.type];
                     const radius = stats?.vision || 0;
@@ -149,10 +163,10 @@ const GameBoard = ({
                 });
             };
 
-            const serverIds = new Set(gameState.entities.map(e => e.id));
+            const serverIds = new Set(gameState.entities.map((e) => e.id));
 
             // Update existing entities and handle New ones
-            gameState.entities.forEach(serverEnt => {
+            gameState.entities.forEach((serverEnt) => {
                 if (!visualEntities.current[serverEnt.id]) {
                     visualEntities.current[serverEnt.id] = {
                         ...serverEnt,
@@ -164,11 +178,11 @@ const GameBoard = ({
                     const viz = visualEntities.current[serverEnt.id];
                     let dx = serverEnt.x - viz.x;
                     if (Math.abs(dx) > mapW / 2) dx = dx > 0 ? dx - mapW : dx + mapW;
-                    viz.x = ((viz.x + dx * LERP_FACTOR % mapW) + mapW) % mapW;
+                    viz.x = (viz.x + ((dx * LERP_FACTOR) % mapW) + mapW) % mapW;
 
                     let dy = serverEnt.y - viz.y;
                     if (Math.abs(dy) > mapH / 2) dy = dy > 0 ? dy - mapH : dy + mapH;
-                    viz.y = ((viz.y + dy * LERP_FACTOR % mapH) + mapH) % mapH;
+                    viz.y = (viz.y + ((dy * LERP_FACTOR) % mapH) + mapH) % mapH;
 
                     viz.type = serverEnt.type;
                     viz.owner = serverEnt.owner;
@@ -190,12 +204,21 @@ const GameBoard = ({
             });
 
             // Handle Ghosts: entities in visualEntities NOT in serverIds
-            Object.keys(visualEntities.current).forEach(id => {
+            Object.keys(visualEntities.current).forEach((id) => {
                 if (!serverIds.has(id)) {
                     const viz = visualEntities.current[id];
 
                     // If it's a transient effect/projectile OR if it was OUR structure, it disappears immediately
-                    const TRANSIENT_TYPES = ['PROJECTILE', 'WEAPON', 'SUPER_BOMB', 'EXPLOSION', 'RECLAIM', 'LASER_BEAM', 'LINK_COLLISION', 'SPARK'];
+                    const TRANSIENT_TYPES = [
+                        'PROJECTILE',
+                        'WEAPON',
+                        'SUPER_BOMB',
+                        'EXPLOSION',
+                        'RECLAIM',
+                        'LASER_BEAM',
+                        'LINK_COLLISION',
+                        'SPARK'
+                    ];
                     if (TRANSIENT_TYPES.includes(viz.type) || viz.owner === myPlayerId) {
                         delete visualEntities.current[id];
                         return;
@@ -218,7 +241,7 @@ const GameBoard = ({
             });
 
             // Handle Links Ghosts
-            gameState.links.forEach(serverLink => {
+            gameState.links.forEach((serverLink) => {
                 const linkId = `${serverLink.from}-${serverLink.to}`;
                 if (!visualLinks.current[linkId]) {
                     visualLinks.current[linkId] = { ...serverLink, isGhost: false };
@@ -227,12 +250,12 @@ const GameBoard = ({
                 }
             });
 
-            Object.keys(visualLinks.current).forEach(linkId => {
+            Object.keys(visualLinks.current).forEach((linkId) => {
                 const viz = visualLinks.current[linkId];
-                const inServer = gameState.links.some(l => `${l.from}-${l.to}` === linkId);
+                const inServer = gameState.links.some((l) => `${l.from}-${l.to}` === linkId);
 
                 if (!inServer) {
-                    // Check if either end of the link is currently in vision. 
+                    // Check if either end of the link is currently in vision.
                     // If an end is in vision but the link is not in the server state, the link is gone.
                     const from = visualEntities.current[viz.from];
                     const to = visualEntities.current[viz.to];
@@ -272,7 +295,7 @@ const GameBoard = ({
 
                     // 2a. DRAW LAKES
                     if (gameState.map.lakes) {
-                        gameState.map.lakes.forEach(lake => {
+                        gameState.map.lakes.forEach((lake) => {
                             ctx.save();
                             ctx.fillStyle = '#1a3a5a'; // Deep water blue
                             ctx.globalAlpha = 0.6;
@@ -289,7 +312,7 @@ const GameBoard = ({
 
                     // 2a-2. DRAW MOUNTAINS
                     if (gameState.map.mountains) {
-                        gameState.map.mountains.forEach(mtn => {
+                        gameState.map.mountains.forEach((mtn) => {
                             ctx.save();
                             // Base stone circle
                             ctx.fillStyle = '#3d3434'; // Dark stone
@@ -314,19 +337,22 @@ const GameBoard = ({
 
                     // 2-c. Craters (Permanent scars)
                     if (gameState.map.craters) {
-                        gameState.map.craters.forEach(crater => {
+                        gameState.map.craters.forEach((crater) => {
                             ctx.save();
-                            ctx.fillStyle = "rgba(0,0,0,0.5)";
+                            ctx.fillStyle = 'rgba(0,0,0,0.5)';
                             ctx.beginPath();
                             ctx.arc(crater.x, crater.y, crater.radius, 0, Math.PI * 2);
                             ctx.fill();
-                            ctx.strokeStyle = "#222";
+                            ctx.strokeStyle = '#222';
                             ctx.lineWidth = 4;
                             ctx.beginPath();
                             for (let i = 0; i < 16; i++) {
                                 const ang = (i / 16) * Math.PI * 2;
                                 const r = crater.radius * (0.85 + Math.sin(i * 1.3) * 0.1);
-                                ctx.lineTo(crater.x + Math.cos(ang) * r, crater.y + Math.sin(ang) * r);
+                                ctx.lineTo(
+                                    crater.x + Math.cos(ang) * r,
+                                    crater.y + Math.sin(ang) * r
+                                );
                             }
                             ctx.closePath();
                             ctx.stroke();
@@ -339,14 +365,20 @@ const GameBoard = ({
                     ctx.lineWidth = 1;
                     const gridSize = 100;
                     for (let x = 0; x < mapW; x += gridSize) {
-                        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, mapH); ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(x, 0);
+                        ctx.lineTo(x, mapH);
+                        ctx.stroke();
                     }
                     for (let y = 0; y < mapH; y += gridSize) {
-                        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(mapW, y); ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(0, y);
+                        ctx.lineTo(mapW, y);
+                        ctx.stroke();
                     }
 
                     // 3. DRAW LINKS (Segmented for partial Fog of War)
-                    Object.values(visualLinks.current).forEach(link => {
+                    Object.values(visualLinks.current).forEach((link) => {
                         const from = visualEntities.current[link.from];
                         const to = visualEntities.current[link.to];
                         if (!from || !to) return;
@@ -387,8 +419,10 @@ const GameBoard = ({
                             const y2 = from.y + dy * rEnd;
 
                             // Sample middle of segment for visibility check
-                            const midX = ((from.x + dx * (rStart + rEnd) / 2 % mapW) + mapW) % mapW;
-                            const midY = ((from.y + dy * (rStart + rEnd) / 2 % mapH) + mapH) % mapH;
+                            const midX =
+                                (from.x + (((dx * (rStart + rEnd)) / 2) % mapW) + mapW) % mapW;
+                            const midY =
+                                (from.y + (((dy * (rStart + rEnd)) / 2) % mapH) + mapH) % mapH;
 
                             const segmentInVision = isInVision(midX, midY);
 
@@ -397,7 +431,7 @@ const GameBoard = ({
 
                             ctx.save();
                             ctx.strokeStyle = isSegmentGhost ? ghostColor : baseColor;
-                            ctx.lineWidth = isSegmentGhost ? 1 : (GLOBAL_STATS.LINK_WIDTH || 2);
+                            ctx.lineWidth = isSegmentGhost ? 1 : GLOBAL_STATS.LINK_WIDTH || 2;
                             ctx.globalAlpha = isSegmentGhost ? 0.2 : 0.6;
                             if (isSegmentGhost) ctx.setLineDash([4, 4]);
 
@@ -431,16 +465,29 @@ const GameBoard = ({
                     });
 
                     // 4. DRAW RESOURCES
-                    gameState.map.resources.forEach(res => {
+                    gameState.map.resources.forEach((res) => {
                         const isSuper = res.isSuper === true;
 
                         // Large Pulse Aura for Super Nodes
                         if (isSuper) {
-                            const { AURA_PULSE_SPEED, AURA_PULSE_MAGNITUDE, AURA_RADIUS_SCALE, AURA_COLOR, AURA_DEFAULT_RADIUS } = VISUAL_STATS.SUPER_NODE;
-                            const pulse = Math.sin(Date.now() / AURA_PULSE_SPEED) * AURA_PULSE_MAGNITUDE;
+                            const {
+                                AURA_PULSE_SPEED,
+                                AURA_PULSE_MAGNITUDE,
+                                AURA_RADIUS_SCALE,
+                                AURA_COLOR,
+                                AURA_DEFAULT_RADIUS
+                            } = VISUAL_STATS.SUPER_NODE;
+                            const pulse =
+                                Math.sin(Date.now() / AURA_PULSE_SPEED) * AURA_PULSE_MAGNITUDE;
                             ctx.save();
                             ctx.beginPath();
-                            ctx.arc(res.x, res.y, (res.radius * AURA_RADIUS_SCALE || AURA_DEFAULT_RADIUS) + pulse, 0, Math.PI * 2);
+                            ctx.arc(
+                                res.x,
+                                res.y,
+                                (res.radius * AURA_RADIUS_SCALE || AURA_DEFAULT_RADIUS) + pulse,
+                                0,
+                                Math.PI * 2
+                            );
                             ctx.fillStyle = AURA_COLOR;
                             ctx.fill();
                             ctx.restore();
@@ -453,11 +500,11 @@ const GameBoard = ({
                     });
 
                     // 5. DRAW ENTITIES
-                    Object.values(visualEntities.current).forEach(entity => {
+                    Object.values(visualEntities.current).forEach((entity) => {
                         const player = gameState.players[entity.owner];
                         let color = player ? player.color : '#fff';
 
-                        // Bug 2 fix: An entity should display as a "ghost" (desaturated) if it's 
+                        // Bug 2 fix: An entity should display as a "ghost" (desaturated) if it's
                         // NOT in active vision, even if it's still in the server state (e.g. as a link endpoint).
                         const currentlyInVision = isInVision(entity.x, entity.y);
                         const displayAsGhost = entity.isGhost || !currentlyInVision;
@@ -474,14 +521,14 @@ const GameBoard = ({
                         const isSelected = entity.id === selectedHubId && !displayAsGhost;
                         const isUndeployed = entity.deployed === false;
 
-                        // DRAWING GUARD: Only render the entity if it is scouted (active vision/owned) 
+                        // DRAWING GUARD: Only render the entity if it is scouted (active vision/owned)
                         // or if it's a ghost (previously scouted).
                         // This prevents enemy hubs at link endpoints from being visible in the dark.
                         if (!entity.scouted && !entity.isGhost) return;
 
                         ctx.save();
                         ctx.fillStyle = color;
-                        ctx.globalAlpha = displayAsGhost ? 0.4 : (isUndeployed ? 0.5 : 1.0);
+                        ctx.globalAlpha = displayAsGhost ? 0.4 : isUndeployed ? 0.5 : 1.0;
 
                         if (isSelected) {
                             ctx.shadowBlur = 15;
@@ -494,10 +541,15 @@ const GameBoard = ({
                             ctx.lineWidth = 1;
                         }
 
-                        const isProjectile = (entity.type === 'PROJECTILE' || entity.type === 'NAPALM') ||
-                            (ENTITY_STATS[entity.itemType || entity.type]?.damageFull !== undefined && (entity.type !== 'NUKE' || !entity.detonationTurn));
+                        const isProjectile =
+                            entity.type === 'PROJECTILE' ||
+                            entity.type === 'NAPALM' ||
+                            (ENTITY_STATS[entity.itemType || entity.type]?.damageFull !==
+                                undefined &&
+                                (entity.type !== 'NUKE' || !entity.detonationTurn));
                         const stats = ENTITY_STATS[entity.itemType || entity.type];
-                        const radius = stats?.size || (isProjectile ? GLOBAL_STATS.PROJECTILE_RADIUS : 20);
+                        const radius =
+                            stats?.size || (isProjectile ? GLOBAL_STATS.PROJECTILE_RADIUS : 20);
 
                         if (isProjectile) {
                             ctx.save();
@@ -509,11 +561,17 @@ const GameBoard = ({
                                 ctx.fillStyle = color;
                                 const rad = ((entity.currentAngle || 0) * Math.PI) / 180;
                                 const beamRange = stats?.homingRange || 400;
-                                const halfCone = (stats?.searchCone || 60) * (Math.PI / 180) / 2;
+                                const halfCone = ((stats?.searchCone || 60) * (Math.PI / 180)) / 2;
 
                                 ctx.beginPath();
                                 ctx.moveTo(entity.x, entity.y);
-                                ctx.arc(entity.x, entity.y, beamRange, rad - halfCone, rad + halfCone);
+                                ctx.arc(
+                                    entity.x,
+                                    entity.y,
+                                    beamRange,
+                                    rad - halfCone,
+                                    rad + halfCone
+                                );
                                 ctx.fill();
                                 ctx.restore();
                             }
@@ -528,8 +586,14 @@ const GameBoard = ({
                                 ctx.shadowBlur = 15;
                                 ctx.shadowColor = flareColor;
                                 ctx.beginPath();
-                                ctx.moveTo(entity.x - Math.cos(rad) * radius, entity.y - Math.sin(rad) * radius);
-                                ctx.lineTo(entity.x - Math.cos(rad) * (radius + flareLen), entity.y - Math.sin(rad) * (radius + flareLen));
+                                ctx.moveTo(
+                                    entity.x - Math.cos(rad) * radius,
+                                    entity.y - Math.sin(rad) * radius
+                                );
+                                ctx.lineTo(
+                                    entity.x - Math.cos(rad) * (radius + flareLen),
+                                    entity.y - Math.sin(rad) * (radius + flareLen)
+                                );
                                 ctx.strokeStyle = flareColor;
                                 ctx.lineWidth = radius * 0.8;
                                 ctx.lineCap = 'round';
@@ -542,7 +606,7 @@ const GameBoard = ({
                             ctx.shadowColor = color;
                             ctx.fillStyle = color;
 
-                            if (entity.itemType === "HOMING_MISSILE") {
+                            if (entity.itemType === 'HOMING_MISSILE') {
                                 // Render as a bullet
                                 const rad = ((entity.currentAngle || 0) * Math.PI) / 180;
                                 ctx.translate(entity.x, entity.y);
@@ -584,8 +648,7 @@ const GameBoard = ({
                                 ctx.fill();
                             }
                             ctx.restore();
-                        }
-                        else if (entity.type === 'LASER_BEAM') {
+                        } else if (entity.type === 'LASER_BEAM') {
                             // Draw Laser Beam
                             ctx.save();
                             ctx.beginPath();
@@ -651,13 +714,19 @@ const GameBoard = ({
                             ctx.shadowColor = vStats?.color || '#ff3300';
                             ctx.fill();
                             ctx.restore();
-                        }
-                        else if (entity.type === 'EXPLOSION_HAZARD') {
+                        } else if (entity.type === 'EXPLOSION_HAZARD') {
                             ctx.save();
                             const radius = entity.radius || 200;
                             const time = Date.now() / 1000;
                             const pulse = 1 + Math.sin(time * 5) * 0.05;
-                            const grad = ctx.createRadialGradient(entity.x, entity.y, 0, entity.x, entity.y, radius * pulse);
+                            const grad = ctx.createRadialGradient(
+                                entity.x,
+                                entity.y,
+                                0,
+                                entity.x,
+                                entity.y,
+                                radius * pulse
+                            );
                             grad.addColorStop(0, 'rgba(255, 69, 0, 0.6)');
                             grad.addColorStop(0.5, 'rgba(255, 140, 0, 0.3)');
                             grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
@@ -667,10 +736,16 @@ const GameBoard = ({
                             ctx.fill();
                             ctx.fillStyle = 'rgba(255, 255, 0, 0.1)';
                             for (let i = 0; i < 6; i++) {
-                                const angle = time + (i * Math.PI * 2 / 6);
+                                const angle = time + (i * Math.PI * 2) / 6;
                                 const r = radius * 0.5;
                                 ctx.beginPath();
-                                ctx.arc(entity.x + Math.cos(angle) * r, entity.y + Math.sin(angle) * r, radius * 0.4, 0, Math.PI * 2);
+                                ctx.arc(
+                                    entity.x + Math.cos(angle) * r,
+                                    entity.y + Math.sin(angle) * r,
+                                    radius * 0.4,
+                                    0,
+                                    Math.PI * 2
+                                );
                                 ctx.fill();
                             }
                             ctx.restore();
@@ -683,7 +758,14 @@ const GameBoard = ({
                             const radius = width / 2;
 
                             // Calculate shortest toroidal vector to determine orientation
-                            const { dx, dy } = getToroidalDistVector(entity.startX, entity.startY, entity.endX, entity.endY, mapW, mapH);
+                            const { dx, dy } = getToroidalDistVector(
+                                entity.startX,
+                                entity.startY,
+                                entity.endX,
+                                entity.endY,
+                                mapW,
+                                mapH
+                            );
                             const angle = Math.atan2(dy, dx);
                             const length = Math.sqrt(dx * dx + dy * dy);
 
@@ -710,7 +792,7 @@ const GameBoard = ({
                             ctx.fillStyle = '#ffaa00';
                             for (let i = 0; i < 5; i++) {
                                 const px = (Math.sin(time * 5 + i * 0.7) * 0.4 + 0.5) * length;
-                                const py = (Math.cos(time * 3 + i * 1.1) * 0.2) * radius;
+                                const py = Math.cos(time * 3 + i * 1.1) * 0.2 * radius;
                                 ctx.beginPath();
                                 ctx.arc(px, py, radius * 0.4, 0, Math.PI * 2);
                                 ctx.fill();
@@ -730,15 +812,26 @@ const GameBoard = ({
                             for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
                                 ctx.beginPath();
                                 ctx.moveTo(entity.x, entity.y);
-                                ctx.lineTo(entity.x + Math.cos(a) * 25, entity.y + Math.sin(a) * 25);
+                                ctx.lineTo(
+                                    entity.x + Math.cos(a) * 25,
+                                    entity.y + Math.sin(a) * 25
+                                );
                                 ctx.stroke();
                             }
                             ctx.restore();
                         } else {
                             // Non-Projectile Entities (Structures, Hazards, etc.)
-                            if (entity.type === 'LASER_POINT_DEFENSE' || entity.type === 'FLAK_DEFENSE') {
+                            if (
+                                entity.type === 'LASER_POINT_DEFENSE' ||
+                                entity.type === 'FLAK_DEFENSE'
+                            ) {
                                 ctx.beginPath();
-                                ctx.rect(entity.x - radius, entity.y - radius, radius * 2, radius * 2);
+                                ctx.rect(
+                                    entity.x - radius,
+                                    entity.y - radius,
+                                    radius * 2,
+                                    radius * 2
+                                );
                                 ctx.fill();
 
                                 // --- Flak Defense Wall Visuals ---
@@ -755,7 +848,13 @@ const GameBoard = ({
                                     ctx.fillStyle = color;
                                     ctx.beginPath();
                                     ctx.moveTo(entity.x, entity.y);
-                                    ctx.arc(entity.x, entity.y, arcRange, centerAngle - arcWidth / 2, centerAngle + arcWidth / 2);
+                                    ctx.arc(
+                                        entity.x,
+                                        entity.y,
+                                        arcRange,
+                                        centerAngle - arcWidth / 2,
+                                        centerAngle + arcWidth / 2
+                                    );
                                     ctx.fill();
                                     ctx.restore();
 
@@ -767,19 +866,32 @@ const GameBoard = ({
                                         const x = Math.sin(seed) * 10000;
                                         return x - Math.floor(x);
                                     };
-                                    let patternSeed = entity.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + timeBucket;
+                                    let patternSeed =
+                                        entity.id
+                                            .split('')
+                                            .reduce((acc, char) => acc + char.charCodeAt(0), 0) +
+                                        timeBucket;
 
                                     for (let i = 0; i < 8; i++) {
                                         const r = getSeededRandom(patternSeed++) * arcRange;
-                                        const theta = centerAngle + (getSeededRandom(patternSeed++) - 0.5) * arcWidth;
+                                        const theta =
+                                            centerAngle +
+                                            (getSeededRandom(patternSeed++) - 0.5) * arcWidth;
                                         const ex = entity.x + Math.cos(theta) * r;
                                         const ey = entity.y + Math.sin(theta) * r;
                                         const eSize = 4 + getSeededRandom(patternSeed++) * 8;
 
                                         ctx.beginPath();
                                         ctx.arc(ex, ey, eSize, 0, Math.PI * 2);
-                                        const colorIdx = Math.floor(getSeededRandom(patternSeed++) * 3);
-                                        ctx.fillStyle = colorIdx === 0 ? '#cc6655' : (colorIdx === 1 ? '#ccaa66' : '#cccc77');
+                                        const colorIdx = Math.floor(
+                                            getSeededRandom(patternSeed++) * 3
+                                        );
+                                        ctx.fillStyle =
+                                            colorIdx === 0
+                                                ? '#cc6655'
+                                                : colorIdx === 1
+                                                  ? '#ccaa66'
+                                                  : '#cccc77';
                                         ctx.shadowBlur = 5;
                                         ctx.shadowColor = '#884433';
                                         ctx.fill();
@@ -801,20 +913,27 @@ const GameBoard = ({
                                 ctx.translate(entity.x, entity.y);
                                 const time = Date.now();
 
-                                const remainingTurns = (entity.detonationTurn || 0) - gameState.turn;
+                                const remainingTurns =
+                                    (entity.detonationTurn || 0) - gameState.turn;
                                 const isDetonating = remainingTurns <= 0;
                                 const isCritical = remainingTurns <= 1;
 
                                 // Pulse math
-                                const pulseSpeed = isDetonating ? 50 : (isCritical ? 150 : 300);
+                                const pulseSpeed = isDetonating ? 50 : isCritical ? 150 : 300;
                                 const pulseFactor = Math.sin(time / pulseSpeed);
                                 const pulseScale = 1 + pulseFactor * (isDetonating ? 0.25 : 0.1);
 
                                 // 1. Pulsing Outer Aura (Glow)
                                 ctx.save();
-                                const auraAlpha = isDetonating ? 0.4 + (pulseFactor + 1) * 0.2 : 0.15 + (pulseFactor + 1) * 0.15;
+                                const auraAlpha = isDetonating
+                                    ? 0.4 + (pulseFactor + 1) * 0.2
+                                    : 0.15 + (pulseFactor + 1) * 0.15;
                                 ctx.globalAlpha = auraAlpha;
-                                ctx.fillStyle = isDetonating ? '#ff0000' : (isCritical ? '#ff3300' : '#f1c40f');
+                                ctx.fillStyle = isDetonating
+                                    ? '#ff0000'
+                                    : isCritical
+                                      ? '#ff3300'
+                                      : '#f1c40f';
                                 ctx.beginPath();
                                 ctx.arc(0, 0, radius * 2.2 * pulseScale, 0, Math.PI * 2);
                                 ctx.fill();
@@ -824,10 +943,17 @@ const GameBoard = ({
                                 ctx.beginPath();
                                 for (let i = 0; i < 6; i++) {
                                     const a = (i * 2 * Math.PI) / 6;
-                                    ctx.lineTo(radius * Math.cos(a) * pulseScale, radius * Math.sin(a) * pulseScale);
+                                    ctx.lineTo(
+                                        radius * Math.cos(a) * pulseScale,
+                                        radius * Math.sin(a) * pulseScale
+                                    );
                                 }
                                 ctx.closePath();
-                                ctx.fillStyle = isDetonating ? '#8b0000' : (isCritical ? '#e74c3c' : '#f39c12');
+                                ctx.fillStyle = isDetonating
+                                    ? '#8b0000'
+                                    : isCritical
+                                      ? '#e74c3c'
+                                      : '#f39c12';
                                 ctx.fill();
                                 ctx.strokeStyle = '#fff';
                                 ctx.lineWidth = isDetonating ? 4 : 2;
@@ -860,7 +986,7 @@ const GameBoard = ({
                                 ctx.shadowBlur = 10;
                                 ctx.shadowColor = '#000';
                                 if (isDetonating) {
-                                    ctx.fillText("CRITICAL", 0, 0);
+                                    ctx.fillText('CRITICAL', 0, 0);
                                 } else if (remainingTurns > 0) {
                                     ctx.fillText(remainingTurns.toString(), 0, 0);
                                 }
@@ -873,7 +999,13 @@ const GameBoard = ({
                                     ctx.strokeStyle = 'rgba(255, 50, 50, 0.4)';
                                     ctx.lineWidth = 2;
                                     ctx.beginPath();
-                                    ctx.arc(entity.x, entity.y, ENTITY_STATS.NUKE.radiusFull, 0, Math.PI * 2);
+                                    ctx.arc(
+                                        entity.x,
+                                        entity.y,
+                                        ENTITY_STATS.NUKE.radiusFull,
+                                        0,
+                                        Math.PI * 2
+                                    );
                                     ctx.stroke();
                                     ctx.restore();
                                 }
@@ -903,19 +1035,37 @@ const GameBoard = ({
                             ctx.lineWidth = 3;
                             ctx.stroke();
 
-                            if (launchMode && entity.type === 'HUB' && entity.owner === myPlayerId && !displayAsGhost) {
+                            if (
+                                launchMode &&
+                                entity.type === 'HUB' &&
+                                entity.owner === myPlayerId &&
+                                !displayAsGhost
+                            ) {
                                 ctx.save();
                                 ctx.setLineDash([8, 12]);
                                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
                                 ctx.lineWidth = 2;
 
                                 // Use toroidal distance for robust highlight detection
-                                const d = getToroidalDist(entity.x, entity.y, mousePos.x, mousePos.y, mapW, mapH);
-                                const ringHighlight = shouldHighlightRing(d, SLING_RING_RADIUS, isAiming && entity.id === selectedHubId);
+                                const d = getToroidalDist(
+                                    entity.x,
+                                    entity.y,
+                                    mousePos.x,
+                                    mousePos.y,
+                                    mapW,
+                                    mapH
+                                );
+                                const ringHighlight = shouldHighlightRing(
+                                    d,
+                                    SLING_RING_RADIUS,
+                                    isAiming && entity.id === selectedHubId
+                                );
 
                                 if (ringHighlight) {
                                     const isActive = isAiming && entity.id === selectedHubId;
-                                    ctx.strokeStyle = isActive ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.7)';
+                                    ctx.strokeStyle = isActive
+                                        ? 'rgba(255, 255, 255, 0.95)'
+                                        : 'rgba(255, 255, 255, 0.7)';
                                     ctx.shadowBlur = isActive ? 15 : 10;
                                     ctx.shadowColor = '#fff';
                                 }
@@ -929,23 +1079,36 @@ const GameBoard = ({
                         ctx.restore();
 
                         // Draw label if not a projectile or beam
-                        const isTransEntity = (entity.type === 'PROJECTILE') || (ENTITY_STATS[entity.itemType || entity.type]?.damageFull !== undefined) || entity.type === 'LASER_BEAM';
+                        const isTransEntity =
+                            entity.type === 'PROJECTILE' ||
+                            ENTITY_STATS[entity.itemType || entity.type]?.damageFull !==
+                                undefined ||
+                            entity.type === 'LASER_BEAM';
                         if (!isTransEntity) {
                             ctx.save();
                             ctx.globalAlpha = displayAsGhost ? 0.3 : 0.8;
                             ctx.fillStyle = '#fff';
                             ctx.font = displayAsGhost ? 'italic 10px Arial' : '10px Arial';
                             ctx.textAlign = 'center';
-                            const labelOffset = ENTITY_STATS[entity.itemType || entity.type]?.labelOffset || 35;
-                            ctx.fillText(displayAsGhost ? `Ghost ${entity.type}` : entity.type, entity.x, entity.y + labelOffset);
+                            const labelOffset =
+                                ENTITY_STATS[entity.itemType || entity.type]?.labelOffset || 35;
+                            ctx.fillText(
+                                displayAsGhost ? `Ghost ${entity.type}` : entity.type,
+                                entity.x,
+                                entity.y + labelOffset
+                            );
                             ctx.restore();
 
-                            if (entity.fuel !== undefined && entity.owner === myPlayerId && !displayAsGhost) {
+                            if (
+                                entity.fuel !== undefined &&
+                                entity.owner === myPlayerId &&
+                                !displayAsGhost
+                            ) {
                                 const dotYOffset = entity.type === 'HUB' ? -15 : -10;
                                 const dotXOffset = entity.type === 'HUB' ? 18 : 12;
                                 for (let i = 0; i < entity.maxFuel; i++) {
                                     ctx.beginPath();
-                                    const dotY = entity.y + dotYOffset + (i * 8);
+                                    const dotY = entity.y + dotYOffset + i * 8;
                                     ctx.arc(entity.x + dotXOffset, dotY, 3, 0, Math.PI * 2);
                                     ctx.fillStyle = i < entity.fuel ? '#2ecc71' : '#444';
                                     ctx.fill();
@@ -961,7 +1124,14 @@ const GameBoard = ({
                         const hub = visualEntities.current[selectedHubId];
                         if (hub) {
                             // Calculate shortest vector once for world-wrap aware aiming
-                            const { dx: shortestDx, dy: shortestDy } = getToroidalDistVector(hub.x, hub.y, mousePos.x, mousePos.y, mapW, mapH);
+                            const { dx: shortestDx, dy: shortestDy } = getToroidalDistVector(
+                                hub.x,
+                                hub.y,
+                                mousePos.x,
+                                mousePos.y,
+                                mapW,
+                                mapH
+                            );
 
                             let dx = shortestDx;
                             let dy = shortestDy;
@@ -984,7 +1154,7 @@ const GameBoard = ({
                             ctx.stroke();
                             ctx.setLineDash([]);
 
-                            const arrowLen = HUB_RADIUS * (1 + (ratio * 0.5));
+                            const arrowLen = HUB_RADIUS * (1 + ratio * 0.5);
                             const arrowX = hub.x + Math.cos(launchAngle) * arrowLen;
                             const arrowY = hub.y + Math.sin(launchAngle) * arrowLen;
 
@@ -1000,7 +1170,9 @@ const GameBoard = ({
                             ctx.rotate(launchAngle);
                             ctx.fillStyle = strengthColor;
                             ctx.beginPath();
-                            ctx.moveTo(0, 0); ctx.lineTo(-12, -7); ctx.lineTo(-12, 7);
+                            ctx.moveTo(0, 0);
+                            ctx.lineTo(-12, -7);
+                            ctx.lineTo(-12, 7);
                             ctx.closePath();
                             ctx.fill();
                             ctx.restore();
@@ -1013,12 +1185,22 @@ const GameBoard = ({
                                 }
                                 const ldx = Math.cos(launchAngle) * launchDistance;
                                 const ldy = Math.sin(launchAngle) * launchDistance;
-                                const targetX = ((hub.x + ldx % mapW) + mapW) % mapW;
-                                const targetY = ((hub.y + ldy % mapH) + mapH) % mapH;
+                                const targetX = (hub.x + (ldx % mapW) + mapW) % mapW;
+                                const targetY = (hub.y + (ldy % mapH) + mapH) % mapH;
 
                                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
                                 ctx.setLineDash([2, 5]);
-                                drawToroidalLine(ctx, hub.x, hub.y, targetX, targetY, mapW, mapH, ldx, ldy);
+                                drawToroidalLine(
+                                    ctx,
+                                    hub.x,
+                                    hub.y,
+                                    targetX,
+                                    targetY,
+                                    mapW,
+                                    mapH,
+                                    ldx,
+                                    ldy
+                                );
                                 ctx.setLineDash([]);
                                 ctx.beginPath();
                                 ctx.arc(targetX, targetY, stats?.size || 12, 0, Math.PI * 2);
@@ -1030,13 +1212,23 @@ const GameBoard = ({
                                     ctx.save();
 
                                     const vStats = VISUAL_STATS[selectedItemType];
-                                    const previewColor = selectedItemType === 'NUKE' ? 'rgba(255, 0, 0, 0.7)' :
-                                        (selectedItemType === 'RECLAIMER' ? 'rgba(0, 255, 255, 0.7)' :
-                                            (vStats?.color ? `${vStats.color}b3` : 'rgba(255, 255, 255, 0.5)'));
+                                    const previewColor =
+                                        selectedItemType === 'NUKE'
+                                            ? 'rgba(255, 0, 0, 0.7)'
+                                            : selectedItemType === 'RECLAIMER'
+                                              ? 'rgba(0, 255, 255, 0.7)'
+                                              : vStats?.color
+                                                ? `${vStats.color}b3`
+                                                : 'rgba(255, 255, 255, 0.5)';
 
                                     // 1. Full Damage Inner Ring (Solid-ish)
                                     ctx.strokeStyle = previewColor;
-                                    ctx.lineWidth = (selectedItemType === 'NUKE' || selectedItemType === 'RECLAIMER' || selectedItemType === 'OVERLOAD') ? 3 : 2;
+                                    ctx.lineWidth =
+                                        selectedItemType === 'NUKE' ||
+                                        selectedItemType === 'RECLAIMER' ||
+                                        selectedItemType === 'OVERLOAD'
+                                            ? 3
+                                            : 2;
                                     ctx.setLineDash([10, 5]);
                                     ctx.beginPath();
                                     ctx.arc(targetX, targetY, explosionRadius, 0, Math.PI * 2);
@@ -1044,7 +1236,10 @@ const GameBoard = ({
 
                                     // 2. Splash Damage Outer Ring (Dashed/Subtle)
                                     if (stats.radiusHalf && stats.radiusHalf > stats.radiusFull) {
-                                        ctx.strokeStyle = selectedItemType === 'NUKE' ? 'rgba(255, 140, 0, 0.5)' : 'rgba(255, 255, 255, 0.3)';
+                                        ctx.strokeStyle =
+                                            selectedItemType === 'NUKE'
+                                                ? 'rgba(255, 140, 0, 0.5)'
+                                                : 'rgba(255, 255, 255, 0.3)';
                                         ctx.lineWidth = 1.5;
                                         ctx.setLineDash([5, 15]);
                                         ctx.beginPath();
@@ -1055,12 +1250,18 @@ const GameBoard = ({
                                     ctx.restore();
                                 }
 
-
                                 // Napalm AOE Preview during aiming
                                 if (selectedItemType === 'NAPALM') {
                                     ctx.save();
                                     const nStats = ENTITY_STATS.NAPALM_FIRE;
-                                    const { dx, dy } = getToroidalDistVector(hub.x, hub.y, targetX, targetY, mapW, mapH);
+                                    const { dx, dy } = getToroidalDistVector(
+                                        hub.x,
+                                        hub.y,
+                                        targetX,
+                                        targetY,
+                                        mapW,
+                                        mapH
+                                    );
                                     const angle = Math.atan2(dy, dx);
                                     const radius = nStats.width / 2;
 
@@ -1090,7 +1291,7 @@ const GameBoard = ({
                             const angleRad = (action.angle * Math.PI) / 180;
                             const ratio = action.distance / maxPullDistance;
                             const strengthColor = getStrengthColor(ratio);
-                            const arrowLen = HUB_RADIUS * (1 + (ratio * 0.5));
+                            const arrowLen = HUB_RADIUS * (1 + ratio * 0.5);
                             const ax = hub.x + Math.cos(angleRad) * arrowLen;
                             const ay = hub.y + Math.sin(angleRad) * arrowLen;
 
@@ -1098,18 +1299,29 @@ const GameBoard = ({
                             ctx.lineWidth = 4;
                             ctx.globalAlpha = 0.6;
                             ctx.beginPath();
-                            ctx.moveTo(hub.x, hub.y); ctx.lineTo(ax, ay);
+                            ctx.moveTo(hub.x, hub.y);
+                            ctx.lineTo(ax, ay);
                             ctx.stroke();
                             ctx.globalAlpha = 1.0;
 
                             ctx.fillStyle = strengthColor;
                             ctx.beginPath();
-                            ctx.arc(ax + Math.cos(angleRad) * 15, ay + Math.sin(angleRad) * 15, 10, 0, Math.PI * 2);
+                            ctx.arc(
+                                ax + Math.cos(angleRad) * 15,
+                                ay + Math.sin(angleRad) * 15,
+                                10,
+                                0,
+                                Math.PI * 2
+                            );
                             ctx.fill();
                             ctx.fillStyle = '#fff';
                             ctx.font = 'bold 10px Arial';
                             ctx.textAlign = 'center';
-                            ctx.fillText((index + 1).toString(), ax + Math.cos(angleRad) * 15, ay + Math.sin(angleRad) * 15 + 4);
+                            ctx.fillText(
+                                (index + 1).toString(),
+                                ax + Math.cos(angleRad) * 15,
+                                ay + Math.sin(angleRad) * 15 + 4
+                            );
                         }
                     });
 
@@ -1146,9 +1358,10 @@ const GameBoard = ({
                         fctx.save();
                         fctx.translate(ox, oy);
 
-                        gameState.entities.forEach(e => {
+                        gameState.entities.forEach((e) => {
                             const stats = ENTITY_STATS[e.itemType || e.type];
-                            const isOwnProjectile = stats?.damageFull !== undefined && e.owner === myPlayerId;
+                            const isOwnProjectile =
+                                stats?.damageFull !== undefined && e.owner === myPlayerId;
                             const isOwnEntity = e.owner === myPlayerId;
 
                             if (isOwnEntity || isOwnProjectile) {
@@ -1159,9 +1372,16 @@ const GameBoard = ({
 
                                     if (e.itemType === 'HOMING_MISSILE') {
                                         const rad = ((viz.currentAngle || 0) * Math.PI) / 180;
-                                        const halfCone = (stats.searchCone || 60) * (Math.PI / 180) / 2;
+                                        const halfCone =
+                                            ((stats.searchCone || 60) * (Math.PI / 180)) / 2;
                                         fctx.moveTo(viz.x, viz.y);
-                                        fctx.arc(viz.x, viz.y, radius, rad - halfCone, rad + halfCone);
+                                        fctx.arc(
+                                            viz.x,
+                                            viz.y,
+                                            radius,
+                                            rad - halfCone,
+                                            rad + halfCone
+                                        );
                                     } else {
                                         fctx.arc(viz.x, viz.y, radius, 0, Math.PI * 2);
                                     }
@@ -1188,40 +1408,56 @@ const GameBoard = ({
 
         animationFrameId = requestAnimationFrame(updateAndDraw);
         return () => cancelAnimationFrame(animationFrameId);
-    }, [gameState, launchMode, isAiming, selectedHubId, mousePos, committedActions, showDebugPreview, maxPullDistance, myPlayerId, cameraOffset, HUB_RADIUS, SLING_RING_RADIUS]);
+    }, [
+        gameState,
+        launchMode,
+        isAiming,
+        selectedHubId,
+        selectedItemType,
+        mousePos,
+        committedActions,
+        showDebugPreview,
+        maxPullDistance,
+        myPlayerId,
+        cameraOffset,
+        HUB_RADIUS,
+        SLING_RING_RADIUS
+    ]);
 
     // Helper: Calculate game coordinates from mouse event
-    const getGameCoords = useCallback((e) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return { x: 0, y: 0 };
+    const getGameCoords = useCallback(
+        (e) => {
+            const canvas = canvasRef.current;
+            if (!canvas) return { x: 0, y: 0 };
 
-        const rect = canvas.getBoundingClientRect();
-        const cw = canvas.width;
-        const ch = canvas.height;
-        const rw = rect.width;
-        const rh = rect.height;
-        const canvasRatio = cw / ch;
-        const rectRatio = rw / rh;
+            const rect = canvas.getBoundingClientRect();
+            const cw = canvas.width;
+            const ch = canvas.height;
+            const rw = rect.width;
+            const rh = rect.height;
+            const canvasRatio = cw / ch;
+            const rectRatio = rw / rh;
 
-        let scale, offsetX, offsetY;
-        if (rectRatio > canvasRatio) {
-            scale = ch / rh;
-            offsetX = (rw - (cw / scale)) / 2;
-            offsetY = 0;
-        } else {
-            scale = cw / rw;
-            offsetX = 0;
-            offsetY = (rh - (ch / scale)) / 2;
-        }
+            let scale, offsetX, offsetY;
+            if (rectRatio > canvasRatio) {
+                scale = ch / rh;
+                offsetX = (rw - cw / scale) / 2;
+                offsetY = 0;
+            } else {
+                scale = cw / rw;
+                offsetX = 0;
+                offsetY = (rh - ch / scale) / 2;
+            }
 
-
-        const x = (((e.clientX - rect.left) - offsetX) * scale) / ZOOM_LEVEL + cameraOffset.x;
-        const y = (((e.clientY - rect.top) - offsetY) * scale) / ZOOM_LEVEL + cameraOffset.y;
-        return {
-            x: ((x % gameState.map.width) + gameState.map.width) % gameState.map.width,
-            y: ((y % gameState.map.height) + gameState.map.height) % gameState.map.height
-        };
-    }, [cameraOffset, gameState.map.width, gameState.map.height]);
+            const x = ((e.clientX - rect.left - offsetX) * scale) / ZOOM_LEVEL + cameraOffset.x;
+            const y = ((e.clientY - rect.top - offsetY) * scale) / ZOOM_LEVEL + cameraOffset.y;
+            return {
+                x: ((x % gameState.map.width) + gameState.map.width) % gameState.map.width,
+                y: ((y % gameState.map.height) + gameState.map.height) % gameState.map.height
+            };
+        },
+        [cameraOffset, gameState.map.width, gameState.map.height]
+    );
 
     // Effect: Global Mouse Listeners for Panning & Aiming
     useEffect(() => {
@@ -1242,9 +1478,17 @@ const GameBoard = ({
                 const rect = canvas.getBoundingClientRect();
                 const scale = canvas.width / rect.width;
 
-                setCameraOffset(prev => ({
-                    x: ((prev.x - (dx * scale / ZOOM_LEVEL) % gameState.map.width) + gameState.map.width) % gameState.map.width,
-                    y: ((prev.y - (dy * scale / ZOOM_LEVEL) % gameState.map.height) + gameState.map.height) % gameState.map.height
+                setCameraOffset((prev) => ({
+                    x:
+                        (prev.x -
+                            (((dx * scale) / ZOOM_LEVEL) % gameState.map.width) +
+                            gameState.map.width) %
+                        gameState.map.width,
+                    y:
+                        (prev.y -
+                            (((dy * scale) / ZOOM_LEVEL) % gameState.map.height) +
+                            gameState.map.height) %
+                        gameState.map.height
                 }));
 
                 setPanStart({ x: e.clientX, y: e.clientY });
@@ -1266,16 +1510,32 @@ const GameBoard = ({
             window.removeEventListener('mousemove', handleGlobalMouseMove);
             window.removeEventListener('mouseup', handleGlobalMouseUp);
         };
-    }, [isAiming, isPanning, panStart, gameState.map.width, gameState.map.height, getGameCoords, onAimEnd, onAimUpdate]);
+    }, [
+        isAiming,
+        isPanning,
+        panStart,
+        gameState.map.width,
+        gameState.map.height,
+        getGameCoords,
+        onAimEnd,
+        onAimUpdate
+    ]);
 
     const handleMouseDown = (e) => {
         const { x, y } = getGameCoords(e);
 
         // 1. If launchMode is active, ONLY allow interaction with the Sling Ring
         if (launchMode && selectedHubId) {
-            const currentHub = gameState.entities.find(e => e.id === selectedHubId);
+            const currentHub = gameState.entities.find((e) => e.id === selectedHubId);
             if (currentHub && currentHub.owner === myPlayerId) {
-                const d = getToroidalDist(currentHub.x, currentHub.y, x, y, gameState.map.width, gameState.map.height);
+                const d = getToroidalDist(
+                    currentHub.x,
+                    currentHub.y,
+                    x,
+                    y,
+                    gameState.map.width,
+                    gameState.map.height
+                );
                 const isInsideRing = d < SLING_RING_RADIUS;
 
                 if (isInsideRing) {
@@ -1290,9 +1550,16 @@ const GameBoard = ({
 
         // 2. Normal mode: Check for DIRECT click on any Hub (Selection)
         // Shortest path aware selection
-        const clickedHub = gameState.entities.find(ent => {
+        const clickedHub = gameState.entities.find((ent) => {
             if (ent.type !== 'HUB') return false;
-            const d = getToroidalDist(ent.x, ent.y, x, y, gameState.map.width, gameState.map.height);
+            const d = getToroidalDist(
+                ent.x,
+                ent.y,
+                x,
+                y,
+                gameState.map.width,
+                gameState.map.height
+            );
             return d < HUB_RADIUS;
         });
 
@@ -1312,7 +1579,15 @@ const GameBoard = ({
     };
 
     return (
-        <div className="game-container" style={{ background: '#111', border: '1px solid #333', borderRadius: '8px', overflow: 'hidden' }}>
+        <div
+            className="game-container"
+            style={{
+                background: '#111',
+                border: '1px solid #333',
+                borderRadius: '8px',
+                overflow: 'hidden'
+            }}
+        >
             <canvas
                 ref={canvasRef}
                 width={gameState.map.width}

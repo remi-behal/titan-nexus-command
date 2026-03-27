@@ -1,4 +1,3 @@
-
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { io as Client } from 'socket.io-client';
 import { spawn } from 'child_process';
@@ -30,7 +29,9 @@ describe('Server - Resolution Race Guard', () => {
 
         await new Promise((resolve) => {
             let authenticated = 0;
-            const onAuth = () => { if (++authenticated === 2) resolve(); };
+            const onAuth = () => {
+                if (++authenticated === 2) resolve();
+            };
             client1.on('playerAssignment', onAuth);
             client2.on('playerAssignment', onAuth);
 
@@ -43,7 +44,7 @@ describe('Server - Resolution Race Guard', () => {
         client1?.disconnect();
         client2?.disconnect();
         serverProcess?.kill('SIGKILL');
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 200));
     });
 
     it('should ignore submissions sent DURING resolution', async () => {
@@ -58,13 +59,12 @@ describe('Server - Resolution Race Guard', () => {
         });
 
         while (!isResolving) {
-            await new Promise(r => setTimeout(r, 100));
+            await new Promise((r) => setTimeout(r, 100));
         }
 
         // 3. Send a "Malicious" submission while resolution is active
         // This simulates the user releasing a drag just after the timer expires
-        client1.once('syncStatus', () => {
-        });
+        client1.once('syncStatus', () => {});
 
         // We want to verify that Turn 2 starts with UNLOCKED status,
         // even if we send a 'submitActions' right now.
@@ -77,14 +77,14 @@ describe('Server - Resolution Race Guard', () => {
         });
 
         while (!isFinished) {
-            await new Promise(r => setTimeout(r, 100));
+            await new Promise((r) => setTimeout(r, 100));
         }
 
         // 5. Final Check: SyncStatus should show player1 UNLOCKED for Turn 2
         let finalLockedStatus = null;
 
         // Use a wrapper to wait for the message
-        await new Promise(resolve => {
+        await new Promise((resolve) => {
             client1.on('syncStatus', (status) => {
                 finalLockedStatus = status.lockedIn;
                 resolve();

@@ -13,9 +13,19 @@ describe('Overload Weapon', () => {
     });
 
     it('should damage Hub and its immediate children when Hub is hit directly', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.isStarter);
-        const child1 = game.addEntity({ type: 'HUB', owner: 'player1', x: p1Hub.x + 100, y: p1Hub.y });
-        const grandchild = game.addEntity({ type: 'HUB', owner: 'player1', x: child1.x + 100, y: child1.y });
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.isStarter);
+        const child1 = game.addEntity({
+            type: 'HUB',
+            owner: 'player1',
+            x: p1Hub.x + 100,
+            y: p1Hub.y
+        });
+        const grandchild = game.addEntity({
+            type: 'HUB',
+            owner: 'player1',
+            x: child1.x + 100,
+            y: child1.y
+        });
 
         game.addLink(p1Hub.id, child1.id, 'player1');
         game.addLink(child1.id, grandchild.id, 'player1');
@@ -39,8 +49,13 @@ describe('Overload Weapon', () => {
     });
 
     it('should damage only the downstream structure when a link is hit', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.isStarter);
-        const child1 = game.addEntity({ type: 'HUB', owner: 'player1', x: p1Hub.x + 100, y: p1Hub.y });
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.isStarter);
+        const child1 = game.addEntity({
+            type: 'HUB',
+            owner: 'player1',
+            x: p1Hub.x + 100,
+            y: p1Hub.y
+        });
         game.addLink(p1Hub.id, child1.id, 'player1');
 
         // Hit the midpoint of the link
@@ -55,8 +70,13 @@ describe('Overload Weapon', () => {
     });
 
     it('should limit damage to 1 HP per round even if multiple parts are hit', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.isStarter);
-        const child1 = game.addEntity({ type: 'HUB', owner: 'player1', x: p1Hub.x + 100, y: p1Hub.y });
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.isStarter);
+        const child1 = game.addEntity({
+            type: 'HUB',
+            owner: 'player1',
+            x: p1Hub.x + 100,
+            y: p1Hub.y
+        });
         game.addLink(p1Hub.id, child1.id, 'player1');
 
         const stats = ENTITY_STATS.OVERLOAD;
@@ -72,9 +92,19 @@ describe('Overload Weapon', () => {
     });
 
     it('should correctly propagate multi-downstream hits', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.isStarter);
-        const child1 = game.addEntity({ type: 'HUB', owner: 'player1', x: p1Hub.x + 100, y: p1Hub.y - 50 });
-        const child2 = game.addEntity({ type: 'HUB', owner: 'player1', x: p1Hub.x + 100, y: p1Hub.y + 50 });
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.isStarter);
+        const child1 = game.addEntity({
+            type: 'HUB',
+            owner: 'player1',
+            x: p1Hub.x + 100,
+            y: p1Hub.y - 50
+        });
+        const child2 = game.addEntity({
+            type: 'HUB',
+            owner: 'player1',
+            x: p1Hub.x + 100,
+            y: p1Hub.y + 50
+        });
 
         game.addLink(p1Hub.id, child1.id, 'player1');
         game.addLink(p1Hub.id, child2.id, 'player1');
@@ -87,24 +117,28 @@ describe('Overload Weapon', () => {
     });
 
     it('should not land as a structure or create a link upon resolution, but still damage targets', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.isStarter);
-        const p2Hub = game.entities.find(e => e.owner === 'player2' && e.isStarter);
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.isStarter);
+        const p2Hub = game.entities.find((e) => e.owner === 'player2' && e.isStarter);
 
         // Setup: launcher at (0, 100), target at (138, 100)
         // With pull distance 100, launch distance is ~137.9
-        p1Hub.x = 0; p1Hub.y = 100;
-        p2Hub.x = 138; p2Hub.y = 100;
+        p1Hub.x = 0;
+        p1Hub.y = 100;
+        p2Hub.x = 138;
+        p2Hub.y = 100;
 
         // Stage an OVERLOAD launch
         const actions = {
-            player1: [{
-                playerId: 'player1',
-                type: 'LAUNCH',
-                itemType: 'OVERLOAD',
-                sourceId: p1Hub.id,
-                angle: 0,
-                distance: 100
-            }]
+            player1: [
+                {
+                    playerId: 'player1',
+                    type: 'LAUNCH',
+                    itemType: 'OVERLOAD',
+                    sourceId: p1Hub.id,
+                    angle: 0,
+                    distance: 100
+                }
+            ]
         };
 
         // Before resolution
@@ -119,16 +153,14 @@ describe('Overload Weapon', () => {
         expect(p2Hub.hp).toBe(ENTITY_STATS.HUB.hp - 1);
 
         // 2. There should NOT be a new entity of type OVERLOAD
-        const overloadEntities = game.entities.filter(e => e.type === 'OVERLOAD');
+        const overloadEntities = game.entities.filter((e) => e.type === 'OVERLOAD');
         expect(overloadEntities.length).toBe(0);
 
         // 3. There should NOT be a new link
         expect(game.links.length).toBe(initialLinkCount);
 
         // 4. Hubs count should stay the same (only original ones)
-        const hubs = game.entities.filter(e => e.type === 'HUB');
+        const hubs = game.entities.filter((e) => e.type === 'HUB');
         expect(hubs.length).toBe(initialEntityCount);
     });
 });
-
-

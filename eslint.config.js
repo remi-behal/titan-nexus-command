@@ -19,13 +19,16 @@ export default defineConfig([
             }
         },
         rules: {
-            'no-unused-vars': ['error', {
-                varsIgnorePattern: '^[A-Z_]',
-                argsIgnorePattern: '^_'
-            }],
-            'indent': ['error', 4],
-            'quotes': ['error', 'single'],
-            'semi': ['error', 'always']
+            'no-unused-vars': [
+                'error',
+                {
+                    varsIgnorePattern: '^[A-Z_]',
+                    argsIgnorePattern: '^_'
+                }
+            ],
+            indent: ['error', 4],
+            quotes: ['error', 'single'],
+            semi: ['error', 'always']
         }
     },
     {
@@ -37,10 +40,7 @@ export default defineConfig([
         },
         rules: {
             ...reactHooks.configs.recommended.rules,
-            'react-refresh/only-export-components': [
-                'warn',
-                { allowConstantExport: true }
-            ]
+            'react-refresh/only-export-components': ['warn', { allowConstantExport: true }]
         }
     }
 ]);

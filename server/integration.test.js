@@ -18,7 +18,10 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
 
         // Wait for server to listen
         await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Server failed to start in time')), 5000);
+            const timeout = setTimeout(
+                () => reject(new Error('Server failed to start in time')),
+                5000
+            );
             serverProcess.stdout.on('data', (data) => {
                 if (data.toString().includes('SERVER RUNNING')) {
                     clearTimeout(timeout);
@@ -35,8 +38,13 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
 
         await new Promise((resolve) => {
             let authenticated = 0;
-            const onAuth1 = (id) => { p1Id = id; if (++authenticated === 2) resolve(); };
-            const onAuth2 = (_id) => { if (++authenticated === 2) resolve(); };
+            const onAuth1 = (id) => {
+                p1Id = id;
+                if (++authenticated === 2) resolve();
+            };
+            const onAuth2 = (_id) => {
+                if (++authenticated === 2) resolve();
+            };
             client1.on('playerAssignment', onAuth1);
             client2.on('playerAssignment', onAuth2);
 
@@ -49,19 +57,19 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
         client1?.disconnect();
         client2?.disconnect();
         serverProcess?.kill('SIGKILL');
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 200));
     });
 
     it('should prevent double resolution if multiple submit events are sent rapidly', async () => {
         // Wait for server to process auth and stabilize
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         // Setup state to track double turn
         let initialTurn = 0;
 
         // Request initial state
-        const statePromise = new Promise(resolve => {
-            client1.once('gameStateUpdate', state => {
+        const statePromise = new Promise((resolve) => {
+            client1.once('gameStateUpdate', (state) => {
                 initialTurn = state.turn;
                 resolve(state);
             });
@@ -71,28 +79,30 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
         const state = await statePromise;
 
         // Find player1's HUB
-        const p1Hub = state.entities.find(e => e.owner === p1Id && e.type === 'HUB');
+        const p1Hub = state.entities.find((e) => e.owner === p1Id && e.type === 'HUB');
 
         // Create a basic valid action (e.g. fire a weapon)
-        const actions = [{
-            playerId: p1Id,
-            type: 'LAUNCH',
-            itemType: 'WEAPON', // Costs 10
-            sourceId: p1Hub.id,
-            sourceX: p1Hub.x,
-            sourceY: p1Hub.y,
-            angle: 0,
-            distance: 100
-        }];
+        const actions = [
+            {
+                playerId: p1Id,
+                type: 'LAUNCH',
+                itemType: 'WEAPON', // Costs 10
+                sourceId: p1Hub.id,
+                sourceX: p1Hub.x,
+                sourceY: p1Hub.y,
+                angle: 0,
+                distance: 100
+            }
+        ];
 
-        // We want to trigger race condition: 
+        // We want to trigger race condition:
         // Sync actions
         client1.emit('syncActions', actions);
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
 
         // Let's listen for how many resolutions are started
         let resolutionsStarted = 0;
-        client1.on('resolutionStatus', status => {
+        client1.on('resolutionStatus', (status) => {
             if (status.active) resolutionsStarted++;
         });
 
@@ -103,10 +113,10 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
         client2.emit('submitActions', []);
 
         // Wait for resolution full process
-        await new Promise(resolve => setTimeout(resolve, 2500));
+        await new Promise((resolve) => setTimeout(resolve, 2500));
 
         // Request final state
-        const finalState = await new Promise(resolve => {
+        const finalState = await new Promise((resolve) => {
             client1.once('gameStateUpdate', resolve);
             client1.emit('requestState');
         });

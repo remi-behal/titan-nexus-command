@@ -1,6 +1,6 @@
 /**
  * EntityStats.js
- * 
+ *
  * Centralized configuration for all entity stats in the game.
  * This includes HP, costs, fuel, range, and other balanced values.
  */
@@ -166,8 +166,8 @@ export const ENTITY_STATS = {
         vision: 100,
         size: 8,
         speed: SPEED_TIERS.NORMAL,
-        minRange: 200,            // Bug 1: Prevent self-hits
-        landAsStructure: false,   // Bug 2: Don't leave a shell entity
+        minRange: 200, // Bug 1: Prevent self-hits
+        landAsStructure: false, // Bug 2: Don't leave a shell entity
         deathEffect: 'DETONATE'
     },
     NAPALM_FIRE: {
@@ -182,7 +182,7 @@ export const ENTITY_STATS = {
     EXPLOSION_HAZARD: {
         radius: 200,
         damageTick: 1, // Damage taken by structures each round
-        hp: 9999,      // Immune to accidental deletion
+        hp: 9999, // Immune to accidental deletion
         isHazard: true,
         vision: 0
     },
@@ -216,12 +216,10 @@ export const ENTITY_STATS = {
         size: 20,
         detectionRange: 800,
         isInterceptable: false,
-        accuracyDeviationAngle: 10, // ±5 degrees 
+        accuracyDeviationAngle: 10, // ±5 degrees
         accuracyDeviationDistance: 0.1 // ±5% distance
     }
 };
-
-
 
 export const RESOURCE_NODE_STATS = {
     STANDARD: {
@@ -242,8 +240,8 @@ export const GLOBAL_STATS = {
     STARTING_ENERGY: 50,
     ENERGY_INCOME_PER_TURN: 10, // Switched to entity-based generation
     RESOURCE_CAPTURE_RADIUS: 30, // Distance to lock onto a node
-    LINK_WIDTH: 5,               // Visual thickness of tethers
-    LINK_ARROW_SIZE: 10,         // Size of direction indicator
+    LINK_WIDTH: 5, // Visual thickness of tethers
+    LINK_ARROW_SIZE: 10, // Size of direction indicator
 
     // Launch Physics
     MAX_PULL: 300,

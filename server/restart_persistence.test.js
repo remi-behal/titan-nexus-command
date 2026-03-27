@@ -30,15 +30,21 @@ describe('Match Restart Persistence & Auto-Reclaim', () => {
 
         await new Promise((resolve) => {
             let authenticated = 0;
-            const onAuth1 = (id) => { p1Id = id; if (++authenticated === 2) resolve(); };
-            const onAuth2 = (id) => { p2Id = id; if (++authenticated === 2) resolve(); };
+            const onAuth1 = (id) => {
+                p1Id = id;
+                if (++authenticated === 2) resolve();
+            };
+            const onAuth2 = (id) => {
+                p2Id = id;
+                if (++authenticated === 2) resolve();
+            };
             client1.on('playerAssignment', onAuth1);
             client2.on('playerAssignment', onAuth2);
 
             // Connect sequentially to ensure deterministic assignment
             (async () => {
                 client1.emit('authenticate', 'restart-token-p1');
-                await new Promise(r => setTimeout(r, 200));
+                await new Promise((r) => setTimeout(r, 200));
                 client2.emit('authenticate', 'restart-token-p2');
             })();
         });
@@ -48,7 +54,7 @@ describe('Match Restart Persistence & Auto-Reclaim', () => {
         client1?.disconnect();
         client2?.disconnect();
         serverProcess?.kill('SIGKILL');
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 200));
     });
 
     it('should automatically re-claim slots after a match restart', async () => {
@@ -64,8 +70,12 @@ describe('Match Restart Persistence & Auto-Reclaim', () => {
         });
 
         // Set up listeners for the new assignments
-        const nextAssignmentP1 = new Promise(resolve => client1.once('playerAssignment', resolve));
-        const nextAssignmentP2 = new Promise(resolve => client2.once('playerAssignment', resolve));
+        const nextAssignmentP1 = new Promise((resolve) =>
+            client1.once('playerAssignment', resolve)
+        );
+        const nextAssignmentP2 = new Promise((resolve) =>
+            client2.once('playerAssignment', resolve)
+        );
 
         // Trigger restart from client 1
         client1.emit('restartGame');

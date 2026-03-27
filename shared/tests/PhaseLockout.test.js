@@ -27,7 +27,7 @@ describe('GameState - Phase Lockout', () => {
         // In our implementation, resolveTurn sets phase=RESOLVING, then snapshots are taken.
         // The last snapshot takes a state after turn increment.
 
-        const midSnapshot = snapshots.find(s => s.type === 'ROUND_START' || s.type === 'ENERGY');
+        const midSnapshot = snapshots.find((s) => s.type === 'ROUND_START' || s.type === 'ENERGY');
         expect(midSnapshot.state.phase).toBe('RESOLVING');
     });
 });

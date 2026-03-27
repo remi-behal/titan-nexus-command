@@ -44,24 +44,24 @@ const playerIds = ['player1', 'player2'];
 game.initializeGame(playerIds);
 
 let playerAssignments = {
-    'player1': null,
-    'player2': null
+    player1: null,
+    player2: null
 };
 
 // Maps playerId -> current socketId
 let activeSockets = {
-    'player1': null,
-    'player2': null
+    player1: null,
+    player2: null
 };
 
 let turnActions = {
-    'player1': null,
-    'player2': null
+    player1: null,
+    player2: null
 };
 
 let lockedIn = {
-    'player1': false,
-    'player2': false
+    player1: false,
+    player2: false
 };
 
 const TURN_DURATION = parseInt(process.env.TURN_DURATION) || 30;
@@ -94,15 +94,15 @@ function tick() {
 }
 
 /**
- * Helper to emit the game state to all players, 
+ * Helper to emit the game state to all players,
  * correctly filtered by their individual Fog of War.
  */
 function emitFilteredState(state = null) {
     const baseState = state || game.getState();
 
-    io.sockets.sockets.forEach(socket => {
+    io.sockets.sockets.forEach((socket) => {
         // Find if this socket is one of the active player sockets
-        const playerId = Object.keys(activeSockets).find(pid => activeSockets[pid] === socket.id);
+        const playerId = Object.keys(activeSockets).find((pid) => activeSockets[pid] === socket.id);
 
         if (playerId) {
             safeEmit(socket, 'gameStateUpdate', game.getVisibleState(playerId, baseState));
@@ -112,8 +112,6 @@ function emitFilteredState(state = null) {
         }
     });
 }
-
-
 
 async function resolveTurn() {
     console.log(`[Server] resolveTurn called. Current Phase: ${game.phase}`);
@@ -159,10 +157,9 @@ async function resolveTurn() {
             }
 
             // Dynamic Delay: Sub-ticks are fast, phase/round transitions are slow
-            const delay = (snap.type === 'ROUND_SUB') ? 60 : 2000;
-            await new Promise(resolve => setTimeout(resolve, delay));
+            const delay = snap.type === 'ROUND_SUB' ? 60 : 2000;
+            await new Promise((resolve) => setTimeout(resolve, delay));
         }
-
     } catch (err) {
         console.error('CRITICAL ERROR during snapshot processing:', err);
     } finally {
@@ -201,7 +198,9 @@ io.on('connection', (socket) => {
         console.log(`Authenticating socket ${socket.id} with token ${token}`);
 
         // 1. Check if this token is already assigned to a player
-        assignedPlayerId = Object.keys(playerAssignments).find(pid => playerAssignments[pid] === token);
+        assignedPlayerId = Object.keys(playerAssignments).find(
+            (pid) => playerAssignments[pid] === token
+        );
 
         // 2. If not assigned, try to assign to a free slot
         if (!assignedPlayerId) {
@@ -225,14 +224,24 @@ io.on('connection', (socket) => {
         }
 
         // 4. Send initial state and sync status
-        safeEmit(socket, 'gameStateUpdate', assignedPlayerId && assignedPlayerId !== 'spectator' ?
-            game.getVisibleState(assignedPlayerId) : game.getState());
+        safeEmit(
+            socket,
+            'gameStateUpdate',
+            assignedPlayerId && assignedPlayerId !== 'spectator'
+                ? game.getVisibleState(assignedPlayerId)
+                : game.getState()
+        );
         safeEmit(io, 'syncStatus', { lockedIn });
     });
 
     socket.on('requestState', () => {
-        safeEmit(socket, 'gameStateUpdate', assignedPlayerId && assignedPlayerId !== 'spectator' ?
-            game.getVisibleState(assignedPlayerId) : game.getState());
+        safeEmit(
+            socket,
+            'gameStateUpdate',
+            assignedPlayerId && assignedPlayerId !== 'spectator'
+                ? game.getVisibleState(assignedPlayerId)
+                : game.getState()
+        );
         safeEmit(socket, 'syncStatus', { lockedIn });
     });
 
@@ -240,7 +249,7 @@ io.on('connection', (socket) => {
         if (game.phase !== 'PLANNING') return;
         if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
 
-        // RACE CONDITION FIX: If the player has already SUBMITTED, don't let 
+        // RACE CONDITION FIX: If the player has already SUBMITTED, don't let
         // trailing 'sync' packets overwrite the final action list.
         if (lockedIn[assignedPlayerId]) {
             console.log(`[Server] Ignored sync from ${assignedPlayerId} (Already Locked)`);
@@ -254,11 +263,11 @@ io.on('connection', (socket) => {
         const player = game.players[assignedPlayerId];
 
         for (const action of actions) {
-            const sourceEntity = game.entities.find(e => e.id === action.sourceId);
+            const sourceEntity = game.entities.find((e) => e.id === action.sourceId);
             if (!sourceEntity || sourceEntity.owner !== assignedPlayerId) continue;
 
             const cost = ENTITY_STATS[action.itemType]?.cost || 0;
-            if (player.energy < (totalCost + cost)) continue;
+            if (player.energy < totalCost + cost) continue;
 
             totalCost += cost;
             validatedActions.push({ ...action, playerId: assignedPlayerId });
@@ -281,16 +290,20 @@ io.on('connection', (socket) => {
 
         for (const action of actions) {
             // 1. Ownership Guard
-            const sourceEntity = game.entities.find(e => e.id === action.sourceId);
+            const sourceEntity = game.entities.find((e) => e.id === action.sourceId);
             if (!sourceEntity || sourceEntity.owner !== assignedPlayerId) {
-                console.warn(`Action REJECTED: Player ${assignedPlayerId} unauthorized source ${action.sourceId}`);
+                console.warn(
+                    `Action REJECTED: Player ${assignedPlayerId} unauthorized source ${action.sourceId}`
+                );
                 continue;
             }
 
             // 2. Continuous Energy Check
             const cost = ENTITY_STATS[action.itemType]?.cost || 0;
-            if (player.energy < (totalCost + cost)) {
-                console.warn(`Action REJECTED: Player ${assignedPlayerId} insufficient energy for full combo`);
+            if (player.energy < totalCost + cost) {
+                console.warn(
+                    `Action REJECTED: Player ${assignedPlayerId} insufficient energy for full combo`
+                );
                 continue;
             }
 
@@ -305,7 +318,9 @@ io.on('connection', (socket) => {
 
         // Check if both players are locked in
         if (lockedIn.player1 && lockedIn.player2) {
-            console.log(`[Socket] Both players locked in (via Submit from ${assignedPlayerId}). Triggering resolution early...`);
+            console.log(
+                `[Socket] Both players locked in (via Submit from ${assignedPlayerId}). Triggering resolution early...`
+            );
             resolveTurn();
         }
     });
@@ -322,7 +337,9 @@ io.on('connection', (socket) => {
         safeEmit(io, 'syncStatus', { lockedIn });
 
         if (lockedIn.player1 && lockedIn.player2) {
-            console.log(`[Socket] Both players locked in (via Pass from ${assignedPlayerId}). Triggering resolution early...`);
+            console.log(
+                `[Socket] Both players locked in (via Pass from ${assignedPlayerId}). Triggering resolution early...`
+            );
             resolveTurn();
         }
     });

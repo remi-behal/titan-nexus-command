@@ -1,6 +1,6 @@
 /**
  * LaunchSpeeds.js
- * 
+ *
  * Centralized speed tiers for all launched entities.
  */
 

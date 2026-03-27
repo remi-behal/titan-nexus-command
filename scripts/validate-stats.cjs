@@ -2,11 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Paths relative to project root
-const MD_FILES = [
-    '.agents/defenses.md',
-    '.agents/weapons.md',
-    '.agents/structures.md'
-];
+const MD_FILES = ['.agents/defenses.md', '.agents/weapons.md', '.agents/structures.md'];
 const STATS_FILE = 'shared/constants/EntityStats.js';
 const SPEEDS_FILE = 'shared/constants/LaunchSpeeds.js';
 
@@ -27,14 +23,14 @@ function validate() {
     // 2. Scan MD files
     let hasWarnings = false;
 
-    MD_FILES.forEach(file => {
+    MD_FILES.forEach((file) => {
         const fullPath = path.join(process.cwd(), file);
         if (!fs.existsSync(fullPath)) return;
 
         const content = fs.readFileSync(fullPath, 'utf8');
         const sections = content.split('###');
 
-        sections.forEach(section => {
+        sections.forEach((section) => {
             const titleMatch = section.match(/^([^-\n]+)/);
             if (!titleMatch) return;
 
@@ -63,7 +59,7 @@ function validate() {
                     { name: 'Damage', key: 'damageFull' }
                 ];
 
-                checks.forEach(check => {
+                checks.forEach((check) => {
                     const mdRegex = new RegExp(`\\* \\*\\*${check.name}\\*\\*:\\s*(\\d+)`);
                     const mdMatch = section.match(mdRegex);
 
@@ -75,7 +71,9 @@ function validate() {
                         if (jsStatMatch) {
                             const jsVal = parseInt(jsStatMatch[1]);
                             if (mdVal !== jsVal) {
-                                console.warn(`[WARNING] ${file}: ${title} "${check.name}" mismatch! MD: ${mdVal}, Code: ${jsVal}`);
+                                console.warn(
+                                    `[WARNING] ${file}: ${title} "${check.name}" mismatch! MD: ${mdVal}, Code: ${jsVal}`
+                                );
                                 hasWarnings = true;
                             }
                         }
@@ -93,7 +91,9 @@ function validate() {
                         const tier = jsSpeedMatch[1];
                         const jsSpeed = speedTiers[tier];
                         if (mdSpeed !== jsSpeed) {
-                            console.warn(`[WARNING] ${file}: ${title} "Speed" mismatch! MD: ${mdSpeed} (${tier}?), Code: ${jsSpeed}`);
+                            console.warn(
+                                `[WARNING] ${file}: ${title} "Speed" mismatch! MD: ${mdSpeed} (${tier}?), Code: ${jsSpeed}`
+                            );
                             hasWarnings = true;
                         }
                     }

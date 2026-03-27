@@ -10,7 +10,15 @@ describe('Explosion Consistency', () => {
         // Nuke radiusFull is 200. Hub size is 40.
         // Surface distance = dist - 40.
         // If dist = 240, surface distance is 200. Should HIT full damage.
-        const target = gs.addEntity({ id: 't1', type: 'HUB', owner: 'p2', x: 340, y: 100, hp: 10, deployed: true });
+        const target = gs.addEntity({
+            id: 't1',
+            type: 'HUB',
+            owner: 'p2',
+            x: 340,
+            y: 100,
+            hp: 10,
+            deployed: true
+        });
 
         const stats = ENTITY_STATS.NUKE;
         gs.triggerExplosion(100, 100, stats, [], new Set(), gs.entities);
@@ -25,7 +33,15 @@ describe('Explosion Consistency', () => {
         gs.entities = [];
         // Nuke radiusHalf is 400. Hub size is 40.
         // If dist = 440, surface = 400. Should HIT splash.
-        const target = gs.addEntity({ id: 't1', type: 'HUB', owner: 'p2', x: 540, y: 100, hp: 10, deployed: true });
+        const target = gs.addEntity({
+            id: 't1',
+            type: 'HUB',
+            owner: 'p2',
+            x: 540,
+            y: 100,
+            hp: 10,
+            deployed: true
+        });
 
         const stats = ENTITY_STATS.NUKE;
         gs.triggerExplosion(100, 100, stats, [], new Set(), gs.entities);
@@ -39,7 +55,15 @@ describe('Explosion Consistency', () => {
         gs.initializeGame(['p1', 'p2']);
         gs.entities = [];
         // dist = 441. surface = 401. MISS.
-        const target = gs.addEntity({ id: 't1', type: 'HUB', owner: 'p2', x: 541, y: 100, hp: 10, deployed: true });
+        const target = gs.addEntity({
+            id: 't1',
+            type: 'HUB',
+            owner: 'p2',
+            x: 541,
+            y: 100,
+            hp: 10,
+            deployed: true
+        });
 
         const stats = ENTITY_STATS.NUKE;
         gs.triggerExplosion(100, 100, stats, [], new Set(), gs.entities);

@@ -1,4 +1,3 @@
-
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { io as Client } from 'socket.io-client';
 import { spawn } from 'child_process';
@@ -30,7 +29,9 @@ describe('Server - Turn Transition & Timer Continuity', () => {
 
         await new Promise((resolve) => {
             let authenticated = 0;
-            const onAuth = () => { if (++authenticated === 2) resolve(); };
+            const onAuth = () => {
+                if (++authenticated === 2) resolve();
+            };
             client1.on('playerAssignment', onAuth);
             client2.on('playerAssignment', onAuth);
 
@@ -43,14 +44,14 @@ describe('Server - Turn Transition & Timer Continuity', () => {
         client1?.disconnect();
         client2?.disconnect();
         serverProcess?.kill('SIGKILL');
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 200));
     });
 
     it('should reset the timer to 30s and unlock players at start of Turn 2', async () => {
         // 1. Initial State Check
         let initialTurn = 0;
-        await new Promise(resolve => {
-            client1.once('gameStateUpdate', state => {
+        await new Promise((resolve) => {
+            client1.once('gameStateUpdate', (state) => {
                 initialTurn = state.turn;
                 resolve();
             });
@@ -68,7 +69,7 @@ describe('Server - Turn Transition & Timer Continuity', () => {
                 if (state.turn === initialTurn + 1) {
                     // Check lockedIn status via a separate request or integrated check
                     client1.emit('requestState');
-                    client1.once('syncStatus', status => {
+                    client1.once('syncStatus', (status) => {
                         if (!status.lockedIn.player1 && !status.lockedIn.player2) {
                             resolve(true);
                         }
@@ -85,8 +86,8 @@ describe('Server - Turn Transition & Timer Continuity', () => {
 
         // Final verification of timer
         let finalTimer = 0;
-        await new Promise(resolve => {
-            client1.once('timerUpdate', time => {
+        await new Promise((resolve) => {
+            client1.once('timerUpdate', (time) => {
                 finalTimer = time;
                 resolve();
             });

@@ -27,15 +27,15 @@ describe('Server Networking - Reconnection and Resilience', () => {
 
     afterAll(async () => {
         serverProcess?.kill('SIGKILL');
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 200));
     });
 
     // Ensure each test starts with a fresh server state
     const resetServer = async () => {
         const resetClient = Client(url);
-        await new Promise(resolve => resetClient.once('connect', resolve));
+        await new Promise((resolve) => resetClient.once('connect', resolve));
         resetClient.emit('restartGame');
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, 200));
         resetClient.disconnect();
     };
 
@@ -45,7 +45,7 @@ describe('Server Networking - Reconnection and Resilience', () => {
 
         // Connect initial
         client.emit('authenticate', 'test-token-id-67');
-        const firstStatePromise = new Promise(resolve => client.once('gameStateUpdate', resolve));
+        const firstStatePromise = new Promise((resolve) => client.once('gameStateUpdate', resolve));
         await firstStatePromise;
 
         // Disconnect
@@ -57,7 +57,10 @@ describe('Server Networking - Reconnection and Resilience', () => {
 
         // Wait for fresh state update
         const secondStatePromise = new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Did not receive state after reconnect')), 2000);
+            const timeout = setTimeout(
+                () => reject(new Error('Did not receive state after reconnect')),
+                2000
+            );
             client.once('gameStateUpdate', (state) => {
                 clearTimeout(timeout);
                 resolve(state);
@@ -80,32 +83,34 @@ describe('Server Networking - Reconnection and Resilience', () => {
         client1.emit('authenticate', 'test-token-p1');
         client2.emit('authenticate', 'test-token-p2');
 
-        const p1Assign = new Promise(resolve => client1.once('playerAssignment', resolve));
-        const p2Assign = new Promise(resolve => client2.once('playerAssignment', resolve));
+        const p1Assign = new Promise((resolve) => client1.once('playerAssignment', resolve));
+        const p2Assign = new Promise((resolve) => client2.once('playerAssignment', resolve));
         await Promise.all([p1Assign, p2Assign]);
 
         // Get initial state
-        const statePromise = new Promise(resolve => client1.once('gameStateUpdate', resolve));
+        const statePromise = new Promise((resolve) => client1.once('gameStateUpdate', resolve));
         client1.emit('requestState');
         const state = await statePromise;
-        const p1Hub = state.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = state.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
 
-        const actions = [{
-            playerId: 'player1',
-            type: 'LAUNCH',
-            itemType: 'HUB',
-            sourceId: p1Hub.id,
-            sourceX: p1Hub.x,
-            sourceY: p1Hub.y,
-            angle: 0,
-            distance: 100
-        }];
+        const actions = [
+            {
+                playerId: 'player1',
+                type: 'LAUNCH',
+                itemType: 'HUB',
+                sourceId: p1Hub.id,
+                sourceX: p1Hub.x,
+                sourceY: p1Hub.y,
+                angle: 0,
+                distance: 100
+            }
+        ];
 
         // Player 1 Locks In
         client1.emit('submitActions', actions);
 
         // Wait for syncStatus to confirm lock
-        await new Promise(resolve => {
+        await new Promise((resolve) => {
             const check = (status) => {
                 if (status.lockedIn.player1) {
                     client1.off('syncStatus', check);
@@ -147,7 +152,7 @@ describe('Server Networking - Reconnection and Resilience', () => {
             stdio: 'pipe'
         });
 
-        await new Promise(resolve => {
+        await new Promise((resolve) => {
             latencyServer.stdout.on('data', (data) => {
                 if (data.toString().includes('SERVER RUNNING')) resolve();
             });
@@ -157,7 +162,7 @@ describe('Server Networking - Reconnection and Resilience', () => {
         client.emit('authenticate', 'latency-test-token');
 
         const startTime = Date.now();
-        const statePromise = new Promise(resolve => client.once('gameStateUpdate', resolve));
+        const statePromise = new Promise((resolve) => client.once('gameStateUpdate', resolve));
 
         await statePromise;
         const duration = Date.now() - startTime;
@@ -165,7 +170,7 @@ describe('Server Networking - Reconnection and Resilience', () => {
         // cleanup early
         client.disconnect();
         latencyServer.kill('SIGKILL');
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 200));
 
         expect(duration).toBeGreaterThanOrEqual(latency);
     }, 10000);
@@ -181,28 +186,33 @@ describe('Server Networking - Reconnection and Resilience', () => {
         client1.emit('authenticate', token1);
         const p1Assign = await new Promise((resolve, reject) => {
             const t = setTimeout(() => reject(new Error('P1 Timeout')), 2000);
-            client1.once('playerAssignment', (id) => { clearTimeout(t); resolve(id); });
+            client1.once('playerAssignment', (id) => {
+                clearTimeout(t);
+                resolve(id);
+            });
         });
         expect(p1Assign).toBe('player1');
         client1.disconnect();
 
         const client2 = Client(url);
         client2.emit('authenticate', token2);
-        const p2Assign = await new Promise(resolve => client2.once('playerAssignment', resolve));
+        const p2Assign = await new Promise((resolve) => client2.once('playerAssignment', resolve));
         expect(p2Assign).toBe('player2');
         client2.disconnect();
 
         // Client 3 tries to join after 1 and 2 disconnect
         const client3 = Client(url);
         client3.emit('authenticate', token3);
-        const p3Assign = await new Promise(resolve => client3.once('playerAssignment', resolve));
+        const p3Assign = await new Promise((resolve) => client3.once('playerAssignment', resolve));
         expect(p3Assign).toBe('spectator'); // Both slots reserved
         client3.disconnect();
 
         // Client 1 reconnects
         const client1Reconnect = Client(url);
         client1Reconnect.emit('authenticate', token1);
-        const p1ReAssign = await new Promise(resolve => client1Reconnect.once('playerAssignment', resolve));
+        const p1ReAssign = await new Promise((resolve) =>
+            client1Reconnect.once('playerAssignment', resolve)
+        );
         expect(p1ReAssign).toBe('player1'); // Reclaims slot
         client1Reconnect.disconnect();
     });

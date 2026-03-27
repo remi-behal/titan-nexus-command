@@ -3,6 +3,7 @@
 This document outlines the testing scenarios required to ensure game stability, balance, and networking synchronization.
 
 ## 🤖 Automated Testing
+
 Automated unit tests validate the core game engine logic. See `.agents/testing_strategy.md` for full details.
 
 - [x] **Unit Tests**: 25 tests covering slingshot math, toroidal wrapping, link integrity, turn resolution, and win conditions (98.3% coverage)
@@ -11,8 +12,8 @@ Automated unit tests validate the core game engine logic. See `.agents/testing_s
 
 **Run tests**: `npm test` (see `.agents/workflows/test.md`)
 
-
 ## 🟢 Phase 1: Local Prototype Testing
+
 Validated the core physics and state management in a single-client environment.
 
 - [x] **Hub Selection**: Clicking a player-owned Hub highlights it and enables launch mode.
@@ -20,9 +21,10 @@ Validated the core physics and state management in a single-client environment.
 - [x] **Power Clamping**: Pulling beyond `MAX_DISTANCE` caps the launch velocity.
 - [x] **Win Condition**: Destroying the enemy Hub triggers the Victory Overlay and mission end.
 - [ ] **Draw Condition (PENDING)**: Simultaneous destruction of all remaining player Hubs in one turn.
-    *   *Note: Currently difficult to test in single-player simulation without multi-action support.*
+    - _Note: Currently difficult to test in single-player simulation without multi-action support._
 
 ## 🟡 Phase 2: Multiplayer & Sync Testing
+
 Focus on the transition from local state to server-side authority.
 
 - [ ] **Connection Stability**: Clients reconnect gracefully if the websocket drops.
@@ -31,6 +33,7 @@ Focus on the transition from local state to server-side authority.
 - [ ] **Latency Simulation**: Test how the "Slingshot" feel holds up with 100ms+ ping.
 
 ## 🔴 Phase 3: Turn & Authority Testing
+
 Testing the fairness and security of the simultaneous turn system.
 
 - [ ] **Action Integrity**: Ensure Player A cannot send actions on behalf of Player B.
@@ -39,6 +42,7 @@ Testing the fairness and security of the simultaneous turn system.
 - [ ] **Edge Case: Disconnect during turn**: How does the server handle a player who disconnects while their action is "Locked In"?
 
 ## 🛰️ Phase 4: Stress & Network Testing
+
 - [ ] **Max Player Capacity**: Test 8 players launching entities simultaneously. This will entail repeating tests in phase 1 & 2 but for 8 players.
 - [ ] **Docker Deployment**: Verify performance matches local dev when running inside the container.
 - [ ] **Mobile/Touch Input**: Verify the slingshot mechanic works on touchscreens (Canvas event listeners).
@@ -46,7 +50,8 @@ Testing the fairness and security of the simultaneous turn system.
 ---
 
 ## Testing Log
-| Date | Scenario | Status | Notes |
-| :--- | :--- | :--- | :--- |
-| 2026-01-28 | Victory Condition | ✅ PASS | Player 2 hub removed, Overlay shown. |
-| 2026-01-28 | Draw Condition | ⏹️ SKIP | Requires 2-player input orchestration. |
+
+| Date       | Scenario          | Status  | Notes                                  |
+| :--------- | :---------------- | :------ | :------------------------------------- |
+| 2026-01-28 | Victory Condition | ✅ PASS | Player 2 hub removed, Overlay shown.   |
+| 2026-01-28 | Draw Condition    | ⏹️ SKIP | Requires 2-player input orchestration. |

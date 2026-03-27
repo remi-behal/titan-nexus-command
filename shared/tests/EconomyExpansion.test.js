@@ -38,7 +38,9 @@ describe('Economy Expansion - Energy Generation', () => {
 
         game.resolveTurn({ player1: [] });
 
-        expect(game.players['player1'].energy).toBe(initialEnergy + hubIncome + extractorIncome + ubi);
+        expect(game.players['player1'].energy).toBe(
+            initialEnergy + hubIncome + extractorIncome + ubi
+        );
     });
 
     it('should give a bonus when Extractor is on a resource node', () => {
@@ -63,7 +65,9 @@ describe('Economy Expansion - Energy Generation', () => {
 
         game.resolveTurn({ player1: [] });
 
-        expect(game.players['player1'].energy).toBe(initialEnergy + hubIncome + extractorIncome + nodeBonus + ubi);
+        expect(game.players['player1'].energy).toBe(
+            initialEnergy + hubIncome + extractorIncome + nodeBonus + ubi
+        );
     });
 
     it('should give a bonus even if slightly misaligned (within radius)', () => {
@@ -87,7 +91,9 @@ describe('Economy Expansion - Energy Generation', () => {
 
         game.resolveTurn({ player1: [] });
 
-        expect(game.players['player1'].energy).toBe(initialEnergy + hubIncome + extractorIncome + nodeBonus + ubi);
+        expect(game.players['player1'].energy).toBe(
+            initialEnergy + hubIncome + extractorIncome + nodeBonus + ubi
+        );
     });
 
     it('should NOT give a bonus if outside radius', () => {
@@ -110,7 +116,9 @@ describe('Economy Expansion - Energy Generation', () => {
 
         game.resolveTurn({ player1: [] });
 
-        expect(game.players['player1'].energy).toBe(initialEnergy + hubIncome + extractorIncome + ubi);
+        expect(game.players['player1'].energy).toBe(
+            initialEnergy + hubIncome + extractorIncome + ubi
+        );
     });
 
     it('should handle toroidal wrapping for node capture', () => {
@@ -135,7 +143,9 @@ describe('Economy Expansion - Energy Generation', () => {
 
         game.resolveTurn({ player1: [] });
 
-        expect(game.players['player1'].energy).toBe(initialEnergy + hubIncome + extractorIncome + 50 + ubi);
+        expect(game.players['player1'].energy).toBe(
+            initialEnergy + hubIncome + extractorIncome + 50 + ubi
+        );
     });
 
     it('should generate high yield (20) for extractor on super node', () => {
@@ -145,7 +155,7 @@ describe('Economy Expansion - Energy Generation', () => {
         const ubi = GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
 
         // Find the super node from initialization (value 15)
-        const superNode = game.map.resources.find(r => r.isSuper);
+        const superNode = game.map.resources.find((r) => r.isSuper);
 
         game.addEntity({
             type: 'EXTRACTOR',
@@ -160,6 +170,8 @@ describe('Economy Expansion - Energy Generation', () => {
 
         // Income = UBI (10) + Hub (5) + Extractor (5) + Node (15) = 35 total increment
         // So total energy = initial + 35
-        expect(game.players['player1'].energy).toBe(initialEnergy + hubIncome + extractorIncome + superNode.value + ubi);
+        expect(game.players['player1'].energy).toBe(
+            initialEnergy + hubIncome + extractorIncome + superNode.value + ubi
+        );
     });
 });

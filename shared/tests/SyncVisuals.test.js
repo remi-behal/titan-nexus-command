@@ -9,26 +9,28 @@ describe('GameState - Sync Visuals', () => {
         // Setup initial energy so player can afford the shot
         game.players.player1.energy = 100;
 
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
 
         const actions = {
-            player1: [{
-                playerId: 'player1',
-                type: 'LAUNCH',
-                itemType: 'WEAPON',
-                sourceId: p1Hub.id,
-                sourceX: p1Hub.x,
-                sourceY: p1Hub.y,
-                angle: 0,
-                distance: 100
-            }],
+            player1: [
+                {
+                    playerId: 'player1',
+                    type: 'LAUNCH',
+                    itemType: 'WEAPON',
+                    sourceId: p1Hub.id,
+                    sourceX: p1Hub.x,
+                    sourceY: p1Hub.y,
+                    angle: 0,
+                    distance: 100
+                }
+            ],
             player2: []
         };
 
         const snapshots = game.resolveTurn(actions);
 
         // Find all snapshots within round 1
-        const r1Snapshots = snapshots.filter(s => s.round === 1);
+        const r1Snapshots = snapshots.filter((s) => s.round === 1);
 
         // The very first snapshot within a round should NOT be a sub-tick,
         // it should be an explicit marker for the start of the round

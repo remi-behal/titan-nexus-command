@@ -5,6 +5,7 @@
 ### 📂 To Do
 
 #### Phase 6 (Game Feature Expansion)
+
 - [x] **Intercept System**: Implement logic for Defense structures to target and destroy incoming weapons. <!-- id: 44 -->
     - [x] Add Laser Defense to the game. <!-- id: 51 -->
     - [x] Add light SAM defense <!-- id: 52 -->
@@ -20,7 +21,7 @@
     - [x] **Nuke**: Implement a structure type weapon that destroys everything in a large radius after a single turn. <!-- id: 88 -->
     - [x] **Reclaimer**: Weapon that only targets friendly structures. Deletes the friendly structure and refunds 50% of the cost (rounded up to nearest integer). <!-- id: 89 -->
     - [ ] **EMP**: Implement a weapon that disables structures in a radius. <!-- id: 90 -->
-    - [ ] **
+    - [ ] \*\*
 - [ ] **Multiplayer Enhancements**: <!-- id: 47 -->
     - [ ] Chat system.
     - [ ] Lobby management / Player slotting.
@@ -38,17 +39,21 @@
     - [ ] Add offensive roles for Defense structures (TBD). <!-- id: 65 -->
 
 #### Phase 7: Artwork, UI/UX, Music
+
 - [ ] Adding artwork, UI/UX, music, and sound effects.
 - [ ] Adding lore, world building.
 - [ ] Map design.
 
 #### Phase 8 (Deployment)
+
 - [ ] **Dockerization**: <!-- id: 41 -->
 - [ ] **Production UI/UX Pass**: <!-- id: 42 -->
 - [ ] **Host on OMV**: <!-- id: 43 -->
+
 ---
 
 ## ⏳ Backlog
+
 - [ ] **Team Play**: Shared energy and hubs. <!-- id: 48 -->
 - [ ] **Dynamic Weather**: Methane rain and high winds. <!-- id: 49 -->
 - [ ] **Spectator Mode**: Ability to watch without a player slot. <!-- id: 50 -->
@@ -82,6 +87,7 @@
 ## ✅ Completed
 
 ### Phase 1 (Prototype)
+
 - [x] Initialize project (React + Vite) <!-- id: 1 -->
 - [x] **Design Game Core**: Define the "Board" and "Player" state objects <!-- id: 2 -->
 - [x] Implement Basic Rendering (Canvas or DOM) <!-- id: 3 -->
@@ -90,6 +96,7 @@
 - [x] Slingshot pull/push basic math. <!-- id: 6 -->
 
 ### Phase 2 (Multiplayer)
+
 - [x] Initialize Server (Node.js + Socket.io) <!-- id: 7 -->
 - [x] Connect Client to Server <!-- id: 8 -->
 - [x] **Migration**: Move Game State from Client to Server <!-- id: 9 -->
@@ -101,6 +108,7 @@
 - [x] Fix white screen of death. <!-- id: 15 -->
 
 ### Phase 3 (Authority & Rules)
+
 - [x] Implement "Lock In" mechanism <!-- id: 16 -->
 - [x] Implement Server-side Resolution (processing all moves at once) <!-- id: 17 -->
 - [x] **Turn Timer**: <!-- id: 18 -->
@@ -121,11 +129,13 @@
     - [x] Client: Implement global mouse drag handling <!-- id: 39 -->
 
 ### Phase 4 (Topology)
+
 - [x] Modular coordinate math (`%`). <!-- id: 29 -->
 - [x] 3x3 tiled rendering in Canvas. <!-- id: 30 -->
 - [x] Click, drag and release to scroll the map. <!-- id: 40 -->
 
 ### Phase 5 (Fog of War)
+
 - [x] Vision mask calculation. <!-- id: 31 -->
 - [x] Server-side unit hiding (State Sharding). <!-- id: 32 -->
 - [x] Ghost Layer implementation (Persistence in UI). <!-- id: 51 -->

@@ -1,6 +1,6 @@
 /**
  * LaserDefense.test.js
- * 
+ *
  * Specifically tests the Laser Point Defense fuel and interception logic.
  */
 
@@ -17,8 +17,8 @@ describe('GameState - Laser Defense Fuel', () => {
     });
 
     it('should only intercept once per turn, even across multiple rounds', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
-        const p2Hub = game.entities.find(e => e.owner === 'player2' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
+        const p2Hub = game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB');
 
         // 1. Add a Laser Defense for Player 2 near their hub
         const defense = game.addEntity({
@@ -31,7 +31,7 @@ describe('GameState - Laser Defense Fuel', () => {
         game.addLink(p2Hub.id, defense.id, 'player2');
 
         // 2. Player 1 launches TWO weapons in TWO separate rounds
-        // To ensure they are in separate rounds, we can't easily force it with playerActionsMap 
+        // To ensure they are in separate rounds, we can't easily force it with playerActionsMap
         // unless we understand how resolveTurn handles rounds.
         // Looking at Gamestate.js: resolveTurn takes playerActionsMap[pid] = [action1, action2]
         // Round 1 takes action1 from each player. Round 2 takes action2.
@@ -39,7 +39,9 @@ describe('GameState - Laser Defense Fuel', () => {
         const dx = defense.x - p1Hub.x;
         const dy = defense.y - p1Hub.y;
         const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-        const pullDistance = Math.pow(500 / GLOBAL_STATS.MAX_LAUNCH, 1 / GLOBAL_STATS.POWER_EXPONENT) * GLOBAL_STATS.MAX_PULL;
+        const pullDistance =
+            Math.pow(500 / GLOBAL_STATS.MAX_LAUNCH, 1 / GLOBAL_STATS.POWER_EXPONENT) *
+            GLOBAL_STATS.MAX_PULL;
 
         const actions = {
             player1: [
@@ -81,7 +83,7 @@ describe('GameState - Laser Defense Fuel', () => {
         // If the second weapon was NOT intercepted, it should hit p2Hub (since it's aimed at the defense near it).
         // The hub has 100 HP. A weapon hit deals 100 damage (line 529).
 
-        const p2HubAfter = game.entities.find(e => e.id === p2Hub.id);
+        const p2HubAfter = game.entities.find((e) => e.id === p2Hub.id);
 
         // If fixed, only ONE is intercepted, so p2Hub is hit by the second one.
         // It should take 2 damage (AOE full damage): 5 - 2 = 3.
@@ -90,8 +92,8 @@ describe('GameState - Laser Defense Fuel', () => {
 
     it('should use shortest toroidal path for laser beam visual coordinates', () => {
         // 1. Setup: Move Hubs near the boundary
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
-        const p2Hub = game.entities.find(e => e.owner === 'player2' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
+        const p2Hub = game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB');
         p1Hub.x = 20;
         p1Hub.y = 100;
         p2Hub.x = 1000; // Keep p2 hub away
@@ -128,7 +130,7 @@ describe('GameState - Laser Defense Fuel', () => {
         let laserVisual = null;
         for (const snapshot of snapshots) {
             if (snapshot.visuals) {
-                laserVisual = snapshot.visuals.find(v => v.type === 'LASER_BEAM');
+                laserVisual = snapshot.visuals.find((v) => v.type === 'LASER_BEAM');
                 if (laserVisual) break;
             }
         }
@@ -137,7 +139,7 @@ describe('GameState - Laser Defense Fuel', () => {
         if (laserVisual) {
             // Defense at 1990. Weapon should be at something like 1980 or 4 (which is 2004).
             // Shortest path should be a small positive or negative dx.
-            // If the bug exists, targetX will be a small number (e.g., 5 or 1995) 
+            // If the bug exists, targetX will be a small number (e.g., 5 or 1995)
             // but the Euclidean distance from 1990 will be large if it doesn't use virtual coords.
 
             // We expect targetX to be near 2000 (e.g. 2005) or slightly below (e.g. 1970)

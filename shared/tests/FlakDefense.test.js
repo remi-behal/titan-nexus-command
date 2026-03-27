@@ -11,8 +11,8 @@ describe('GameState - Flak Defense', () => {
     });
 
     it('should activate on first enemy projectile and lock angle', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
-        const p2Hub = game.entities.find(e => e.owner === 'player2' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
+        const p2Hub = game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB');
 
         // Setup Flak Defense for Player 1
         const flak = game.addEntity({
@@ -30,19 +30,30 @@ describe('GameState - Flak Defense', () => {
         // We fire a weapon from Hub 2 aimed at a point that passes (+100, 0) relative to Hub 1
         const targetX = p1Hub.x + 100;
         const targetY = p1Hub.y;
-        const vec = GameState.getToroidalVector(p2Hub.x, p2Hub.y, targetX, targetY, game.map.width, game.map.height);
+        const vec = GameState.getToroidalVector(
+            p2Hub.x,
+            p2Hub.y,
+            targetX,
+            targetY,
+            game.map.width,
+            game.map.height
+        );
         const angle = (Math.atan2(vec.dy, vec.dx) * 180) / Math.PI;
         const dist = Math.sqrt(vec.dx * vec.dx + vec.dy * vec.dy);
-        const pullDistance = Math.pow(dist / GLOBAL_STATS.MAX_LAUNCH, 1 / GLOBAL_STATS.POWER_EXPONENT) * GLOBAL_STATS.MAX_PULL;
+        const pullDistance =
+            Math.pow(dist / GLOBAL_STATS.MAX_LAUNCH, 1 / GLOBAL_STATS.POWER_EXPONENT) *
+            GLOBAL_STATS.MAX_PULL;
 
         const actions = {
-            player2: [{
-                playerId: 'player2',
-                sourceId: p2Hub.id,
-                itemType: 'WEAPON',
-                angle: angle,
-                distance: pullDistance
-            }],
+            player2: [
+                {
+                    playerId: 'player2',
+                    sourceId: p2Hub.id,
+                    itemType: 'WEAPON',
+                    angle: angle,
+                    distance: pullDistance
+                }
+            ],
             player1: []
         };
 
@@ -61,10 +72,10 @@ describe('GameState - Flak Defense', () => {
     });
 
     it('should hit friend and foe alike (No IFF)', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
-        const p2Hub = game.entities.find(e => e.owner === 'player2' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
+        const p2Hub = game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB');
 
-        const flak = game.addEntity({
+        const _flak = game.addEntity({
             type: 'FLAK_DEFENSE',
             owner: 'player1',
             x: p1Hub.x + 20,
@@ -75,20 +86,24 @@ describe('GameState - Flak Defense', () => {
 
         // Trigger flak with an enemy projectile (Player 2)
         const actions = {
-            player2: [{
-                playerId: 'player2',
-                sourceId: p2Hub.id,
-                itemType: 'WEAPON', // Target p1Hub
-                angle: 180,
-                distance: 300
-            }],
-            player1: [{
-                playerId: 'player1',
-                sourceId: p1Hub.id,
-                itemType: 'WEAPON', // Fire AWAY from p2, through the flak wall
-                angle: 0,
-                distance: 200
-            }]
+            player2: [
+                {
+                    playerId: 'player2',
+                    sourceId: p2Hub.id,
+                    itemType: 'WEAPON', // Target p1Hub
+                    angle: 180,
+                    distance: 300
+                }
+            ],
+            player1: [
+                {
+                    playerId: 'player1',
+                    sourceId: p1Hub.id,
+                    itemType: 'WEAPON', // Fire AWAY from p2, through the flak wall
+                    angle: 0,
+                    distance: 200
+                }
+            ]
         };
 
         // We need to verify both projectiles took damage.
@@ -106,13 +121,15 @@ describe('GameState - Flak Defense', () => {
         // Let's verify via snapshot count or just check if they detonated early.
         // A weapon that is hit by flak (1 damage) and has 1 HP will set active=false and hitThisTick=true.
         // This causes an EXPLOSION snapshot at that location earlier than intended.
-        const explosions = snapshots.filter(s => s.state.entities.some(e => e.type === 'EXPLOSION'));
+        const explosions = snapshots.filter((s) =>
+            s.state.entities.some((e) => e.type === 'EXPLOSION')
+        );
         expect(explosions.length).toBeGreaterThan(0);
     });
 
     it('should NOT hit deployed structures', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
-        const p2Hub = game.entities.find(e => e.owner === 'player2' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
+        const p2Hub = game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB');
 
         const flak = game.addEntity({
             type: 'FLAK_DEFENSE',
@@ -135,13 +152,15 @@ describe('GameState - Flak Defense', () => {
 
         // Trigger flak
         const actions = {
-            player2: [{
-                playerId: 'player2',
-                sourceId: p2Hub.id,
-                itemType: 'WEAPON',
-                angle: 180,
-                distance: 50
-            }],
+            player2: [
+                {
+                    playerId: 'player2',
+                    sourceId: p2Hub.id,
+                    itemType: 'WEAPON',
+                    angle: 180,
+                    distance: 50
+                }
+            ],
             player1: []
         };
 
@@ -152,10 +171,10 @@ describe('GameState - Flak Defense', () => {
     });
 
     it('should hit structures-in-flight (undeployed)', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
-        const p2Hub = game.entities.find(e => e.owner === 'player2' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
+        const p2Hub = game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB');
 
-        const flak = game.addEntity({
+        const _flak = game.addEntity({
             type: 'FLAK_DEFENSE',
             owner: 'player1',
             x: p1Hub.x + 50,
@@ -181,7 +200,7 @@ describe('GameState - Flak Defense', () => {
         game.resolveTurn(actions);
 
         // The second HUB should NOT have landed (destroyed in flight)
-        const hubs = game.entities.filter(e => e.type === 'HUB');
+        const hubs = game.entities.filter((e) => e.type === 'HUB');
         expect(hubs.length).toBe(2); // Only the starting 2 hubs should exist
     });
 });

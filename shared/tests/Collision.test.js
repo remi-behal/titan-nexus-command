@@ -44,9 +44,19 @@ describe('GameState - Link Collision Math', () => {
 
     it('should detect intersection across a toroidal wrap', () => {
         // Seg 1 wraps X: 1990 -> 10 at y=100
-        const segments1 = GameState.getLinkSegments({ x: 1990, y: 100 }, { x: 10, y: 100 }, 2000, 2000);
+        const segments1 = GameState.getLinkSegments(
+            { x: 1990, y: 100 },
+            { x: 10, y: 100 },
+            2000,
+            2000
+        );
         // Seg 2 is vertical: 0 -> 200 at x=1995
-        const segments2 = GameState.getLinkSegments({ x: 1995, y: 0 }, { x: 1995, y: 200 }, 2000, 2000);
+        const segments2 = GameState.getLinkSegments(
+            { x: 1995, y: 0 },
+            { x: 1995, y: 200 },
+            2000,
+            2000
+        );
 
         let hit = false;
         for (const s1 of segments1) {
@@ -64,28 +74,34 @@ describe('GameState - Link Collision Math', () => {
         // P2 launches to (500, 600)
         // These links cross at (550, 550) approx
 
-        const p1Hub = game.entities.find(e => e.owner === 'p1' && e.type === 'HUB');
-        const p2Hub = game.entities.find(e => e.owner === 'p2' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'p1' && e.type === 'HUB');
+        const p2Hub = game.entities.find((e) => e.owner === 'p2' && e.type === 'HUB');
 
         // Reposition for predictable test
-        p1Hub.x = 500; p1Hub.y = 500;
-        p2Hub.x = 600; p2Hub.y = 600;
+        p1Hub.x = 500;
+        p1Hub.y = 500;
+        p2Hub.x = 600;
+        p2Hub.y = 600;
 
         const actions = {
-            p1: [{
-                playerId: 'p1',
-                sourceId: p1Hub.id,
-                itemType: 'HUB',
-                angle: 45, // Points down-right
-                distance: 141 // ~100*sqrt(2)
-            }],
-            p2: [{
-                playerId: 'p2',
-                sourceId: p2Hub.id,
-                itemType: 'HUB',
-                angle: 225, // Points up-left
-                distance: 141
-            }]
+            p1: [
+                {
+                    playerId: 'p1',
+                    sourceId: p1Hub.id,
+                    itemType: 'HUB',
+                    angle: 45, // Points down-right
+                    distance: 141 // ~100*sqrt(2)
+                }
+            ],
+            p2: [
+                {
+                    playerId: 'p2',
+                    sourceId: p2Hub.id,
+                    itemType: 'HUB',
+                    angle: 225, // Points up-left
+                    distance: 141
+                }
+            ]
         };
 
         // P1: (500,500) -> (600,600)
@@ -95,16 +111,20 @@ describe('GameState - Link Collision Math', () => {
         // Let's use simpler cross:
         // P1: (500,550) -> (600,550) - horizontal
         // P2: (550,500) -> (550,600) - vertical
-        p1Hub.x = 500; p1Hub.y = 550;
-        p2Hub.x = 550; p2Hub.y = 500;
+        p1Hub.x = 500;
+        p1Hub.y = 550;
+        p2Hub.x = 550;
+        p2Hub.y = 500;
 
-        actions.p1[0].angle = 0; actions.p1[0].distance = 100;
-        actions.p2[0].angle = 90; actions.p2[0].distance = 100;
+        actions.p1[0].angle = 0;
+        actions.p1[0].distance = 100;
+        actions.p2[0].angle = 90;
+        actions.p2[0].distance = 100;
 
         game.resolveTurn(actions);
 
         // Both should be destroyed (And thus filtered out of the state)
-        const newEntities = game.entities.filter(e => e.id !== p1Hub.id && e.id !== p2Hub.id);
+        const newEntities = game.entities.filter((e) => e.id !== p1Hub.id && e.id !== p2Hub.id);
         expect(newEntities.length).toBe(0);
     });
 });

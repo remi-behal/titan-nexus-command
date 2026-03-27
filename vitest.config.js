@@ -8,12 +8,7 @@ export default defineConfig({
             provider: 'v8',
             reporter: ['text', 'html', 'lcov'],
             include: ['shared/**/*.js', 'client/src/**/*.js', 'client/src/**/*.jsx'],
-            exclude: [
-                '**/*.test.js',
-                '**/*.test.jsx',
-                '**/*.spec.js',
-                'shared/EntityStats.js'
-            ]
+            exclude: ['**/*.test.js', '**/*.test.jsx', '**/*.spec.js', 'shared/EntityStats.js']
         }
     }
 });
