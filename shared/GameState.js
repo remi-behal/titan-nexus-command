@@ -1458,234 +1458,236 @@ export class GameState {
                                             tempVisuals,
                                             impacts
                                         );
-                                        const stats = ENTITY_STATS[proj.type];
-                                        // Bug 2: landAsStructure: false avoids duplicate entities for weapons like Napalm
-                                        if (
-                                            ((stats?.damageFull === undefined &&
-                                                proj.type !== 'RECLAIMER') ||
-                                                stats?.landAsStructure) &&
-                                            stats?.landAsStructure !== false
-                                        ) {
-                                            const data = {
-                                                type: proj.type,
-                                                owner: proj.owner,
-                                                x: proj.currX,
-                                                y: proj.currY,
-                                                sourceId: proj.sourceId,
-                                                intendedDx: proj.intendedDx,
-                                                intendedDy: proj.intendedDy,
-                                                deployed: false,
-                                                hp: GLOBAL_STATS.UNDEPLOYED_HP
-                                            };
-                                            const newEnt = this.addEntity(data);
-                                            console.log(
-                                                '--- LANDING ---',
-                                                newEnt.type,
-                                                newEnt.id,
-                                                'at',
-                                                newEnt.x,
-                                                newEnt.y
-                                            );
-                                            if (
-                                                data.sourceId &&
-                                                data.intendedDx !== undefined &&
-                                                data.intendedDy !== undefined
-                                            ) {
-                                                this.addLink(
-                                                    data.sourceId,
-                                                    newEnt.id,
-                                                    data.owner,
-                                                    data.intendedDx,
-                                                    data.intendedDy
-                                                );
-                                                console.log(
-                                                    '--- LINK CREATED ---',
-                                                    data.sourceId,
-                                                    '->',
-                                                    newEnt.id
-                                                );
-                                            }
-                                            console.log(
-                                                `[Lifecycle] ${proj.owner} ${proj.type} landed at (${Math.round(proj.currX)}, ${Math.round(proj.currY)})`
-                                            );
-                                        }
-
-                                        // --- Napalm Special Logic (Always deploy fire on arrival) ---
-                                        if (proj.type === 'NAPALM') {
-                                            const nStats = ENTITY_STATS.NAPALM_FIRE;
-                                            this.addEntity({
-                                                type: 'NAPALM_FIRE',
-                                                owner: proj.owner,
-                                                x: proj.currX, // Impact point (base of stadium)
-                                                y: proj.currY,
-                                                startX: proj.currX, // Base
-                                                startY: proj.currY,
-                                                endX: proj.originalTargetX, // Tip (Original target)
-                                                endY: proj.originalTargetY,
-                                                roundsLeft: 2, // New internal round tracking
-                                                deployed: true,
-                                                isHazard: true,
-                                                hp: nStats.hp
-                                            });
-                                            console.log(
-                                                `[Napalm] ${proj.id} deployed fire from (${Math.round(proj.currX)}, ${Math.round(proj.currY)}) to original target.`
-                                            );
-
-                                            // Push specialized landing snapshot for visual feedback
-                                            snapshots.push({
-                                                type: 'LANDING',
-                                                tick: t,
-                                                round: round,
-                                                playerId: proj.owner,
-                                                itemType: proj.type,
-                                                state: this.getState()
-                                            });
-                                        }
-
-                                        if (proj.type === 'OVERLOAD' && proj.hitThisTick) {
-                                            this.triggerOverload(
-                                                proj.currX,
-                                                proj.currY,
-                                                stats,
-                                                tempVisuals,
-                                                impacts,
-                                                overloadedThisRound
-                                            );
-                                            proj.hitThisTick = false;
-                                        }
-
-                                        if (
-                                            stats?.damageFull !== undefined &&
-                                            !stats?.landAsStructure &&
-                                            proj.hitThisTick
-                                        ) {
-                                            const potentialTargets = [
-                                                ...this.entities,
-                                                ...tempProjectiles.filter((p) => p.active)
-                                            ];
-
-                                            this.triggerExplosion(
-                                                proj.currX,
-                                                proj.currY,
-                                                stats,
-                                                tempVisuals,
-                                                impacts,
-                                                potentialTargets
-                                            );
-                                            proj.hitThisTick = false;
-                                        }
                                     }
-                                }
-
-                                // --- SHIELD PASSIVE INTERCEPTION (The Crossing Rule) ---
-                                this.entities.forEach((shield) => {
-                                    if (!proj.active && !proj.hitThisTick) return;
-                                    if (shield.type !== 'SHIELD' || shield.barrierHp <= 0) return;
-
-                                    const sStats = ENTITY_STATS.SHIELD;
-                                    const prevDist = this.getToroidalDistance(
-                                        shield.x,
-                                        shield.y,
-                                        prevX,
-                                        prevY
-                                    );
-                                    const currDist = this.getToroidalDistance(
-                                        shield.x,
-                                        shield.y,
-                                        proj.currX,
-                                        proj.currY
-                                    );
-
-                                    if (prevDist > sStats.range && currDist <= sStats.range) {
-                                        // BLOCK!
-                                        proj.active = false;
-                                        proj.hitThisTick = false; // Prevent landing or detonation
-
-                                        const pStats =
-                                            ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
-                                        const isStructure =
-                                            proj.type === 'HUB' ||
-                                            proj.type === 'NUKE' ||
-                                            proj.type === 'EXTRACTOR';
-
-                                        if (!isStructure) {
-                                            const damage = pStats?.damageFull || 1;
-                                            shield.barrierHp -= damage;
-                                            if (shield.barrierHp < 0) shield.barrierHp = 0;
-
-                                            console.log(
-                                                `[Shield Hit] ${proj.id} blocked by ${shield.id}. Shield HP: ${shield.barrierHp}`
-                                            );
-                                        } else {
-                                            console.log(
-                                                `[Shield Structure Block] ${proj.id} destroyed by ${shield.id}. No damage to shield.`
-                                            );
-                                        }
-
-                                        // Visual effect
-                                        tempVisuals.push({
-                                            type: 'SPARK',
+                                    const stats = ENTITY_STATS[proj.type];
+                                    // Bug 2: landAsStructure: false avoids duplicate entities for weapons like Napalm
+                                    if (
+                                        ((stats?.damageFull === undefined &&
+                                            proj.type !== 'RECLAIMER') ||
+                                            stats?.landAsStructure) &&
+                                        stats?.landAsStructure !== false
+                                    ) {
+                                        const data = {
+                                            type: proj.type,
+                                            owner: proj.owner,
                                             x: proj.currX,
                                             y: proj.currY,
-                                            duration: 15
+                                            sourceId: proj.sourceId,
+                                            intendedDx: proj.intendedDx,
+                                            intendedDy: proj.intendedDy,
+                                            deployed: false,
+                                            hp: GLOBAL_STATS.UNDEPLOYED_HP
+                                        };
+                                        const newEnt = this.addEntity(data);
+                                        console.log(
+                                            '--- LANDING ---',
+                                            newEnt.type,
+                                            newEnt.id,
+                                            'at',
+                                            newEnt.x,
+                                            newEnt.y
+                                        );
+                                        if (
+                                            data.sourceId &&
+                                            data.intendedDx !== undefined &&
+                                            data.intendedDy !== undefined
+                                        ) {
+                                            this.addLink(
+                                                data.sourceId,
+                                                newEnt.id,
+                                                data.owner,
+                                                data.intendedDx,
+                                                data.intendedDy
+                                            );
+                                            console.log(
+                                                '--- LINK CREATED ---',
+                                                data.sourceId,
+                                                '->',
+                                                newEnt.id
+                                            );
+                                        }
+                                        console.log(
+                                            `[Lifecycle] ${proj.owner} ${proj.type} landed at (${Math.round(proj.currX)}, ${Math.round(proj.currY)})`
+                                        );
+                                    }
+
+                                    // --- Napalm Special Logic (Always deploy fire on arrival) ---
+                                    if (proj.type === 'NAPALM') {
+                                        const nStats = ENTITY_STATS.NAPALM_FIRE;
+                                        this.addEntity({
+                                            type: 'NAPALM_FIRE',
+                                            owner: proj.owner,
+                                            x: proj.currX, // Impact point (base of stadium)
+                                            y: proj.currY,
+                                            startX: proj.currX, // Base
+                                            startY: proj.currY,
+                                            endX: proj.originalTargetX, // Tip (Original target)
+                                            endY: proj.originalTargetY,
+                                            roundsLeft: 2, // New internal round tracking
+                                            deployed: true,
+                                            isHazard: true,
+                                            hp: nStats.hp
+                                        });
+                                        console.log(
+                                            `[Napalm] ${proj.id} deployed fire from (${Math.round(proj.currX)}, ${Math.round(proj.currY)}) to original target.`
+                                        );
+
+                                        // Push specialized landing snapshot for visual feedback
+                                        snapshots.push({
+                                            type: 'LANDING',
+                                            tick: t,
+                                            round: round,
+                                            playerId: proj.owner,
+                                            itemType: proj.type,
+                                            state: this.getState()
                                         });
                                     }
-                                });
 
-                                // --- Post-Movement Hazard Collision ---
-                                if (proj.active) {
-                                    const hazards = this.entities.filter(
-                                        (e) => e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE'
-                                    );
-                                    hazards.forEach((h) => {
-                                        const hStats = ENTITY_STATS[h.type];
-                                        let isHit = false;
+                                    if (proj.type === 'OVERLOAD' && proj.hitThisTick) {
+                                        this.triggerOverload(
+                                            proj.currX,
+                                            proj.currY,
+                                            stats,
+                                            tempVisuals,
+                                            impacts,
+                                            overloadedThisRound
+                                        );
+                                        proj.hitThisTick = false;
+                                    }
 
-                                        if (h.type === 'NAPALM_FIRE') {
-                                            const dist = GameState.getPointToSegmentDistance(
-                                                proj.currX,
-                                                proj.currY,
-                                                h.startX,
-                                                h.startY,
-                                                h.endX,
-                                                h.endY,
-                                                this.map.width,
-                                                this.map.height
-                                            );
-                                            // Projectile incineration uses its radius (size or default)
-                                            if (
-                                                dist <=
-                                                hStats.width / 2 + (ENTITY_STATS[proj.type]?.size || 8)
-                                            )
-                                                isHit = true;
-                                        } else {
-                                            if (
-                                                GameState.lineCircleIntersection(
-                                                    prevX,
-                                                    prevY,
-                                                    proj.currX,
-                                                    proj.currY,
-                                                    h.x,
-                                                    h.y,
-                                                    hStats.radius || 200,
-                                                    this.map.width,
-                                                    this.map.height
-                                                )
-                                            ) {
-                                                isHit = true;
-                                            }
-                                        }
+                                    if (
+                                        stats?.damageFull !== undefined &&
+                                        !stats?.landAsStructure &&
+                                        proj.hitThisTick
+                                    ) {
+                                        const potentialTargets = [
+                                            ...this.entities,
+                                            ...tempProjectiles.filter((p) => p.active)
+                                        ];
 
-                                        if (isHit) {
-                                            console.log(
-                                                `[Hazard] Projectile ${proj.id} incinerated by ${h.type} at (${Math.round(h.x)}, ${Math.round(h.y)})`
-                                            );
-                                            proj.active = false;
-                                            proj.hitThisTick = false; // Destroyed mid-air, no detonation
-                                        }
+                                        this.triggerExplosion(
+                                            proj.currX,
+                                            proj.currY,
+                                            stats,
+                                            tempVisuals,
+                                            impacts,
+                                            potentialTargets
+                                        );
+                                        proj.hitThisTick = false;
+                                    }
+                                }
+                            }
+
+                            // --- SHIELD PASSIVE INTERCEPTION (The Crossing Rule) ---
+                            this.entities.forEach((shield) => {
+                                if (!proj.active && !proj.hitThisTick) return;
+                                if (shield.type !== 'SHIELD' || shield.barrierHp <= 0) return;
+
+                                const sStats = ENTITY_STATS.SHIELD;
+                                const prevDist = this.getToroidalDistance(
+                                    shield.x,
+                                    shield.y,
+                                    prevX,
+                                    prevY
+                                );
+                                const currDist = this.getToroidalDistance(
+                                    shield.x,
+                                    shield.y,
+                                    proj.currX,
+                                    proj.currY
+                                );
+
+
+                                if (prevDist > sStats.range && currDist <= sStats.range) {
+                                    // BLOCK!
+                                    proj.active = false;
+                                    proj.hitThisTick = false; // Prevent landing or detonation
+
+                                    const pStats =
+                                        ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
+                                    const isStructure =
+                                        proj.type === 'HUB' ||
+                                        proj.type === 'NUKE' ||
+                                        proj.type === 'EXTRACTOR';
+
+                                    if (!isStructure) {
+                                        const damage = pStats?.damageFull || 1;
+                                        shield.barrierHp -= damage;
+                                        if (shield.barrierHp < 0) shield.barrierHp = 0;
+
+                                        console.log(
+                                            `[Shield Hit] ${proj.id} blocked by ${shield.id}. Shield HP: ${shield.barrierHp}`
+                                        );
+                                    } else {
+                                        console.log(
+                                            `[Shield Structure Block] ${proj.id} destroyed by ${shield.id}. No damage to shield.`
+                                        );
+                                    }
+
+                                    // Visual effect
+                                    tempVisuals.push({
+                                        type: 'SPARK',
+                                        x: proj.currX,
+                                        y: proj.currY,
+                                        duration: 15
                                     });
                                 }
                             });
+
+                            // --- Post-Movement Hazard Collision ---
+                            if (proj.active) {
+                                const hazards = this.entities.filter(
+                                    (e) => e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE'
+                                );
+                                hazards.forEach((h) => {
+                                    const hStats = ENTITY_STATS[h.type];
+                                    let isHit = false;
+
+                                    if (h.type === 'NAPALM_FIRE') {
+                                        const dist = GameState.getPointToSegmentDistance(
+                                            proj.currX,
+                                            proj.currY,
+                                            h.startX,
+                                            h.startY,
+                                            h.endX,
+                                            h.endY,
+                                            this.map.width,
+                                            this.map.height
+                                        );
+                                        // Projectile incineration uses its radius (size or default)
+                                        if (
+                                            dist <=
+                                            hStats.width / 2 + (ENTITY_STATS[proj.type]?.size || 8)
+                                        )
+                                            isHit = true;
+                                    } else {
+                                        if (
+                                            GameState.lineCircleIntersection(
+                                                prevX,
+                                                prevY,
+                                                proj.currX,
+                                                proj.currY,
+                                                h.x,
+                                                h.y,
+                                                hStats.radius || 200,
+                                                this.map.width,
+                                                this.map.height
+                                            )
+                                        ) {
+                                            isHit = true;
+                                        }
+                                    }
+
+                                    if (isHit) {
+                                        console.log(
+                                            `[Hazard] Projectile ${proj.id} incinerated by ${h.type} at (${Math.round(h.x)}, ${Math.round(h.y)})`
+                                        );
+                                        proj.active = false;
+                                        proj.hitThisTick = false; // Destroyed mid-air, no detonation
+                                    }
+                                });
+                            }
+                        });
 
                         // Second pass for Weapons to catch anything that landed this tick (AOE Damage)
                         // This block is now redundant for non-seeker projectiles as the logic is moved above.

@@ -890,8 +890,8 @@ const GameBoard = ({
                                             colorIdx === 0
                                                 ? '#cc6655'
                                                 : colorIdx === 1
-                                                  ? '#ccaa66'
-                                                  : '#cccc77';
+                                                    ? '#ccaa66'
+                                                    : '#cccc77';
                                         ctx.shadowBlur = 5;
                                         ctx.shadowColor = '#884433';
                                         ctx.fill();
@@ -907,6 +907,77 @@ const GameBoard = ({
                                 ctx.lineTo(entity.x - radius, entity.y + radius / 2);
                                 ctx.closePath();
                                 ctx.fill();
+                            } else if (entity.type === 'SHIELD') {
+                                // 1. Render Central Structure
+                                ctx.save();
+                                ctx.translate(entity.x, entity.y);
+                                ctx.beginPath();
+                                // Base square
+                                ctx.rect(
+                                    -radius,
+                                    -radius,
+                                    radius * 2,
+                                    radius * 2
+                                );
+                                ctx.fillStyle = color;
+                                ctx.shadowBlur = 10;
+                                ctx.shadowColor = color;
+                                ctx.fill();
+
+                                // Glowing core
+                                ctx.beginPath();
+                                ctx.arc(0, 0, radius * 0.6, 0, Math.PI * 2);
+                                ctx.fillStyle = '#fff';
+                                ctx.fill();
+                                ctx.restore();
+
+                                // 2. Render Barrier Bubble (if active)
+                                if (entity.barrierHp > 0) {
+                                    ctx.save();
+                                    ctx.translate(entity.x, entity.y);
+
+                                    const bStats = ENTITY_STATS.SHIELD;
+                                    const bRadius = bStats.range;
+                                    const time = Date.now() / 1000;
+
+                                    // Pulse based on barrier health (dims when low)
+                                    const hpFactor = entity.barrierHp / bStats.barrierHpMax;
+                                    const pulse = 1 + Math.sin(time * 3) * 0.02;
+
+                                    ctx.globalAlpha = 0.15 * hpFactor + 0.05;
+                                    ctx.fillStyle = VISUAL_STATS.SHIELD.secondaryColor;
+                                    ctx.strokeStyle = VISUAL_STATS.SHIELD.color;
+                                    ctx.lineWidth = 2 + (1 - hpFactor) * 2; // Thicker lines when low? Or flickering?
+
+                                    if (entity.barrierHp < 2) {
+                                        // Flickering effect for low health
+                                        if (Math.sin(time * 20) > 0.5) ctx.globalAlpha *= 0.3;
+                                    }
+
+                                    // Hexagonal Bubble Shape
+                                    ctx.beginPath();
+                                    for (let i = 0; i < 6; i++) {
+                                        const a = (i * 2 * Math.PI) / 6 + time * 0.1; // Slow rotation
+                                        ctx.lineTo(bRadius * Math.cos(a) * pulse, bRadius * Math.sin(a) * pulse);
+                                    }
+                                    ctx.closePath();
+                                    ctx.fill();
+                                    ctx.stroke();
+
+                                    // Internal Energy Web / Facets
+                                    ctx.save();
+                                    ctx.globalAlpha = 0.1 * hpFactor;
+                                    for (let i = 0; i < 3; i++) {
+                                        const angle = (i * 120 * Math.PI) / 180 + time * 0.2;
+                                        ctx.beginPath();
+                                        ctx.moveTo(-bRadius * Math.cos(angle), -bRadius * Math.sin(angle));
+                                        ctx.lineTo(bRadius * Math.cos(angle), bRadius * Math.sin(angle));
+                                        ctx.stroke();
+                                    }
+                                    ctx.restore();
+
+                                    ctx.restore();
+                                }
                             } else if (entity.type === 'NUKE') {
                                 // Enhanced Nuke Icon (Landed)
                                 ctx.save();
@@ -932,8 +1003,8 @@ const GameBoard = ({
                                 ctx.fillStyle = isDetonating
                                     ? '#ff0000'
                                     : isCritical
-                                      ? '#ff3300'
-                                      : '#f1c40f';
+                                        ? '#ff3300'
+                                        : '#f1c40f';
                                 ctx.beginPath();
                                 ctx.arc(0, 0, radius * 2.2 * pulseScale, 0, Math.PI * 2);
                                 ctx.fill();
@@ -952,8 +1023,8 @@ const GameBoard = ({
                                 ctx.fillStyle = isDetonating
                                     ? '#8b0000'
                                     : isCritical
-                                      ? '#e74c3c'
-                                      : '#f39c12';
+                                        ? '#e74c3c'
+                                        : '#f39c12';
                                 ctx.fill();
                                 ctx.strokeStyle = '#fff';
                                 ctx.lineWidth = isDetonating ? 4 : 2;
@@ -1082,7 +1153,7 @@ const GameBoard = ({
                         const isTransEntity =
                             entity.type === 'PROJECTILE' ||
                             ENTITY_STATS[entity.itemType || entity.type]?.damageFull !==
-                                undefined ||
+                            undefined ||
                             entity.type === 'LASER_BEAM';
                         if (!isTransEntity) {
                             ctx.save();
@@ -1206,8 +1277,8 @@ const GameBoard = ({
                                 ctx.arc(targetX, targetY, stats?.size || 12, 0, Math.PI * 2);
                                 ctx.stroke();
 
-                                // AOE Preview for explosive weapons (Nuke, Weapon, Super Bomb, OVERLOAD)
-                                const explosionRadius = stats?.radiusFull || stats?.detectionRadius;
+                                // AOE Preview for explosive weapons (Nuke, Weapon, Super Bomb, OVERLOAD) or SHIELD
+                                const explosionRadius = stats?.radiusFull || stats?.detectionRadius || stats?.range;
                                 if (explosionRadius) {
                                     ctx.save();
 
@@ -1216,22 +1287,38 @@ const GameBoard = ({
                                         selectedItemType === 'NUKE'
                                             ? 'rgba(255, 0, 0, 0.7)'
                                             : selectedItemType === 'RECLAIMER'
-                                              ? 'rgba(0, 255, 255, 0.7)'
-                                              : vStats?.color
-                                                ? `${vStats.color}b3`
-                                                : 'rgba(255, 255, 255, 0.5)';
+                                                ? 'rgba(0, 255, 255, 0.7)'
+                                                : selectedItemType === 'SHIELD'
+                                                    ? 'rgba(0, 255, 255, 0.5)'
+                                                    : vStats?.color
+                                                        ? `${vStats.color}b3`
+                                                        : 'rgba(255, 255, 255, 0.5)';
 
-                                    // 1. Full Damage Inner Ring (Solid-ish)
+                                    // 1. Full Damage Inner Ring (Solid-ish) / Shield Barrier
                                     ctx.strokeStyle = previewColor;
                                     ctx.lineWidth =
                                         selectedItemType === 'NUKE' ||
-                                        selectedItemType === 'RECLAIMER' ||
-                                        selectedItemType === 'OVERLOAD'
+                                            selectedItemType === 'RECLAIMER' ||
+                                            selectedItemType === 'OVERLOAD' ||
+                                            selectedItemType === 'SHIELD'
                                             ? 3
                                             : 2;
                                     ctx.setLineDash([10, 5]);
                                     ctx.beginPath();
-                                    ctx.arc(targetX, targetY, explosionRadius, 0, Math.PI * 2);
+
+                                    if (selectedItemType === 'SHIELD') {
+                                        // Hexagonal preview for Shield
+                                        for (let i = 0; i < 6; i++) {
+                                            const a = (i * 2 * Math.PI) / 6;
+                                            const vx = targetX + explosionRadius * Math.cos(a);
+                                            const vy = targetY + explosionRadius * Math.sin(a);
+                                            if (i === 0) ctx.moveTo(vx, vy);
+                                            else ctx.lineTo(vx, vy);
+                                        }
+                                        ctx.closePath();
+                                    } else {
+                                        ctx.arc(targetX, targetY, explosionRadius, 0, Math.PI * 2);
+                                    }
                                     ctx.stroke();
 
                                     // 2. Splash Damage Outer Ring (Dashed/Subtle)

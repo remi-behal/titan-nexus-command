@@ -359,6 +359,12 @@ function App() {
                         Flak Defense ({ENTITY_STATS.FLAK_DEFENSE.cost} E)
                     </option>
                     <option
+                        value="SHIELD"
+                        disabled={pCurrent.energy < ENTITY_STATS.SHIELD.cost}
+                    >
+                        Shield Defense ({ENTITY_STATS.SHIELD.cost} E)
+                    </option>
+                    <option
                         value="CLUSTER_BOMB"
                         disabled={pCurrent.energy < ENTITY_STATS.CLUSTER_BOMB.cost}
                     >
@@ -421,14 +427,14 @@ function App() {
                             {isResolvingUI
                                 ? 'Observation Phase'
                                 : isLocked
-                                  ? 'Mission Locked'
-                                  : fuelCostWarning
-                                    ? fuelCostWarning
-                                    : pCurrent.energy < (ENTITY_STATS[selectedItemType]?.cost || 0)
-                                      ? `Insufficient Energy (${ENTITY_STATS[selectedItemType]?.cost} E)`
-                                      : launchMode
-                                        ? 'Cancel Aiming'
-                                        : 'Launch New Structure'}
+                                    ? 'Mission Locked'
+                                    : fuelCostWarning
+                                        ? fuelCostWarning
+                                        : pCurrent.energy < (ENTITY_STATS[selectedItemType]?.cost || 0)
+                                            ? `Insufficient Energy (${ENTITY_STATS[selectedItemType]?.cost} E)`
+                                            : launchMode
+                                                ? 'Cancel Aiming'
+                                                : 'Launch New Structure'}
                         </button>
                     );
                 })()}
@@ -447,10 +453,10 @@ function App() {
                     {isResolvingUI
                         ? 'Resolving...'
                         : isLocked
-                          ? 'Waiting for others...'
-                          : committedActions.length > 0
-                            ? `Complete Turn (${committedActions.length})`
-                            : 'Complete Turn'}
+                            ? 'Waiting for others...'
+                            : committedActions.length > 0
+                                ? `Complete Turn (${committedActions.length})`
+                                : 'Complete Turn'}
                 </button>
             </div>
         </header>
@@ -512,7 +518,7 @@ function App() {
                     isResolving={isResolvingUI}
                     onSelectHub={setSelectedHubId}
                     onAimStart={handleAimStart}
-                    onAimUpdate={() => {}}
+                    onAimUpdate={() => { }}
                     onAimEnd={handleAimEnd}
                 />
                 {launchMode && !isResolvingUI && (
