@@ -218,6 +218,17 @@ export const ENTITY_STATS = {
         isInterceptable: false,
         accuracyDeviationAngle: 10, // ±5 degrees
         accuracyDeviationDistance: 0.1 // ±5% distance
+    },
+    SHIELD: {
+        hp: 2,
+        barrierHpMax: 5,
+        rechargeRate: 1,
+        vision: 150,
+        range: 125, // Barrier radius
+        cost: 45,
+        size: 20,
+        speed: SPEED_TIERS.SLOW,
+        deathEffect: 'DISINTEGRATE'
     }
 };
 

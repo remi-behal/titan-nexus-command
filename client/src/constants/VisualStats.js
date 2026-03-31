@@ -14,5 +14,10 @@ export const VISUAL_STATS = {
     ECHO_ARTILLERY: {
         color: '#808080',
         secondaryColor: '#ff8c00'
+    },
+    SHIELD: {
+        bubbleColor: 'rgba(0, 191, 255, 0.2)', // Deep Sky Blue
+        strokeColor: 'rgba(0, 191, 255, 0.6)',
+        impactColor: '#00ffff'
     }
 };
