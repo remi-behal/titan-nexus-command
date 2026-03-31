@@ -16,12 +16,15 @@
     - [x] Mountains (Non-buildable, Link-traversable) <!-- id: 55 -->
     - [x] Energy Nodes (Static locations for Extractors) <!-- id: 13 -->
     - [x] Super Energy Nodes (High yield, competitive) <!-- id: 56 -->
-- [ ] **Weapon Expansion**: <!-- id: 86 -->
+- [ ] **Weapon/Defense Expansion**: <!-- id: 86 -->
     - [x] **Cluster Bomb**: Implement separation into multiple sub-bombs landing in a perpendicular line. <!-- id: 87 -->
     - [x] **Nuke**: Implement a structure type weapon that destroys everything in a large radius after a single turn. <!-- id: 88 -->
     - [x] **Reclaimer**: Weapon that only targets friendly structures. Deletes the friendly structure and refunds 50% of the cost (rounded up to nearest integer). <!-- id: 89 -->
     - [ ] **EMP**: Implement a weapon that disables structures in a radius. <!-- id: 90 -->
-    - [ ] \*\*
+    - [x] **Echo artillery**: Anti artillery automatic weapon. <!-- id: 91 -->
+    - [x] **Overload**: Link spreading weapon. <!-- id: 92 -->
+    - [x] **Shield**: Add shield structure type. <!-- id: 93 -->
+    
 - [ ] **Multiplayer Enhancements**: <!-- id: 47 -->
     - [ ] Chat system.
     - [ ] Lobby management / Player slotting.

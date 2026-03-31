@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { GameState } from '../GameState.js';
 import { ENTITY_STATS, GLOBAL_STATS } from '../constants/EntityStats.js';
 
-describe('Shield Defense (v2) Logic', () => {
+describe('Shield Defense Logic', () => {
     let game;
 
     beforeEach(() => {
@@ -47,8 +47,8 @@ describe('Shield Defense (v2) Logic', () => {
         });
 
         expect(blocked).toBe(true);
-        // WEAPON damage is 2. Barrier HP 5 -> 3.
-        expect(shield.barrierHp).toBe(3);
+        // WEAPON damage is 2.
+        expect(shield.barrierHp).toBe(ENTITY_STATS.SHIELD.barrierHpMax - 2);
     });
 
     it('should block friendly fire entering from outside (Total Blockade)', () => {
@@ -73,7 +73,7 @@ describe('Shield Defense (v2) Logic', () => {
         };
 
         game.resolveTurn(actions);
-        expect(shield.barrierHp).toBe(3);
+        expect(shield.barrierHp).toBe(ENTITY_STATS.SHIELD.barrierHpMax - 2);
     });
 
     it('should block structure launches (HUB) but take NO damage to barrier', () => {
@@ -101,7 +101,7 @@ describe('Shield Defense (v2) Logic', () => {
 
         game.resolveTurn(actions);
 
-        expect(shield.barrierHp).toBe(5);
+        expect(shield.barrierHp).toBe(ENTITY_STATS.SHIELD.barrierHpMax);
         const hubsAfter = game.entities.filter(e => e.owner === 'player2' && e.type === 'HUB').length;
         expect(hubsAfter).toBe(hubsBefore);
     });
@@ -138,7 +138,42 @@ describe('Shield Defense (v2) Logic', () => {
         });
 
         expect(explosionFound).toBe(true);
-        expect(shield.barrierHp).toBe(5);
+        expect(shield.barrierHp).toBe(ENTITY_STATS.SHIELD.barrierHpMax);
+    });
+
+    it('should allow Reclaimer to pass through shields', () => {
+        const shield = game.addEntity({
+            type: 'SHIELD',
+            owner: 'player1',
+            x: 500,
+            y: 500,
+            deployed: true,
+            isStarter: true
+        });
+
+        const actions = {
+            player1: [{
+                playerId: 'player1',
+                itemType: 'RECLAIMER',
+                sourceId: game.entities.find(e => e.owner === 'player1' && e.type === 'HUB').id,
+                angle: 0,
+                distance: 500
+            }],
+            player2: []
+        };
+
+        const snapshots = game.resolveTurn(actions);
+
+        let reclaimerActiveAcrossBoundary = false;
+        snapshots.forEach(s => {
+            if (s.type === 'ROUND_SUB' && s.subTick > 50) { // Should have crossed boundary
+                const proj = s.state.entities.find(e => e.itemType === 'RECLAIMER');
+                if (proj && proj.x > 500) reclaimerActiveAcrossBoundary = true;
+            }
+        });
+
+        expect(reclaimerActiveAcrossBoundary).toBe(true);
+        expect(shield.barrierHp).toBe(ENTITY_STATS.SHIELD.barrierHpMax);
     });
 
     it('should recharge barrier HP at the turn start', () => {
@@ -150,10 +185,12 @@ describe('Shield Defense (v2) Logic', () => {
             deployed: true,
             isStarter: true
         });
-        shield.barrierHp = 3;
+
+        // Set to HP-1 to ensure room for recharge
+        shield.barrierHp = ENTITY_STATS.SHIELD.barrierHpMax - 1;
 
         game.resolveTurn({ player1: [], player2: [] });
-        expect(shield.barrierHp).toBe(4);
+        expect(shield.barrierHp).toBe(ENTITY_STATS.SHIELD.barrierHpMax);
     });
 
     it('should handle toroidal crossing correctly (Manual Logic Check)', () => {

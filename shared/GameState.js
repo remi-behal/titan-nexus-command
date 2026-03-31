@@ -1582,6 +1582,8 @@ export class GameState {
                             this.entities.forEach((shield) => {
                                 if (!proj.active && !proj.hitThisTick) return;
                                 if (shield.type !== 'SHIELD' || shield.barrierHp <= 0) return;
+                                // 1. Reclaimer Exception: Friendly management tools bypass shields
+                                if (proj.type === 'RECLAIMER' || proj.itemType === 'RECLAIMER') return;
 
                                 const sStats = ENTITY_STATS.SHIELD;
                                 const prevDist = this.getToroidalDistance(

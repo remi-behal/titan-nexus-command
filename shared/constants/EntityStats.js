@@ -221,7 +221,7 @@ export const ENTITY_STATS = {
     },
     SHIELD: {
         hp: 2,
-        barrierHpMax: 5,
+        barrierHpMax: 3,
         rechargeRate: 1,
         vision: 150,
         range: 125, // Barrier radius

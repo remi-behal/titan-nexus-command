@@ -940,39 +940,73 @@ const GameBoard = ({
                                     const bRadius = bStats.range;
                                     const time = Date.now() / 1000;
 
-                                    // Pulse based on barrier health (dims when low)
+                                    // Pulse and HP feedback
                                     const hpFactor = entity.barrierHp / bStats.barrierHpMax;
                                     const pulse = 1 + Math.sin(time * 3) * 0.02;
+                                    const currentRadius = bRadius * pulse;
 
-                                    ctx.globalAlpha = 0.15 * hpFactor + 0.05;
-                                    ctx.fillStyle = VISUAL_STATS.SHIELD.secondaryColor;
-                                    ctx.strokeStyle = VISUAL_STATS.SHIELD.color;
-                                    ctx.lineWidth = 2 + (1 - hpFactor) * 2; // Thicker lines when low? Or flickering?
-
-                                    if (entity.barrierHp < 2) {
-                                        // Flickering effect for low health
-                                        if (Math.sin(time * 20) > 0.5) ctx.globalAlpha *= 0.3;
+                                    if (entity.barrierHp < 2 && Math.sin(time * 20) > 0.5) {
+                                        ctx.globalAlpha *= 0.3;
                                     }
 
-                                    // Hexagonal Bubble Shape
+                                    // A. Base Circular Bubble
                                     ctx.beginPath();
-                                    for (let i = 0; i < 6; i++) {
-                                        const a = (i * 2 * Math.PI) / 6 + time * 0.1; // Slow rotation
-                                        ctx.lineTo(bRadius * Math.cos(a) * pulse, bRadius * Math.sin(a) * pulse);
-                                    }
-                                    ctx.closePath();
+                                    ctx.arc(0, 0, currentRadius, 0, Math.PI * 2);
+
+                                    // Gradient Fill
+                                    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, currentRadius);
+                                    grad.addColorStop(0, `rgba(0, 255, 255, ${0.1 * hpFactor + 0.05})`);
+                                    grad.addColorStop(0.8, `rgba(0, 255, 255, ${0.05 * hpFactor})`);
+                                    grad.addColorStop(1, 'rgba(0, 255, 255, 0)');
+                                    ctx.fillStyle = grad;
                                     ctx.fill();
+
+                                    // B. Circular Boundary Stroke
+                                    ctx.strokeStyle = VISUAL_STATS.SHIELD.color;
+                                    ctx.lineWidth = 2;
+                                    ctx.globalAlpha = 0.4 * hpFactor + 0.1;
                                     ctx.stroke();
 
-                                    // Internal Energy Web / Facets
+                                    // C. Hexagonal Overly (Honeycomb)
                                     ctx.save();
-                                    ctx.globalAlpha = 0.1 * hpFactor;
-                                    for (let i = 0; i < 3; i++) {
-                                        const angle = (i * 120 * Math.PI) / 180 + time * 0.2;
-                                        ctx.beginPath();
-                                        ctx.moveTo(-bRadius * Math.cos(angle), -bRadius * Math.sin(angle));
-                                        ctx.lineTo(bRadius * Math.cos(angle), bRadius * Math.sin(angle));
-                                        ctx.stroke();
+                                    ctx.beginPath();
+                                    ctx.arc(0, 0, currentRadius, 0, Math.PI * 2);
+                                    ctx.clip();
+
+                                    const hexSize = 18;
+                                    const hDist = hexSize * 1.5;
+                                    const vDist = hexSize * Math.sqrt(3);
+
+                                    ctx.strokeStyle = VISUAL_STATS.SHIELD.color;
+                                    ctx.lineWidth = 1;
+
+                                    // Dynamic offset for "energy flow"
+                                    const scrollX = (time * 10) % hDist;
+                                    const scrollY = (time * 5) % vDist;
+
+                                    for (let x = -currentRadius - hDist; x < currentRadius + hDist; x += hDist) {
+                                        const isOdd = Math.abs(Math.round(x / hDist)) % 2 !== 0;
+                                        for (let y = -currentRadius - vDist; y < currentRadius + vDist; y += vDist) {
+                                            const posY = y + (isOdd ? vDist / 2 : 0);
+
+                                            // Only draw if roughly inside to save performance (clipping handles precision)
+                                            const dist = Math.sqrt(x * x + posY * posY);
+                                            if (dist < currentRadius + hexSize) {
+                                                // Hexagon distance-based alpha (fade out near edges)
+                                                ctx.globalAlpha = (0.2 * (1 - dist / currentRadius)) * hpFactor;
+
+                                                ctx.beginPath();
+                                                for (let i = 0; i < 6; i++) {
+                                                    const angle = (i * Math.PI) / 3;
+                                                    const vx = x + hexSize * Math.cos(angle);
+                                                    const vy = posY + hexSize * Math.sin(angle);
+                                                    if (i === 0) ctx.moveTo(vx, vy);
+                                                    else ctx.lineTo(vx, vy);
+                                                }
+                                                ctx.closePath();
+                                                ctx.stroke();
+                                            }
+                                        }
                                     }
                                     ctx.restore();
 
@@ -1306,20 +1340,44 @@ const GameBoard = ({
                                     ctx.setLineDash([10, 5]);
                                     ctx.beginPath();
 
-                                    if (selectedItemType === 'SHIELD') {
-                                        // Hexagonal preview for Shield
-                                        for (let i = 0; i < 6; i++) {
-                                            const a = (i * 2 * Math.PI) / 6;
-                                            const vx = targetX + explosionRadius * Math.cos(a);
-                                            const vy = targetY + explosionRadius * Math.sin(a);
-                                            if (i === 0) ctx.moveTo(vx, vy);
-                                            else ctx.lineTo(vx, vy);
-                                        }
-                                        ctx.closePath();
-                                    } else {
-                                        ctx.arc(targetX, targetY, explosionRadius, 0, Math.PI * 2);
-                                    }
+                                    // Boundary is always circular for Shield now
+                                    ctx.arc(targetX, targetY, explosionRadius, 0, Math.PI * 2);
                                     ctx.stroke();
+
+                                    // Add subtle hex grid dash inside Shield preview
+                                    if (selectedItemType === 'SHIELD') {
+                                        ctx.save();
+                                        ctx.beginPath();
+                                        ctx.arc(targetX, targetY, explosionRadius, 0, Math.PI * 2);
+                                        ctx.clip();
+
+                                        ctx.lineWidth = 1;
+                                        ctx.setLineDash([2, 8]);
+                                        const hexSize = 25; // Slightly larger for cleaner preview
+                                        const hDist = hexSize * 1.5;
+                                        const vDist = hexSize * Math.sqrt(3);
+
+                                        for (let x = targetX - explosionRadius - hDist; x < targetX + explosionRadius + hDist; x += hDist) {
+                                            const isOdd = Math.abs(Math.round((x - targetX) / hDist)) % 2 !== 0;
+                                            for (let y = targetY - explosionRadius - vDist; y < targetY + explosionRadius + vDist; y += vDist) {
+                                                const posY = y + (isOdd ? vDist / 2 : 0);
+                                                const d = Math.sqrt((x - targetX) ** 2 + (posY - targetY) ** 2);
+                                                if (d < explosionRadius) {
+                                                    ctx.beginPath();
+                                                    for (let i = 0; i < 6; i++) {
+                                                        const a = (i * Math.PI) / 3;
+                                                        const vx = x + hexSize * Math.cos(a);
+                                                        const vy = posY + hexSize * Math.sin(a);
+                                                        if (i === 0) ctx.moveTo(vx, vy);
+                                                        else ctx.lineTo(vx, vy);
+                                                    }
+                                                    ctx.closePath();
+                                                    ctx.stroke();
+                                                }
+                                            }
+                                        }
+                                        ctx.restore();
+                                    }
 
                                     // 2. Splash Damage Outer Ring (Dashed/Subtle)
                                     if (stats.radiusHalf && stats.radiusHalf > stats.radiusFull) {
