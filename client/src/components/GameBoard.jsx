@@ -942,7 +942,7 @@ const GameBoard = ({
 
                                     // Pulse and HP feedback
                                     const hpFactor = entity.barrierHp / bStats.barrierHpMax;
-                                    const pulse = 1 + Math.sin(time * 3) * 0.02;
+                                    const pulse = 1.0; // Static (No breathing)
                                     const currentRadius = bRadius * pulse;
 
                                     if (entity.barrierHp < 2 && Math.sin(time * 20) > 0.5) {
@@ -955,16 +955,16 @@ const GameBoard = ({
 
                                     // Gradient Fill
                                     const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, currentRadius);
-                                    grad.addColorStop(0, `rgba(0, 255, 255, ${0.1 * hpFactor + 0.05})`);
-                                    grad.addColorStop(0.8, `rgba(0, 255, 255, ${0.05 * hpFactor})`);
+                                    grad.addColorStop(0, `rgba(0, 255, 255, ${0.1 * hpFactor + 0.1})`);
+                                    grad.addColorStop(0.9, `rgba(0, 255, 255, ${0.05 * hpFactor})`);
                                     grad.addColorStop(1, 'rgba(0, 255, 255, 0)');
                                     ctx.fillStyle = grad;
                                     ctx.fill();
 
                                     // B. Circular Boundary Stroke
                                     ctx.strokeStyle = VISUAL_STATS.SHIELD.color;
-                                    ctx.lineWidth = 2;
-                                    ctx.globalAlpha = 0.4 * hpFactor + 0.1;
+                                    ctx.lineWidth = 3; // Thicker border
+                                    ctx.globalAlpha = 0.6 * hpFactor + 0.3; // Higher contrast
                                     ctx.stroke();
 
                                     // C. Hexagonal Overly (Honeycomb)
@@ -976,25 +976,25 @@ const GameBoard = ({
                                     const hexSize = 18;
                                     const hDist = hexSize * 1.5;
                                     const vDist = hexSize * Math.sqrt(3);
+                                    
+                                    ctx.strokeStyle = "#fff";
+                                    ctx.lineWidth = 0.8;
+                                    
+                                    const cols = Math.ceil(currentRadius / hDist) + 1;
+                                    const rows = Math.ceil(currentRadius / vDist) + 1;
 
-                                    ctx.strokeStyle = VISUAL_STATS.SHIELD.color;
-                                    ctx.lineWidth = 1;
-
-                                    // Dynamic offset for "energy flow"
-                                    const scrollX = (time * 10) % hDist;
-                                    const scrollY = (time * 5) % vDist;
-
-                                    for (let x = -currentRadius - hDist; x < currentRadius + hDist; x += hDist) {
-                                        const isOdd = Math.abs(Math.round(x / hDist)) % 2 !== 0;
-                                        for (let y = -currentRadius - vDist; y < currentRadius + vDist; y += vDist) {
-                                            const posY = y + (isOdd ? vDist / 2 : 0);
-
-                                            // Only draw if roughly inside to save performance (clipping handles precision)
+                                    for (let q = -cols; q <= cols; q++) {
+                                        for (let r = -rows; r <= rows; r++) {
+                                            const x = q * hDist;
+                                            const posY = r * vDist + (Math.abs(q) % 2 === 1 ? vDist / 2 : 0);
+                                            
                                             const dist = Math.sqrt(x * x + posY * posY);
                                             if (dist < currentRadius + hexSize) {
                                                 // Hexagon distance-based alpha (fade out near edges)
-                                                ctx.globalAlpha = (0.2 * (1 - dist / currentRadius)) * hpFactor;
-
+                                                // Ensure alpha is clamped [0, 0.2] and symmetric
+                                                const alpha = Math.max(0, 0.2 * (1 - dist / currentRadius)) * hpFactor;
+                                                ctx.globalAlpha = alpha;
+                                                
                                                 ctx.beginPath();
                                                 for (let i = 0; i < 6; i++) {
                                                     const angle = (i * Math.PI) / 3;
@@ -1344,41 +1344,10 @@ const GameBoard = ({
                                     ctx.arc(targetX, targetY, explosionRadius, 0, Math.PI * 2);
                                     ctx.stroke();
 
-                                    // Add subtle hex grid dash inside Shield preview
-                                    if (selectedItemType === 'SHIELD') {
-                                        ctx.save();
-                                        ctx.beginPath();
-                                        ctx.arc(targetX, targetY, explosionRadius, 0, Math.PI * 2);
-                                        ctx.clip();
-
-                                        ctx.lineWidth = 1;
-                                        ctx.setLineDash([2, 8]);
-                                        const hexSize = 25; // Slightly larger for cleaner preview
-                                        const hDist = hexSize * 1.5;
-                                        const vDist = hexSize * Math.sqrt(3);
-
-                                        for (let x = targetX - explosionRadius - hDist; x < targetX + explosionRadius + hDist; x += hDist) {
-                                            const isOdd = Math.abs(Math.round((x - targetX) / hDist)) % 2 !== 0;
-                                            for (let y = targetY - explosionRadius - vDist; y < targetY + explosionRadius + vDist; y += vDist) {
-                                                const posY = y + (isOdd ? vDist / 2 : 0);
-                                                const d = Math.sqrt((x - targetX) ** 2 + (posY - targetY) ** 2);
-                                                if (d < explosionRadius) {
-                                                    ctx.beginPath();
-                                                    for (let i = 0; i < 6; i++) {
-                                                        const a = (i * Math.PI) / 3;
-                                                        const vx = x + hexSize * Math.cos(a);
-                                                        const vy = posY + hexSize * Math.sin(a);
-                                                        if (i === 0) ctx.moveTo(vx, vy);
-                                                        else ctx.lineTo(vx, vy);
-                                                    }
-                                                    ctx.closePath();
-                                                    ctx.stroke();
-                                                }
-                                            }
-                                        }
-                                        ctx.restore();
+                                    // Add subtle boundary preview for Shield
+                                    if (selectedItemType === "SHIELD") {
+                                        // Just the boundary ring, no internal hexes for the preview
                                     }
-
                                     // 2. Splash Damage Outer Ring (Dashed/Subtle)
                                     if (stats.radiusHalf && stats.radiusHalf > stats.radiusFull) {
                                         ctx.strokeStyle =
