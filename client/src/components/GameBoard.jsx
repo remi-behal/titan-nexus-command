@@ -499,6 +499,95 @@ const GameBoard = ({
                         ctx.fill();
                     });
 
+                    ctx.restore();
+                }
+            }
+            ctx.restore();
+
+            // -----------------------------------------------------------------
+            // 7. FOG OF WAR OVERLAY
+            // -----------------------------------------------------------------
+            if (myPlayerId && myPlayerId !== 'spectator') {
+                // To prevent destination-out from erasing our map entities,
+                // we render the fog logic to a temporary offscreen canvas first.
+                const fogCanvas = document.createElement('canvas');
+                fogCanvas.width = canvas.width;
+                fogCanvas.height = canvas.height;
+                const fctx = fogCanvas.getContext('2d');
+
+                // 1. Draw solid fog overlay
+                fctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                fctx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
+
+                // 2. Punch holes
+                fctx.globalCompositeOperation = 'destination-out';
+                fctx.fillStyle = '#ffffff';
+
+                // We must apply the same world-space transform to the fog context
+                fctx.scale(ZOOM_LEVEL, ZOOM_LEVEL);
+                fctx.translate(-cameraOffset.x, -cameraOffset.y);
+
+                // Tiled loop ensures holes wrap correctly alongside the entities
+                for (let ox = -mapW; ox <= mapW; ox += mapW) {
+                    for (let oy = -mapH; oy <= mapH; oy += mapH) {
+                        fctx.save();
+                        fctx.translate(ox, oy);
+
+                        gameState.entities.forEach((e) => {
+                            const stats = ENTITY_STATS[e.itemType || e.type];
+                            const isOwnProjectile =
+                                stats?.damageFull !== undefined && e.owner === myPlayerId;
+                            const isOwnEntity = e.owner === myPlayerId;
+
+                            if (isOwnEntity || isOwnProjectile) {
+                                const radius = stats?.vision || 0;
+                                if (radius > 0) {
+                                    const viz = visualEntities.current[e.id] || e;
+                                    fctx.beginPath();
+
+                                    if (e.itemType === 'HOMING_MISSILE') {
+                                        const rad = ((viz.currentAngle || 0) * Math.PI) / 180;
+                                        const halfCone =
+                                            ((stats.searchCone || 60) * (Math.PI / 180)) / 2;
+                                        fctx.moveTo(viz.x, viz.y);
+                                        fctx.arc(
+                                            viz.x,
+                                            viz.y,
+                                            radius,
+                                            rad - halfCone,
+                                            rad + halfCone
+                                        );
+                                    } else {
+                                        fctx.arc(viz.x, viz.y, radius, 0, Math.PI * 2);
+                                    }
+                                    fctx.fill();
+                                }
+                            }
+                        });
+                        fctx.restore();
+                    }
+                }
+
+                // 3. Draw the completed fog mask back onto the main canvas
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.drawImage(fogCanvas, 0, 0);
+                ctx.restore();
+            }
+
+            // -----------------------------------------------------------------
+            // 8. FOREGROUND & UI (Entities, Highlights, Aiming)
+            // -----------------------------------------------------------------
+            ctx.save(); // Balance with the final restore() at the end of updateAndDraw
+            ctx.scale(ZOOM_LEVEL, ZOOM_LEVEL);
+            ctx.translate(-cameraOffset.x, -cameraOffset.y);
+
+            for (let offsetOffsetX = -mapW; offsetOffsetX <= mapW; offsetOffsetX += mapW) {
+                for (let offsetOffsetY = -mapH; offsetOffsetY <= mapH; offsetOffsetY += mapH) {
+                    ctx.save();
+                    ctx.translate(offsetOffsetX, offsetOffsetY);
+
                     // 5. DRAW ENTITIES
                     Object.values(visualEntities.current).forEach((entity) => {
                         const player = gameState.players[entity.owner];
@@ -524,7 +613,7 @@ const GameBoard = ({
                         // DRAWING GUARD: Only render the entity if it is scouted (active vision/owned)
                         // or if it's a ghost (previously scouted).
                         // This prevents enemy hubs at link endpoints from being visible in the dark.
-                        if (!entity.scouted && !entity.isGhost) return;
+                        if (entity.scouted === false && !entity.isGhost) return;
 
                         ctx.save();
                         ctx.fillStyle = color;
@@ -899,6 +988,33 @@ const GameBoard = ({
                                     ctx.restore();
                                     ctx.restore();
                                 }
+                            } else if (entity.type === 'HUB') {
+                                // Draw Hub as a solid Hexagon with a core
+                                ctx.save();
+                                ctx.translate(entity.x, entity.y);
+                                ctx.beginPath();
+                                for (let i = 0; i < 6; i++) {
+                                    const a = (i * 2 * Math.PI) / 6;
+                                    ctx.lineTo(radius * Math.cos(a), radius * Math.sin(a));
+                                }
+                                ctx.closePath();
+                                ctx.fill();
+
+                                // Bright White Core
+                                ctx.beginPath();
+                                ctx.arc(0, 0, radius * 0.45, 0, Math.PI * 2);
+                                ctx.fillStyle = '#fff';
+                                ctx.shadowBlur = 15;
+                                ctx.shadowColor = '#fff';
+                                ctx.fill();
+
+                                // Subtle inner ring for detail
+                                ctx.beginPath();
+                                ctx.arc(0, 0, radius * 0.25, 0, Math.PI * 2);
+                                ctx.fillStyle = color;
+                                ctx.globalAlpha = 0.6;
+                                ctx.fill();
+                                ctx.restore();
                             } else if (entity.type === 'EXTRACTOR') {
                                 // Draw Extractor as a triangle
                                 ctx.beginPath();
@@ -976,10 +1092,10 @@ const GameBoard = ({
                                     const hexSize = 18;
                                     const hDist = hexSize * 1.5;
                                     const vDist = hexSize * Math.sqrt(3);
-                                    
+
                                     ctx.strokeStyle = "#fff";
                                     ctx.lineWidth = 0.8;
-                                    
+
                                     const cols = Math.ceil(currentRadius / hDist) + 1;
                                     const rows = Math.ceil(currentRadius / vDist) + 1;
 
@@ -987,14 +1103,14 @@ const GameBoard = ({
                                         for (let r = -rows; r <= rows; r++) {
                                             const x = q * hDist;
                                             const posY = r * vDist + (Math.abs(q) % 2 === 1 ? vDist / 2 : 0);
-                                            
+
                                             const dist = Math.sqrt(x * x + posY * posY);
                                             if (dist < currentRadius + hexSize) {
                                                 // Hexagon distance-based alpha (fade out near edges)
                                                 // Ensure alpha is clamped [0, 0.2] and symmetric
                                                 const alpha = Math.max(0, 0.2 * (1 - dist / currentRadius)) * hpFactor;
                                                 ctx.globalAlpha = alpha;
-                                                
+
                                                 ctx.beginPath();
                                                 for (let i = 0; i < 6; i++) {
                                                     const angle = (i * Math.PI) / 3;
@@ -1308,7 +1424,34 @@ const GameBoard = ({
                                 );
                                 ctx.setLineDash([]);
                                 ctx.beginPath();
-                                ctx.arc(targetX, targetY, stats?.size || 12, 0, Math.PI * 2);
+                                const size = stats?.size || 12;
+                                if (selectedItemType === 'HUB' || selectedItemType === 'NUKE') {
+                                    // Hexagon Preview
+                                    for (let i = 0; i < 6; i++) {
+                                        const a = (i * 2 * Math.PI) / 6;
+                                        ctx.lineTo(
+                                            targetX + size * Math.cos(a),
+                                            targetY + size * Math.sin(a)
+                                        );
+                                    }
+                                    ctx.closePath();
+                                } else if (selectedItemType === 'EXTRACTOR') {
+                                    // Triangle Preview
+                                    ctx.moveTo(targetX, targetY - size);
+                                    ctx.lineTo(targetX + size, targetY + size / 2);
+                                    ctx.lineTo(targetX - size, targetY + size / 2);
+                                    ctx.closePath();
+                                } else if (
+                                    selectedItemType === 'SHIELD' ||
+                                    selectedItemType === 'LASER_POINT_DEFENSE' ||
+                                    selectedItemType === 'FLAK_DEFENSE'
+                                ) {
+                                    // Square Preview
+                                    ctx.rect(targetX - size, targetY - size, size * 2, size * 2);
+                                } else {
+                                    // Default Circle for projectiles
+                                    ctx.arc(targetX, targetY, size, 0, Math.PI * 2);
+                                }
                                 ctx.stroke();
 
                                 // AOE Preview for explosive weapons (Nuke, Weapon, Super Bomb, OVERLOAD) or SHIELD
@@ -1443,77 +1586,6 @@ const GameBoard = ({
                 }
             }
 
-            // -----------------------------------------------------------------
-            // 7. FOG OF WAR OVERLAY
-            // -----------------------------------------------------------------
-            if (myPlayerId && myPlayerId !== 'spectator') {
-                // To prevent destination-out from erasing our map entities,
-                // we render the fog logic to a temporary offscreen canvas first.
-                const fogCanvas = document.createElement('canvas');
-                fogCanvas.width = canvas.width;
-                fogCanvas.height = canvas.height;
-                const fctx = fogCanvas.getContext('2d');
-
-                // 1. Draw solid fog overlay
-                fctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                fctx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
-
-                // 2. Punch holes
-                fctx.globalCompositeOperation = 'destination-out';
-                fctx.fillStyle = '#ffffff';
-
-                // We must apply the same world-space transform to the fog context
-                fctx.scale(ZOOM_LEVEL, ZOOM_LEVEL);
-                fctx.translate(-cameraOffset.x, -cameraOffset.y);
-
-                // Tiled loop ensures holes wrap correctly alongside the entities
-                for (let ox = -mapW; ox <= mapW; ox += mapW) {
-                    for (let oy = -mapH; oy <= mapH; oy += mapH) {
-                        fctx.save();
-                        fctx.translate(ox, oy);
-
-                        gameState.entities.forEach((e) => {
-                            const stats = ENTITY_STATS[e.itemType || e.type];
-                            const isOwnProjectile =
-                                stats?.damageFull !== undefined && e.owner === myPlayerId;
-                            const isOwnEntity = e.owner === myPlayerId;
-
-                            if (isOwnEntity || isOwnProjectile) {
-                                const radius = stats?.vision || 0;
-                                if (radius > 0) {
-                                    const viz = visualEntities.current[e.id] || e;
-                                    fctx.beginPath();
-
-                                    if (e.itemType === 'HOMING_MISSILE') {
-                                        const rad = ((viz.currentAngle || 0) * Math.PI) / 180;
-                                        const halfCone =
-                                            ((stats.searchCone || 60) * (Math.PI / 180)) / 2;
-                                        fctx.moveTo(viz.x, viz.y);
-                                        fctx.arc(
-                                            viz.x,
-                                            viz.y,
-                                            radius,
-                                            rad - halfCone,
-                                            rad + halfCone
-                                        );
-                                    } else {
-                                        fctx.arc(viz.x, viz.y, radius, 0, Math.PI * 2);
-                                    }
-                                    fctx.fill();
-                                }
-                            }
-                        });
-                        fctx.restore();
-                    }
-                }
-
-                // 3. Draw the completed fog mask back onto the main canvas
-                ctx.save();
-                ctx.setTransform(1, 0, 0, 1, 0, 0);
-                ctx.globalCompositeOperation = 'source-over';
-                ctx.drawImage(fogCanvas, 0, 0);
-                ctx.restore();
-            }
 
             ctx.restore();
 

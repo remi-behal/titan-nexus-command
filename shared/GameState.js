@@ -195,7 +195,10 @@ export class GameState {
      */
     getVisibleState(playerId, baseState = null) {
         const state = baseState ? JSON.parse(JSON.stringify(baseState)) : this.getState();
-        if (!playerId || playerId === 'spectator') return state;
+        if (!playerId || playerId === 'spectator') {
+            state.entities = state.entities.map((e) => ({ ...e, scouted: true }));
+            return state;
+        }
 
         const isVisible = (x, y) => {
             return this.isPositionVisible(playerId, x, y, state.entities);

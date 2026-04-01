@@ -568,6 +568,14 @@ describe('GameState - Fog of War', () => {
         expect(entA.scouted).toBe(false); // Inside the dark, only seen via link
         expect(entB.scouted).toBe(true); // Actively seen
     });
+
+    it('should include scouted: true when getVisibleState is called with null/spectator', () => {
+        const state = game.getVisibleState(null);
+        expect(state.entities[0].scouted).toBe(true);
+
+        const specState = game.getVisibleState('spectator');
+        expect(specState.entities[0].scouted).toBe(true);
+    });
 });
 
 describe('GameState - Multi-Action Turns', () => {
