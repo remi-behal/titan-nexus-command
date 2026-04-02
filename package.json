@@ -8,7 +8,7 @@
         "server": "npm run dev --prefix server",
         "dev": "npx -y concurrently \"npm run server\" \"npm run client\"",
         "install:all": "npm install --prefix client && npm install --prefix server",
-        "lint": "eslint . && node scripts/validate-stats.cjs",
+        "lint": "eslint . && node scripts/validate-stats.cjs && node scripts/validate-canvas-stack.cjs",
         "lint:fix": "eslint . --fix && npx prettier . --write",
         "cleanup:git": "git rm -r --cached . && git add . && git commit -m 'chore: clean git index' && git push origin main",
         "test": "vitest run --coverage",

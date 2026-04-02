@@ -42,6 +42,7 @@ export class GameState {
      * Note: The launch direction is OPPOSITE to the pull direction.
      */
     static calculateLaunchAngle(dx, dy) {
+        if (isNaN(dx) || isNaN(dy) || (dx === 0 && dy === 0)) return 0;
         // We pull away from target, so launch is opposite (-dx, -dy)
         return Math.atan2(-dy, -dx) * (180 / Math.PI);
     }
@@ -50,6 +51,9 @@ export class GameState {
      * Helper to get the shortest distance vector (dx, dy) between two points on a torus.
      */
     static getToroidalVector(x1, y1, x2, y2, w, h) {
+        if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return { dx: 0, dy: 0 };
+        if (w <= 0 || h <= 0) return { dx: 0, dy: 0 };
+
         let dx = x2 - x1;
         let dy = y2 - y1;
         if (dx > w / 2) dx -= w;
@@ -108,13 +112,15 @@ export class GameState {
      * Shortest distance between two points on a torus
      */
     getToroidalDistance(x1, y1, x2, y2) {
+        if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return 0;
+
         let dx = Math.abs(x2 - x1);
         let dy = Math.abs(y2 - y1);
 
         if (dx > this.map.width / 2) dx = this.map.width - dx;
         if (dy > this.map.height / 2) dy = this.map.height - dy;
 
-        return Math.sqrt(dx * dx + dy * dy);
+        return Math.sqrt(dx * dx + dy * dy) || 0;
     }
 
     /**

@@ -34,8 +34,9 @@ describe('Server Networking - Reconnection and Resilience', () => {
     const resetServer = async () => {
         const resetClient = Client(url);
         await new Promise((resolve) => resetClient.once('connect', resolve));
+        const restarted = new Promise((resolve) => resetClient.once('matchRestarted', resolve));
         resetClient.emit('restartGame');
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        await restarted;
         resetClient.disconnect();
     };
 
@@ -79,19 +80,24 @@ describe('Server Networking - Reconnection and Resilience', () => {
         let client1 = Client(url);
         let client2 = Client(url);
 
-        // Wait for connection and assignment
+        // Register listeners BEFORE emiting authenticate to avoid race conditions
+        const p1Assign = new Promise((resolve) => client1.once('playerAssignment', resolve));
+        const p2Assign = new Promise((resolve) => client2.once('playerAssignment', resolve));
+
+        // Wait for connection AND assignment
         client1.emit('authenticate', 'test-token-p1');
         client2.emit('authenticate', 'test-token-p2');
 
-        const p1Assign = new Promise((resolve) => client1.once('playerAssignment', resolve));
-        const p2Assign = new Promise((resolve) => client2.once('playerAssignment', resolve));
-        await Promise.all([p1Assign, p2Assign]);
+        const [id1, id2] = await Promise.all([p1Assign, p2Assign]);
+        expect(id1).toBe('player1');
+        expect(id2).toBe('player2');
 
         // Get initial state
         const statePromise = new Promise((resolve) => client1.once('gameStateUpdate', resolve));
         client1.emit('requestState');
         const state = await statePromise;
-        const p1Hub = state.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = state.entities.find((e) => e.owner === 'player1' && (e.type === 'HUB' || e.itemType === 'HUB'));
+        expect(p1Hub).toBeDefined();
 
         const actions = [
             {
