@@ -3,6 +3,9 @@ const path = require('path');
 
 const targetFile = path.resolve(__dirname, '../client/src/components/GameBoard.jsx');
 
+// Contexts to track independently
+const CONTEXTS = ['ctx', 'fctx', 'offscreenCtx'];
+
 function validateCanvasStack(filePath) {
     if (!fs.existsSync(filePath)) {
         console.warn(`File not found: ${filePath}`);
@@ -11,7 +14,11 @@ function validateCanvasStack(filePath) {
 
     const content = fs.readFileSync(filePath, 'utf8');
     const lines = content.split('\n');
-    let stackDepth = 0;
+
+    // Independent depths for each context
+    const depths = {};
+    CONTEXTS.forEach(c => depths[c] = 0);
+
     let errors = 0;
 
     console.log(`Validating Canvas Stack in: ${filePath}`);
@@ -19,32 +26,39 @@ function validateCanvasStack(filePath) {
     lines.forEach((line, index) => {
         const lineNum = index + 1;
 
-        // Count saves and restores
-        const saves = (line.match(/ctx\.save\(/g) || []).length;
-        const restores = (line.match(/ctx\.restore\(/g) || []).length;
+        CONTEXTS.forEach(ctxName => {
+            const saveRegex = new RegExp(`${ctxName}\\.save\\(`, 'g');
+            const restoreRegex = new RegExp(`${ctxName}\\.restore\\(`, 'g');
 
-        // Skip fogCanvas for now, or track it separately if needed
-        // const fSaves = (line.match(/fctx\.save\(/g) || []).length;
-        // const fRestores = (line.match(/fctx\.restore\(/g) || []).length;
+            const saves = (line.match(saveRegex) || []).length;
+            const restores = (line.match(restoreRegex) || []).length;
 
-        if (saves > 0 || restores > 0) {
-            stackDepth += saves - restores;
-            if (stackDepth < 0) {
-                console.error(`ERROR: Canvas Stack Underflow at line ${lineNum}: ${line.trim()}`);
-                errors++;
+            if (saves > 0 || restores > 0) {
+                depths[ctxName] += saves - restores;
+
+                if (depths[ctxName] < 0) {
+                    console.error(`ERROR [${ctxName}]: Stack Underflow at line ${lineNum}: ${line.trim()}`);
+                    errors++;
+                    // Reset to avoid cascading errors for this line
+                    depths[ctxName] = 0;
+                }
             }
+        });
+    });
+
+    // Final check for each context
+    CONTEXTS.forEach(ctxName => {
+        if (depths[ctxName] !== 0) {
+            console.error(`ERROR [${ctxName}]: Mismatched Canvas Stack! Final Depth: ${depths[ctxName]}. Check for missing .restore() calls.`);
+            errors++;
         }
     });
 
-    if (stackDepth !== 0) {
-        console.error(`ERROR: Mismatched Canvas Stack! Final Depth: ${stackDepth}. Check for missing ctx.restore() calls.`);
-        errors++;
-    }
-
     if (errors > 0) {
+        console.error(`\nValidation FAILED with ${errors} error(s).`);
         process.exit(1);
     } else {
-        console.log('Canvas Stack Validation: PASSED');
+        console.log('Canvas Stack Validation: PASSED (All contexts balanced)');
     }
 }
 
