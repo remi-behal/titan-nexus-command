@@ -232,6 +232,7 @@ export const ENTITY_STATS = {
     },
     EMP: {
         hp: 1,
+        itemType: 'EMP',
         cost: 50,
         radiusFull: 200,
         damageFull: 0, // Non-destructive
