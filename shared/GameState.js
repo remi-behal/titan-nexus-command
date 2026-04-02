@@ -602,6 +602,11 @@ export class GameState {
             entity.barrierHp = stats.barrierHpMax || 5;
         }
 
+        // Initialize capture status for Extractors
+        if (data.type === 'EXTRACTOR') {
+            this.updateExtractorStatus(entity);
+        }
+
         this.entities.push(entity);
         return entity;
     }
@@ -698,20 +703,16 @@ export class GameState {
                         let entityIncome = stats.energyGen;
 
                         // Extractor-specific node bonus
-                        // We check if the extractor is within the capture radius of any resource node.
                         if (entity.type === 'EXTRACTOR') {
-                            // Find the closest node in range (toroidal-aware)
-                            const node = this.map.resources.find(
-                                (res) =>
-                                    this.getToroidalDistance(entity.x, entity.y, res.x, res.y) <=
-                                    GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS
-                            );
-                            if (node) {
-                                // The node's 'value' acts as a multiplier or flat bonus to energy production
-                                entityIncome += node.value || 0;
-                                console.log(
-                                    `[Economy] Extractor ${entity.id} on node ${node.id} generated ${entityIncome} total.`
-                                );
+                            this.updateExtractorStatus(entity);
+                            if (entity.isCapturing && entity.capturedNodeId) {
+                                const node = this.map.resources.find(r => r.id === entity.capturedNodeId);
+                                if (node) {
+                                    entityIncome += node.value || 0;
+                                    console.log(
+                                        `[Economy] Extractor ${entity.id} on node ${node.id} generated ${entityIncome} total.`
+                                    );
+                                }
                             }
                         }
 
@@ -2404,10 +2405,6 @@ export class GameState {
         return null;
     }
 
-    /**
-     * Internal Echo Artillery logic: Detect a launch and schedule a response.
-     * Used by both manual and automated launches.
-     */
     triggerEchoArtillery(sourceX, sourceY, launcherId, round) {
         this.entities.forEach((ent) => {
             if (ent.type === 'ECHO_ARTILLERY' && ent.owner !== launcherId && !ent.firedThisTurn) {
@@ -2421,5 +2418,26 @@ export class GameState {
                 }
             }
         });
+    }
+
+    /**
+     * Updates an extractor's capture status based on nearby resource nodes.
+     */
+    updateExtractorStatus(entity) {
+        if (entity.type !== 'EXTRACTOR') return;
+
+        const node = this.map.resources.find(
+            (res) =>
+                this.getToroidalDistance(entity.x, entity.y, res.x, res.y) <=
+                GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS
+        );
+
+        if (node) {
+            entity.isCapturing = true;
+            entity.capturedNodeId = node.id;
+        } else {
+            entity.isCapturing = false;
+            entity.capturedNodeId = null;
+        }
     }
 }

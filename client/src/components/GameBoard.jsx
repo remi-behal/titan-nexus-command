@@ -36,9 +36,51 @@ const GameBoard = ({
     const SLING_RING_RADIUS = GLOBAL_STATS.SLING_RING_RADIUS;
     const RING_INTERACTION_BUFFER = GLOBAL_STATS.RING_INTERACTION_BUFFER;
 
-    // visualEntities stores the smoothly-interpolated positions of all objects
     const visualEntities = useRef({});
     const visualLinks = useRef({});
+
+    // Use a Ref to provide the animation loop with the latest props without restarting the loop
+    const propsRef = useRef({
+        gameState,
+        myPlayerId,
+        selectedHubId,
+        selectedItemType,
+        launchMode,
+        isAiming,
+        committedActions,
+        mousePos,
+        cameraOffset,
+        maxPullDistance,
+        showDebugPreview
+    });
+
+    useEffect(() => {
+        propsRef.current = {
+            gameState,
+            myPlayerId,
+            selectedHubId,
+            selectedItemType,
+            launchMode,
+            isAiming,
+            committedActions,
+            mousePos,
+            cameraOffset,
+            maxPullDistance,
+            showDebugPreview
+        };
+    }, [
+        gameState,
+        myPlayerId,
+        selectedHubId,
+        selectedItemType,
+        launchMode,
+        isAiming,
+        committedActions,
+        mousePos,
+        cameraOffset,
+        maxPullDistance,
+        showDebugPreview
+    ]);
 
     const getStrengthColor = (ratio) => {
         // Linear transition: Green (0,255,0) -> Orange (255,165,0) -> Red (255,0,0)
@@ -112,16 +154,35 @@ const GameBoard = ({
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
 
-        const mapW = gameState.map.width;
-        const mapH = gameState.map.height;
-
         const updateAndDraw = () => {
+            const {
+                gameState: currentGameState,
+                myPlayerId,
+                selectedHubId,
+                selectedItemType,
+                launchMode,
+                isAiming,
+                committedActions,
+                mousePos,
+                cameraOffset,
+                maxPullDistance,
+                showDebugPreview
+            } = propsRef.current;
+
+            if (!currentGameState) {
+                animationFrameId = requestAnimationFrame(updateAndDraw);
+                return;
+            }
+
+            const mapW = currentGameState.map.width;
+            const mapH = currentGameState.map.height;
+
             // 1. UPDATE VISUAL POSITIONS (Lerp) & GHOST LOGIC
             // LERP_FACTOR targets how fast we reach the server's state.
             const LERP_FACTOR = 0.3;
 
             // Define current vision circles for re-scouting check
-            const currentVisionCircles = gameState.entities
+            const currentVisionCircles = currentGameState.entities
                 .filter((e) => e.owner === myPlayerId)
                 .map((e) => ({
                     x: e.x,
@@ -143,7 +204,7 @@ const GameBoard = ({
                 }
 
                 // Then check specialized cone vision for projectiles
-                return gameState.entities.some((e) => {
+                return currentGameState.entities.some((e) => {
                     if (e.owner !== myPlayerId) return false;
                     const stats = ENTITY_STATS[e.itemType || e.type];
                     const radius = stats?.vision || 0;
@@ -163,10 +224,10 @@ const GameBoard = ({
                 });
             };
 
-            const serverIds = new Set(gameState.entities.map((e) => e.id));
+            const serverIds = new Set(currentGameState.entities.map((e) => e.id));
 
             // Update existing entities and handle New ones
-            gameState.entities.forEach((serverEnt) => {
+            currentGameState.entities.forEach((serverEnt) => {
                 if (!visualEntities.current[serverEnt.id]) {
                     visualEntities.current[serverEnt.id] = {
                         ...serverEnt,
@@ -197,6 +258,9 @@ const GameBoard = ({
                     viz.flakActive = serverEnt.flakActive;
                     viz.flakAngle = serverEnt.flakAngle;
                     viz.flakTriggerTick = serverEnt.flakTriggerTick;
+                    viz.barrierHp = serverEnt.barrierHp;
+                    viz.disabledUntilTurn = serverEnt.disabledUntilTurn;
+                    viz.detonationTurn = serverEnt.detonationTurn;
                     viz.isGhost = false;
                     viz.lastSeen = Date.now();
                     viz.scouted = viz.scouted || serverEnt.scouted; // Once scouted, always scouted for ghosting purposes
@@ -241,7 +305,7 @@ const GameBoard = ({
             });
 
             // Handle Links Ghosts
-            gameState.links.forEach((serverLink) => {
+            currentGameState.links.forEach((serverLink) => {
                 const linkId = `${serverLink.from}-${serverLink.to}`;
                 if (!visualLinks.current[linkId]) {
                     visualLinks.current[linkId] = { ...serverLink, isGhost: false };
@@ -252,7 +316,7 @@ const GameBoard = ({
 
             Object.keys(visualLinks.current).forEach((linkId) => {
                 const viz = visualLinks.current[linkId];
-                const inServer = gameState.links.some((l) => `${l.from}-${l.to}` === linkId);
+                const inServer = currentGameState.links.some((l) => `${l.from}-${l.to}` === linkId);
 
                 if (!inServer) {
                     // Check if either end of the link is currently in vision.
@@ -294,8 +358,8 @@ const GameBoard = ({
                     ctx.translate(offsetOffsetX, offsetOffsetY);
 
                     // 2a. DRAW LAKES
-                    if (gameState.map.lakes) {
-                        gameState.map.lakes.forEach((lake) => {
+                    if (currentGameState.map.lakes) {
+                        currentGameState.map.lakes.forEach((lake) => {
                             ctx.save();
                             ctx.fillStyle = '#1a3a5a'; // Deep water blue
                             ctx.globalAlpha = 0.6;
@@ -311,8 +375,8 @@ const GameBoard = ({
                     }
 
                     // 2a-2. DRAW MOUNTAINS
-                    if (gameState.map.mountains) {
-                        gameState.map.mountains.forEach((mtn) => {
+                    if (currentGameState.map.mountains) {
+                        currentGameState.map.mountains.forEach((mtn) => {
                             ctx.save();
                             // Base stone circle
                             ctx.fillStyle = '#3d3434'; // Dark stone
@@ -336,8 +400,8 @@ const GameBoard = ({
                     }
 
                     // 2-c. Craters (Permanent scars)
-                    if (gameState.map.craters) {
-                        gameState.map.craters.forEach((crater) => {
+                    if (currentGameState.map.craters) {
+                        currentGameState.map.craters.forEach((crater) => {
                             ctx.save();
                             ctx.fillStyle = 'rgba(0,0,0,0.5)';
                             ctx.beginPath();
@@ -384,7 +448,7 @@ const GameBoard = ({
                         if (!from || !to) return;
 
                         const ownerId = link.owner || from.owner;
-                        const player = gameState.players[ownerId];
+                        const player = currentGameState.players[ownerId];
                         const baseColor = player ? player.color : '#666';
 
                         // Calculate desaturated color for ghost segments (Bug 1 fix)
@@ -465,7 +529,7 @@ const GameBoard = ({
                     });
 
                     // 4. DRAW RESOURCES
-                    gameState.map.resources.forEach((res) => {
+                    currentGameState.map.resources.forEach((res) => {
                         const isSuper = res.isSuper === true;
 
                         // Large Pulse Aura for Super Nodes
@@ -533,7 +597,7 @@ const GameBoard = ({
                         fctx.save();
                         fctx.translate(ox, oy);
 
-                        gameState.entities.forEach((e) => {
+                        currentGameState.entities.forEach((e) => {
                             const stats = ENTITY_STATS[e.itemType || e.type];
                             const isOwnProjectile =
                                 stats?.damageFull !== undefined && e.owner === myPlayerId;
@@ -590,8 +654,23 @@ const GameBoard = ({
 
                     // 5. DRAW ENTITIES
                     Object.values(visualEntities.current).forEach((entity) => {
-                        const player = gameState.players[entity.owner];
+                        const player = currentGameState.players[entity.owner];
                         let color = player ? player.color : '#fff';
+
+                        const isDisabled = entity.disabledUntilTurn > currentGameState.turn;
+                        if (isDisabled && !displayAsGhost) {
+                            const eStats = VISUAL_STATS.EMP;
+                            const tSeed = Math.floor(Date.now() / (eStats.jitterFrequency || 60));
+                            // Use deterministic sin/cos based on time for 'stutter' effect
+                            const dx = Math.sin(tSeed * 12.98) * (eStats.jitterMagnitude || 2);
+                            const dy = Math.cos(tSeed * 43.21) * (eStats.jitterMagnitude || 2);
+                            ctx.translate(dx, dy);
+
+                            // Flicker color based on rate
+                            if (Math.random() > (eStats.flickerRate || 0.7)) {
+                                color = Math.random() > 0.5 ? eStats.color : eStats.secondaryColor;
+                            }
+                        }
 
                         // Bug 2 fix: An entity should display as a "ghost" (desaturated) if it's
                         // NOT in active vision, even if it's still in the server state (e.g. as a link endpoint).
@@ -1017,12 +1096,36 @@ const GameBoard = ({
                                 ctx.restore();
                             } else if (entity.type === 'EXTRACTOR') {
                                 // Draw Extractor as a triangle
+                                const isInactive = entity.deployed !== false && entity.isCapturing === false;
+
+                                if (isInactive) {
+                                    ctx.fillStyle = VISUAL_STATS.EXTRACTOR.inactiveColor;
+                                }
+
                                 ctx.beginPath();
                                 ctx.moveTo(entity.x, entity.y - radius);
                                 ctx.lineTo(entity.x + radius, entity.y + radius / 2);
                                 ctx.lineTo(entity.x - radius, entity.y + radius / 2);
                                 ctx.closePath();
                                 ctx.fill();
+
+                                // Draw tether if capturing
+                                if (entity.isCapturing && entity.capturedNodeId) {
+                                    const node = currentGameState.map.resources.find(r => r.id === entity.capturedNodeId);
+                                    if (node) {
+                                        ctx.save();
+                                        ctx.strokeStyle = VISUAL_STATS.EXTRACTOR.tetherColor;
+                                        ctx.lineWidth = 2;
+                                        ctx.setLineDash([5, 5]);
+                                        // Draw toroidal-aware tether
+                                        const { dx, dy } = getToroidalDistVector(entity.x, entity.y, node.x, node.y, mapW, mapH);
+                                        ctx.beginPath();
+                                        ctx.moveTo(entity.x, entity.y);
+                                        ctx.lineTo(entity.x + dx, entity.y + dy);
+                                        ctx.stroke();
+                                        ctx.restore();
+                                    }
+                                }
                             } else if (entity.type === 'SHIELD') {
                                 // 1. Render Central Structure
                                 ctx.save();
@@ -1047,8 +1150,8 @@ const GameBoard = ({
                                 ctx.fill();
                                 ctx.restore();
 
-                                // 2. Render Barrier Bubble (if active)
-                                if (entity.barrierHp > 0) {
+                                // 2. Render Barrier Bubble (if active and NOT disabled)
+                                if (entity.barrierHp > 0 && !isDisabled) {
                                     ctx.save();
                                     ctx.translate(entity.x, entity.y);
 
@@ -1135,7 +1238,7 @@ const GameBoard = ({
                                 const time = Date.now();
 
                                 const remainingTurns =
-                                    (entity.detonationTurn || 0) - gameState.turn;
+                                    (entity.detonationTurn || 0) - currentGameState.turn;
                                 const isDetonating = remainingTurns <= 0;
                                 const isCritical = remainingTurns <= 1;
 
@@ -1441,6 +1544,15 @@ const GameBoard = ({
                                     ctx.lineTo(targetX + size, targetY + size / 2);
                                     ctx.lineTo(targetX - size, targetY + size / 2);
                                     ctx.closePath();
+
+                                    // Capture Radius Preview
+                                    ctx.save();
+                                    ctx.strokeStyle = VISUAL_STATS.EXTRACTOR.captureRadiusColor;
+                                    ctx.setLineDash([5, 5]);
+                                    ctx.beginPath();
+                                    ctx.arc(targetX, targetY, GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS, 0, Math.PI * 2);
+                                    ctx.stroke();
+                                    ctx.restore();
                                 } else if (
                                     selectedItemType === 'SHIELD' ||
                                     selectedItemType === 'LASER_POINT_DEFENSE' ||

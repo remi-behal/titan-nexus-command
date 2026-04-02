@@ -256,6 +256,9 @@ function App() {
                         let projectedIncome = GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
                         playerState?.entities?.forEach((entity) => {
                             if (entity.owner === myPlayerId) {
+                                // Skip income from disabled entities
+                                if (entity.disabledUntilTurn > playerState.turn) return;
+
                                 const stats = ENTITY_STATS[entity.type];
                                 if (stats && stats.energyGen) {
                                     projectedIncome += stats.energyGen;
@@ -383,6 +386,12 @@ function App() {
                         Overload ({ENTITY_STATS.OVERLOAD.cost} E)
                     </option>
                     <option
+                        value="EMP"
+                        disabled={pCurrent.energy < ENTITY_STATS.EMP.cost}
+                    >
+                        EMP Weapon ({ENTITY_STATS.EMP.cost} E)
+                    </option>
+                    <option
                         value="ECHO_ARTILLERY"
                         disabled={pCurrent.energy < ENTITY_STATS.ECHO_ARTILLERY.cost}
                     >
@@ -402,6 +411,7 @@ function App() {
                     const selectedEntity = playerState?.entities?.find(
                         (e) => e.id === selectedHubId
                     );
+                    const isDisabled = selectedEntity?.disabledUntilTurn > playerState?.turn;
                     const pendingFuelSpent = committedActions.filter(
                         (a) => a.sourceId === selectedHubId
                     ).length;
@@ -410,7 +420,7 @@ function App() {
                             ? selectedEntity.fuel - pendingFuelSpent
                             : Infinity;
                     const hasFuel = remainingFuel > 0;
-                    const fuelCostWarning = !hasFuel ? 'Out of Fuel' : null;
+                    const fuelCostWarning = !hasFuel ? 'Out of Fuel' : isDisabled ? 'Hub Offline (EMP)' : null;
 
                     return (
                         <button
@@ -421,7 +431,8 @@ function App() {
                                 isLocked ||
                                 isResolvingUI ||
                                 pCurrent.energy < (ENTITY_STATS[selectedItemType]?.cost || 0) ||
-                                !hasFuel
+                                !hasFuel ||
+                                isDisabled
                             }
                         >
                             {isResolvingUI

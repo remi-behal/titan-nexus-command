@@ -18,6 +18,20 @@ export const VISUAL_STATS = {
     SHIELD: {
         bubbleColor: 'rgba(0, 191, 255, 0.2)', // Deep Sky Blue
         strokeColor: 'rgba(0, 191, 255, 0.6)',
-        impactColor: '#00ffff'
+        impactColor: '#00ffff',
+        color: 'rgba(0, 255, 255, 0.5)'
+    },
+    EMP: {
+        color: '#00ffff', // Cyan
+        secondaryColor: '#ffff00', // Yellow
+        jitterMagnitude: 2,
+        jitterFrequency: 500, // Update jitter every jitterFrequency ms
+        flickerRate: 0.7 // Probability of showing a glitched color each frame
+    },
+    EXTRACTOR: {
+        inactiveColor: '#555',
+        activeColor: '#00ffff',
+        captureRadiusColor: 'rgba(0, 255, 255, 0.4)',
+        tetherColor: 'rgba(131, 255, 100, 1)'
     }
 };
