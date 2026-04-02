@@ -162,6 +162,12 @@ describe('GameState - Game Initialization', () => {
         expect(superNode.value).toBe(15);
         expect(superNode.color).toBe('#bf00ff');
     });
+
+    it('should initialize disabledUntilTurn to 0 for new entities', () => {
+        game.initializeGame(['player1']);
+        const hub = game.entities.find((e) => e.type === 'HUB');
+        expect(hub.disabledUntilTurn).toBe(0);
+    });
 });
 
 describe('GameState - Link Integrity', () => {

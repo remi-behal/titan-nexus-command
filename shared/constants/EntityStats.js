@@ -229,6 +229,17 @@ export const ENTITY_STATS = {
         size: 20,
         speed: SPEED_TIERS.SLOW,
         deathEffect: 'DISINTEGRATE'
+    },
+    EMP: {
+        hp: 1,
+        cost: 50,
+        radiusFull: 200,
+        damageFull: 0, // Non-destructive
+        vision: 100,
+        size: 8,
+        speed: SPEED_TIERS.NORMAL,
+        isInterceptable: true,
+        deathEffect: 'DETONATE'
     }
 };
 

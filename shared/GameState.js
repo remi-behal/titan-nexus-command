@@ -585,7 +585,8 @@ export class GameState {
             ...data,
             fuel: finalFuel,
             maxFuel: finalMaxFuel,
-            hp: data.hp || stats.hp || GLOBAL_STATS.DEFAULT_HP
+            hp: data.hp || stats.hp || GLOBAL_STATS.DEFAULT_HP,
+            disabledUntilTurn: 0
         };
 
         if (data.type === 'NUKE' && data.detonationTurn === undefined) {
