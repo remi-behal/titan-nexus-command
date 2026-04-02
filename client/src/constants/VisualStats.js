@@ -24,7 +24,7 @@ export const VISUAL_STATS = {
     EMP: {
         color: '#00ffff', // Cyan
         secondaryColor: '#ffff00', // Yellow
-        jitterMagnitude: 2,
+        jitterMagnitude: 1,
         jitterFrequency: 500, // Update jitter every jitterFrequency ms
         flickerRate: 0.7 // Probability of showing a glitched color each frame
     },

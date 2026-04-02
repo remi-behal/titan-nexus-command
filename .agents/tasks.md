@@ -20,7 +20,7 @@
     - [x] **Cluster Bomb**: Implement separation into multiple sub-bombs landing in a perpendicular line. <!-- id: 87 -->
     - [x] **Nuke**: Implement a structure type weapon that destroys everything in a large radius after a single turn. <!-- id: 88 -->
     - [x] **Reclaimer**: Weapon that only targets friendly structures. Deletes the friendly structure and refunds 50% of the cost (rounded up to nearest integer). <!-- id: 89 -->
-    - [ ] **EMP**: Implement a weapon that disables structures in a radius. <!-- id: 90 -->
+    - [x] **EMP**: Implement a weapon that disables structures in a radius. <!-- id: 90 -->
     - [x] **Echo artillery**: Anti artillery automatic weapon. <!-- id: 91 -->
     - [x] **Overload**: Link spreading weapon. <!-- id: 92 -->
     - [x] **Shield**: Add shield structure type. <!-- id: 93 -->
