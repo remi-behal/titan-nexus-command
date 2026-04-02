@@ -156,14 +156,36 @@ describe('EMP Weapon System', () => {
 
         expect(game.players.p2.energy).toBe(expected);
 
-        // Check snapshots to ensure second projectile wasn't created
-        let secondProjFound = false;
+        // Check snapshots:
+        // Round 1 (index ~0-20) should have projectiles.
+        // Round 2 (starts after the first ROUND snapshot) should have NO projectiles.
+        let round2Started = false;
+        let p2SecondProjFound = false;
         snapshots.forEach(s => {
-            if (s.type === 'ROUND_SUB' && s.subTick > 0) {
+            if (s.type === 'ROUND' && s.round === 1) round2Started = true;
+
+            if (round2Started && s.type === 'ROUND_SUB') {
                 const projs = s.state.entities.filter(e => e.type === 'PROJECTILE');
-                if (projs.length > 1) secondProjFound = true;
+                if (projs.length > 0) p2SecondProjFound = true;
             }
         });
-        expect(secondProjFound).toBe(false);
+        expect(p2SecondProjFound).toBe(false);
+    });
+
+    it('should pause nuke countdown when disabled', () => {
+        const nuke = game.addEntity({
+            type: 'NUKE',
+            owner: 'p1',
+            x: 0,
+            y: 0,
+            detonationTurn: game.turn + 2 // Detonates in 2 turns (Turn 3)
+        });
+
+        nuke.disabledUntilTurn = game.turn + 1; // Disabled for turn 1
+
+        game.resolveTurn({ p1: [], p2: [] });
+
+        // Should have incremented to Turn 4
+        expect(nuke.detonationTurn).toBe(4);
     });
 });
