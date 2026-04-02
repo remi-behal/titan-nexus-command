@@ -33,7 +33,7 @@ If hit in **Turn N**, the target is disabled for the remainder of Turn N and the
 
 ## 4. Visuals & UI
 - **Visual Effect**: An animated "electrical glitch" or blue/yellow static flicker overlay is rendered over the structure in `GameBoard.jsx`.
-- **UI**: Grayed out in the selection menu if the player attempts to select a disabled hub.
+- **UI**: Grayed out on the launch structure button if the player selects a disabled hub.
 
 ## 5. Technical Implementation
 - Add `EMP` to `ENTITY_STATS.js`.
