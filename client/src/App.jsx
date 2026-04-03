@@ -405,6 +405,12 @@ function App() {
                         Super Bomb [TEST] ({ENTITY_STATS.SUPER_BOMB?.cost || 10} E)
                     </option>
                     <option value="RECLAIMER">Reclaimer (0 E, 1 Fuel)</option>
+                    <option
+                        value="SMART_SAM_DEFENSE"
+                        disabled={pCurrent.energy < (ENTITY_STATS.SMART_SAM_DEFENSE?.cost || 10)}
+                    >
+                        Smart SAM Defense ({ENTITY_STATS.SMART_SAM_DEFENSE?.cost || 10} E)
+                    </option>
                 </select>
 
                 {(() => {

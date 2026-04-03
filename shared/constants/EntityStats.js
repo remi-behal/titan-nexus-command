@@ -131,6 +131,41 @@ export const ENTITY_STATS = {
         isSeeker: true,
         deathEffect: 'DETONATE'
     },
+    SMART_SAM_DEFENSE: {
+        hp: 3,
+        fuel: 2,
+        fuelRegen: 1,
+        vision: 250,
+        range: 400,
+        cost: 40,
+        size: 18,
+        labelOffset: 35,
+        speed: SPEED_TIERS.SLOW,
+        isDefense: true,
+        deathEffect: 'DISINTEGRATE'
+    },
+    SMART_SAM_MISSILE: {
+        hp: 2,
+        cost: 0,
+        damageFull: 3,
+        radiusFull: 10,
+        damageHalf: 1,
+        radiusHalf: 20,
+        vision: 100,
+        size: 8,
+        speed: SPEED_TIERS.INTERCEPTOR_INITIAL,
+        maxSpeed: SPEED_TIERS.INTERCEPTOR_MAX,
+        acceleration: 1,
+        homingRange: 400,
+        homingFuel: 1500,
+        searchCone: 300, //degrees
+        turnRadius: 7.5,
+        isInterceptor: true,
+        isSeeker: true,
+        reacquire: true,
+        persistsAcrossTurns: false,
+        deathEffect: 'DETONATE'
+    },
     /** @see [defenses.md#flak-defense](../../.agents/defenses.md#flak-defense) */
     FLAK_DEFENSE: {
         hp: 2,

@@ -378,11 +378,9 @@ export class GameState {
                     e.owner === pid &&
                     !connected.has(e.id) &&
                     !e.isHazard &&
-                    e.type !== 'EXPLOSION_HAZARD';
+                    e.type !== 'EXPLOSION_HAZARD' &&
+                    !ENTITY_STATS[e.type]?.isSeeker;
                 if (isOrphan) {
-                    console.log(
-                        `[LinkDecay-DEBUG] Round ${round}: Orphaned structure ${e.id} (${e.type})`
-                    );
                     toDestroy.add(e.id);
                 }
             });
@@ -628,6 +626,222 @@ export class GameState {
     }
 
     /**
+     * Updates a seeker/homing projectile (Weapon or Interceptor).
+     * Handles target acquisition, tracking, movement, and proximity detonation.
+     * @param {object} proj - The projectile instance.
+     * @param {object} stats - The ENTITY_STATS for this projectile type/itemType.
+     * @param {Array} tempProjectiles - Reference to other active projectiles in a round.
+     */
+    updateSeekerProjectile(proj, stats, tempProjectiles) {
+        // 1. Lifecycle Check: Ignite seeker at 50% distance
+        if (
+            !proj.searchMode &&
+            proj.totalDistanceMoved >= proj.intendedDistance * 0.5
+        ) {
+            proj.searchMode = true;
+        }
+
+        // 2. Seeker Logic: Target Acquisition
+        if (proj.searchMode && !proj.targetId) {
+            let minDist = Infinity;
+            let closestTarget = null;
+
+            // Interceptors search through tempProjectiles (incoming weapons)
+            // Homing weapons search through this.entities (enemy structures)
+            const targets = stats.isInterceptor ? tempProjectiles : this.entities;
+
+            targets.forEach((ent) => {
+                if (ent.owner === proj.owner) return;
+
+                // Filtering Logic
+                if (stats.isInterceptor) {
+                    // Interceptors target weapons/projectiles that are active (except other interceptors)
+                    const entStats = ENTITY_STATS[ent.type] || ENTITY_STATS[ent.itemType];
+                    if (!ent.active || entStats?.isInterceptor) return;
+                } else {
+                    // Weapons target structures (not projectiles/resources)
+                    if (
+                        ent.type === 'WEAPON' ||
+                        ent.type === 'PROJECTILE' ||
+                        ent.type === 'RESOURCE'
+                    )
+                        return;
+                }
+
+                const dist = this.getToroidalDistance(
+                    proj.currX,
+                    proj.currY,
+                    ent.x !== undefined ? ent.x : ent.currX,
+                    ent.y !== undefined ? ent.y : ent.currY
+                );
+                if (dist > stats.homingRange) return;
+
+                const vec = this.constructor.getToroidalVector(
+                    proj.currX,
+                    proj.currY,
+                    ent.x !== undefined ? ent.x : ent.currX,
+                    ent.y !== undefined ? ent.y : ent.currY,
+                    this.map.width,
+                    this.map.height
+                );
+                const angleToTarget =
+                    Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+                let diff = angleToTarget - proj.currentAngle;
+                while (diff > 180) diff -= 360;
+                while (diff < -180) diff += 360;
+
+                if (Math.abs(diff) <= stats.searchCone / 2) {
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closestTarget = ent;
+                    }
+                }
+            });
+
+            if (closestTarget) {
+                proj.targetId = closestTarget.id;
+                proj.lockFound = true;
+                proj.searchMode = false; // Stop searching once locked
+            }
+        }
+
+        // 3. Tracking Logic
+        if (proj.targetId) {
+            let target = this.entities.find((e) => e.id === proj.targetId);
+            // Interceptors search in the active projectile list
+            if (!target && stats?.isInterceptor) {
+                target = tempProjectiles.find(
+                    (p) => p.id === proj.targetId && p.active
+                );
+            }
+
+            if (target && (target.hp > 0 || target.active)) {
+                // Accelerate if target is still active
+                if (proj.velocity < stats.maxSpeed) {
+                    proj.velocity = Math.min(
+                        stats.maxSpeed,
+                        proj.velocity + stats.acceleration
+                    );
+                }
+
+                const targetX =
+                    target.x !== undefined ? target.x : target.currX;
+                const targetY =
+                    target.y !== undefined ? target.y : target.currY;
+
+                // Save last known coordinates for persistence
+                proj.targetX = targetX;
+                proj.targetY = targetY;
+
+                const vec = this.constructor.getToroidalVector(
+                    proj.currX,
+                    proj.currY,
+                    targetX,
+                    targetY,
+                    this.map.width,
+                    this.map.height
+                );
+                const angleToTarget =
+                    Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+
+                let diff = angleToTarget - proj.currentAngle;
+                while (diff > 180) diff -= 360;
+                while (diff < -180) diff += 360;
+
+                // Toroidal flip protection
+                if (Math.abs(diff) > 170) diff = 0;
+
+                const turn =
+                    Math.sign(diff) *
+                    Math.min(Math.abs(diff), stats.turnRadius);
+                proj.currentAngle += turn;
+            } else {
+                proj.lockFound = false; // Target lost
+
+                // SMART LOGIC: Re-enable search and slow down
+                if (stats.reacquire) {
+                    proj.targetId = null;
+                    proj.searchMode = true;
+                    proj.velocity = GLOBAL_STATS.SPEED_TIERS.SLOW; // Slow down to conserve fuel
+                }
+            }
+        } else if (proj.searchMode) {
+            // Passive acceleration during search phase (unless smart and searching)
+            const targetSpeed = stats.reacquire ? GLOBAL_STATS.SPEED_TIERS.SLOW : stats.maxSpeed;
+
+            if (proj.velocity < targetSpeed) {
+                proj.velocity = Math.min(
+                    targetSpeed,
+                    proj.velocity + stats.acceleration
+                );
+            } else if (proj.velocity > targetSpeed) {
+                proj.velocity = Math.max(
+                    targetSpeed,
+                    proj.velocity - stats.acceleration
+                );
+            }
+        }
+
+        // 4. Step-based Movement
+        const moveDist = proj.velocity;
+        const rad = (proj.currentAngle || 0) * (Math.PI / 180);
+        proj.currX = this.wrapX(proj.currX + Math.cos(rad) * moveDist);
+        proj.currY = this.wrapY(proj.currY + Math.sin(rad) * moveDist);
+        proj.totalDistanceMoved += moveDist;
+
+        // 5. Fuel & Endurance Checks
+        const fuelLimit =
+            proj.intendedDistance * 0.5 + (stats.homingFuel || 400);
+        if (proj.totalDistanceMoved >= fuelLimit) {
+            proj.active = false;
+            proj.hitThisTick = true;
+        }
+
+        // 6. Impact Triggering (Proximity)
+        if (proj.targetId) {
+            let target = this.entities.find((e) => e.id === proj.targetId);
+            if (!target && stats?.isInterceptor) {
+                target = tempProjectiles.find(
+                    (p) => p.id === proj.targetId && p.active
+                );
+            }
+
+            if (target && (target.hp > 0 || target.active)) {
+                const tx = target.x !== undefined ? target.x : target.currX;
+                const ty = target.y !== undefined ? target.y : target.currY;
+                const actualDist = this.getToroidalDistance(
+                    proj.currX,
+                    proj.currY,
+                    tx,
+                    ty
+                );
+
+                const targetStats =
+                    ENTITY_STATS[target.type] ||
+                    ENTITY_STATS[target.itemType];
+                const hitDist = (targetStats?.size || 10) + 2;
+
+                if (actualDist <= hitDist) {
+                    proj.active = false;
+                    proj.hitThisTick = true;
+                }
+            } else if (proj.targetX !== undefined && !stats?.reacquire) {
+                // Target lost: detonate at last known coordinates
+                const actualDist = this.getToroidalDistance(
+                    proj.currX,
+                    proj.currY,
+                    proj.targetX,
+                    proj.targetY
+                );
+                if (actualDist <= 15) {
+                    proj.active = false;
+                    proj.hitThisTick = true;
+                }
+            }
+        }
+    }
+
+    /**
      * This is where the magic happens.
      * It processes all inputs and updates the state for the next turn.
      */
@@ -636,7 +850,6 @@ export class GameState {
      * Returns an array of snapshots so the client can "watch" the resolution unfold.
      */
     resolveTurn(playerActionsMap) {
-        console.log('--- RESOLVE TURN ---', JSON.stringify(playerActionsMap));
         this.phase = 'RESOLVING';
         const snapshots = [];
         if (this.winner) {
@@ -774,6 +987,15 @@ export class GameState {
 
         let round = 0;
         let activeInProgress = true;
+
+        // Reset per-round tracking state on all entities
+        this.entities.forEach((e) => {
+            e.lastRoundFired = -1;
+            if (e.type === 'FLAK_DEFENSE') {
+                e.flakActive = false;
+                e.flakTriggerTick = 0;
+            }
+        });
 
         while (
             activeInProgress ||
@@ -942,7 +1164,7 @@ export class GameState {
                         const rad = (action.angle * Math.PI) / 180;
 
                         console.log(
-                            `[Launch] ${action.playerId} launching ${action.itemType} from ${action.sourceId} to distance ${actualLaunchDistance} (arrivalTick: ${arrivalTick})`
+                            `[Launch-Trace] Added ${action.itemType} to tempProjectiles. Count: ${tempProjectiles.length}`
                         );
                         tempProjectiles.push({
                             id: Math.random().toString(36).substring(2, 6),
@@ -1005,34 +1227,78 @@ export class GameState {
                 if (hasActiveSimulation) {
                     for (let t = 1; t <= subTicks; t++) {
                         // --- Interception Logic ---
+                        // Reset per-round flak tracking for active projectiles
+                        tempProjectiles.forEach((proj) => {
+                            if (proj.hitByFlakDefense) proj.hitByFlakDefense.clear();
+                        });
+
                         this.entities.forEach((def) => {
                             // SKIP if not a functional defense or if disabled/out of fuel
                             const stats = ENTITY_STATS[def.type];
                             if (!stats || !stats.range) return;
                             if (def.deployed === false) return;
-                            if (def.fuel !== undefined && def.fuel <= 0) return;
+                            if (typeof def.fuel === 'number' && def.fuel <= 0 && !(def.type === 'FLAK_DEFENSE' && def.flakActive)) return;
+
                             if (def.disabledUntilTurn > this.turn) return;
 
-                            // Rule: One defensive action per turn round per structure
-                            if (def.lastRoundFired === round) return;
+                            // Rule: One defensive action per turn round per structure (EXCEPT persistent ones)
+                            if (def.lastRoundFired === round && def.type !== 'FLAK_DEFENSE' && def.type !== 'SHIELD') return;
 
                             // Flak logic: If already active, it doesn't need to re-trigger or search
-                            if (def.type === 'FLAK_DEFENSE' && def.flakActive) return;
+                            if (def.type === 'FLAK_DEFENSE' && def.flakActive) {
+                                const stats = ENTITY_STATS.FLAK_DEFENSE;
+                                tempProjectiles.forEach((proj) => {
+                                    if (!proj.active || proj.hitByFlakDefense.has(def.id)) return;
+
+                                    const pStats = ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
+                                    if (pStats?.isInterceptable === false) return;
+
+                                    const dist = this.getToroidalDistance(def.x, def.y, proj.currX, proj.currY);
+                                    if (dist <= stats.range) {
+                                        const vec = this.constructor.getToroidalVector(
+                                            def.x, def.y, proj.currX, proj.currY,
+                                            this.map.width, this.map.height
+                                        );
+                                        const angleToProj = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+
+                                        let diff = angleToProj - (def.flakAngle || 0);
+                                        while (diff > 180) diff -= 360;
+                                        while (diff < -180) diff += 360;
+
+                                        if (Math.abs(diff) <= stats.arc / 2) {
+                                            proj.hp -= stats.damage;
+                                            proj.hitByFlakDefense.add(def.id);
+                                            tempVisuals.push({
+                                                type: 'SPARK',
+                                                x: proj.currX,
+                                                y: proj.currY,
+                                                duration: 15
+                                            });
+                                            if (proj.hp <= 0) {
+                                                proj.active = false;
+                                                const pStats = ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
+                                                if (pStats?.deathEffect === 'DETONATE') {
+                                                    proj.hitThisTick = true;
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+                                return;
+                            }
                             let closestProj = null;
                             let minDist = stats.range;
 
                             tempProjectiles.forEach((proj) => {
                                 if (!proj.active || proj.owner === def.owner) return;
 
+
                                 const pStats =
                                     ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
                                 if (pStats?.isInterceptable === false) return;
 
                                 const dist = this.getToroidalDistance(
-                                    def.x,
-                                    def.y,
-                                    proj.currX,
-                                    proj.currY
+                                    def.x, def.y, proj.currX, proj.currY
                                 );
                                 // Deterministic Tie-break: if distances are equal, pick by ID (lexicographical)
                                 if (
@@ -1073,9 +1339,6 @@ export class GameState {
                                         targetY: def.y + vec.dy,
                                         duration: Math.max(5, Math.floor(subTicks / 8))
                                     });
-                                    console.log(
-                                        `[Intercept] ${def.id} (Laser) blocked projectile from ${closestProj.owner}`
-                                    );
                                 } else if (def.type === 'FLAK_DEFENSE') {
                                     // Flak Activation!
                                     def.flakActive = true;
@@ -1092,16 +1355,12 @@ export class GameState {
                                     );
                                     def.flakAngle =
                                         Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
-
-                                    console.log(
-                                        `[Flak Activation] ${def.id} triggered at ${Math.round(def.flakAngle)} degrees`
-                                    );
-                                } else if (def.type === 'LIGHT_SAM_DEFENSE') {
+                                } else if (def.type === 'LIGHT_SAM_DEFENSE' || def.type === 'SMART_SAM_DEFENSE') {
                                     // SAM Intercept!
                                     def.fuel--;
 
-                                    // Spawn SAM Missile
-                                    const samStats = ENTITY_STATS.SAM_MISSILE;
+                                    const projectileType = def.type === 'SMART_SAM_DEFENSE' ? 'SMART_SAM_MISSILE' : 'SAM_MISSILE';
+                                    const samStats = ENTITY_STATS[projectileType];
                                     const vec = this.constructor.getToroidalVector(
                                         def.x,
                                         def.y,
@@ -1115,91 +1374,27 @@ export class GameState {
 
                                     const samMissile = {
                                         id: 'sam_' + Math.random().toString(36).substr(2, 9),
-                                        type: 'SAM_MISSILE',
-                                        itemType: 'SAM_MISSILE',
+                                        type: projectileType,
+                                        itemType: projectileType,
                                         owner: def.owner,
                                         active: true,
                                         currX: def.x,
                                         currY: def.y,
-                                        targetX: closestProj.currX, // Initial target X/Y for direction
+                                        targetX: closestProj.currX,
                                         targetY: closestProj.currY,
                                         velocity: samStats.speed,
                                         currentAngle: initialAngle,
-                                        targetId: closestProj.id, // LOCKED ON
-                                        searchMode: true,
+                                        targetId: closestProj.id,
+                                        searchMode: false, // Start locked
                                         totalDistanceMoved: 0,
-                                        maxDistance: 600 // High enough range for defense
+                                        intendedDistance: 1000, // Fuel limit
+                                        hitByFlakDefense: new Set()
                                     };
 
                                     tempProjectiles.push(samMissile);
-                                    console.log(
-                                        `[SAM Launch] ${def.id} fired SAM at ${closestProj.id}`
-                                    );
                                 }
                             }
 
-                            // --- Persistent Flak Damage Logic ---
-                            if (def.type === 'FLAK_DEFENSE' && def.flakActive) {
-                                const stats = ENTITY_STATS.FLAK_DEFENSE;
-                                tempProjectiles.forEach((proj) => {
-                                    if (!proj.active || proj.hitByFlakDefense.has(def.id)) return;
-
-                                    const pStats =
-                                        ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
-                                    if (pStats?.isInterceptable === false) return;
-
-                                    const dist = this.getToroidalDistance(
-                                        def.x,
-                                        def.y,
-                                        proj.currX,
-                                        proj.currY
-                                    );
-                                    if (dist <= stats.range) {
-                                        const vec = this.constructor.getToroidalVector(
-                                            def.x,
-                                            def.y,
-                                            proj.currX,
-                                            proj.currY,
-                                            this.map.width,
-                                            this.map.height
-                                        );
-                                        const angleToProj =
-                                            Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
-
-                                        let diff = angleToProj - (def.flakAngle || 0);
-                                        while (diff > 180) diff -= 360;
-                                        while (diff < -180) diff += 360;
-
-                                        if (Math.abs(diff) <= stats.arc / 2) {
-                                            // HIT!
-                                            proj.hp -= stats.damage;
-                                            proj.hitByFlakDefense.add(def.id);
-
-                                            // Impact Sparks
-                                            tempVisuals.push({
-                                                type: 'SPARK',
-                                                x: proj.currX,
-                                                y: proj.currY,
-                                                duration: 15
-                                            });
-
-                                            console.log(
-                                                `[Flak Hit] Proj ${proj.id} hit by ${def.id}. HP: ${proj.hp}`
-                                            );
-
-                                            if (proj.hp <= 0) {
-                                                proj.active = false;
-                                                const pStats =
-                                                    ENTITY_STATS[proj.type] ||
-                                                    ENTITY_STATS[proj.itemType];
-                                                if (pStats?.deathEffect === 'DETONATE') {
-                                                    proj.hitThisTick = true;
-                                                }
-                                            }
-                                        }
-                                    }
-                                });
-                            }
                         });
 
                         tempProjectiles.forEach((proj) => {
@@ -1208,191 +1403,13 @@ export class GameState {
                             const prevX = proj.currX;
                             const prevY = proj.currY;
 
-                            if (proj.type === 'HOMING_MISSILE' || proj.type === 'SAM_MISSILE') {
+                            if (
+                                proj.type === 'HOMING_MISSILE' ||
+                                proj.type === 'SAM_MISSILE' ||
+                                proj.type === 'SMART_SAM_MISSILE'
+                            ) {
                                 const stats = ENTITY_STATS[proj.type];
-
-                                // 1. Lifecycle Check: Ignite seeker at 50% distance
-                                if (
-                                    !proj.searchMode &&
-                                    proj.totalDistanceMoved >= proj.intendedDistance * 0.5
-                                ) {
-                                    proj.searchMode = true;
-                                }
-
-                                // 2. Seeker Logic: Single Lock policy
-                                if (proj.searchMode && !proj.targetId) {
-                                    let minDist = Infinity;
-                                    let closestTarget = null;
-
-                                    this.entities.forEach((ent) => {
-                                        if (ent.owner === proj.owner) return;
-                                        if (
-                                            ent.type === 'WEAPON' ||
-                                            ent.type === 'PROJECTILE' ||
-                                            ent.type === 'RESOURCE'
-                                        )
-                                            return;
-
-                                        const dist = this.getToroidalDistance(
-                                            proj.currX,
-                                            proj.currY,
-                                            ent.x,
-                                            ent.y
-                                        );
-                                        if (dist > stats.homingRange) return;
-
-                                        const vec = this.constructor.getToroidalVector(
-                                            proj.currX,
-                                            proj.currY,
-                                            ent.x,
-                                            ent.y,
-                                            this.map.width,
-                                            this.map.height
-                                        );
-                                        const angleToTarget =
-                                            Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
-                                        let diff = angleToTarget - proj.currentAngle;
-                                        while (diff > 180) diff -= 360;
-                                        while (diff < -180) diff += 360;
-
-                                        if (Math.abs(diff) <= stats.searchCone / 2) {
-                                            if (dist < minDist) {
-                                                minDist = dist;
-                                                closestTarget = ent;
-                                            }
-                                        }
-                                    });
-
-                                    if (closestTarget) {
-                                        proj.targetId = closestTarget.id;
-                                        proj.lockFound = true;
-                                    }
-                                }
-
-                                // 3. Tracking Logic
-                                if (proj.targetId) {
-                                    let target = this.entities.find((e) => e.id === proj.targetId);
-                                    if (!target && ENTITY_STATS[proj.type]?.isInterceptor) {
-                                        target = tempProjectiles.find(
-                                            (p) => p.id === proj.targetId && p.active
-                                        );
-                                    }
-
-                                    if (target && (target.hp > 0 || target.active)) {
-                                        // Accelerate if target is still active
-                                        if (proj.velocity < stats.maxSpeed) {
-                                            proj.velocity = Math.min(
-                                                stats.maxSpeed,
-                                                proj.velocity + stats.acceleration
-                                            );
-                                        }
-
-                                        const targetX =
-                                            target.x !== undefined ? target.x : target.currX;
-                                        const targetY =
-                                            target.y !== undefined ? target.y : target.currY;
-
-                                        // Save last known coordinates for persistence
-                                        proj.targetX = targetX;
-                                        proj.targetY = targetY;
-
-                                        const vec = this.constructor.getToroidalVector(
-                                            proj.currX,
-                                            proj.currY,
-                                            targetX,
-                                            targetY,
-                                            this.map.width,
-                                            this.map.height
-                                        );
-                                        const angleToTarget =
-                                            Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
-
-                                        let diff = angleToTarget - proj.currentAngle;
-                                        while (diff > 180) diff -= 360;
-                                        while (diff < -180) diff += 360;
-
-                                        // Stability Hysteresis: If the target crosses the halfway point of the toroidal map,
-                                        // the "shortest path" angle can suddenly flip 180 degrees. We detect this
-                                        // and ignore the snap to avoid seeker oscillation.
-                                        if (Math.abs(diff) > 170) {
-                                            diff = 0;
-                                        }
-
-                                        const turn =
-                                            Math.sign(diff) *
-                                            Math.min(Math.abs(diff), stats.turnRadius);
-                                        proj.currentAngle += turn;
-                                    } else {
-                                        proj.lockFound = false; // Target lost, stop hunting but keep flying straight
-                                    }
-                                } else if (proj.searchMode) {
-                                    // Passive acceleration during search phase
-                                    if (proj.velocity < stats.maxSpeed) {
-                                        proj.velocity = Math.min(
-                                            stats.maxSpeed,
-                                            proj.velocity + stats.acceleration
-                                        );
-                                    }
-                                }
-
-                                // 4. Step-based Movement
-                                const moveDist = proj.velocity;
-                                const rad = (proj.currentAngle || 0) * (Math.PI / 180);
-                                proj.currX = this.wrapX(proj.currX + Math.cos(rad) * moveDist);
-                                proj.currY = this.wrapY(proj.currY + Math.sin(rad) * moveDist);
-                                proj.totalDistanceMoved += moveDist;
-
-                                // 5. Impact & Fuel Checks
-                                const fuelLimit =
-                                    proj.intendedDistance * 0.5 + (stats.homingFuel || 400);
-                                if (proj.totalDistanceMoved >= fuelLimit) {
-                                    proj.active = false;
-                                    proj.hitThisTick = true; // Trigger detonation logic
-                                }
-
-                                // Immediate proximity trigger ONLY if targeting something
-                                if (proj.targetId) {
-                                    let target = this.entities.find((e) => e.id === proj.targetId);
-                                    if (!target && ENTITY_STATS[proj.type]?.isInterceptor) {
-                                        target = tempProjectiles.find(
-                                            (p) => p.id === proj.targetId && p.active
-                                        );
-                                    }
-
-                                    if (target && (target.hp > 0 || target.active)) {
-                                        const tx = target.x !== undefined ? target.x : target.currX;
-                                        const ty = target.y !== undefined ? target.y : target.currY;
-                                        const actualDist = this.getToroidalDistance(
-                                            proj.currX,
-                                            proj.currY,
-                                            tx,
-                                            ty
-                                        );
-
-                                        // Surface-to-Surface trigger: detonate when "touching" the building's edge
-                                        const targetStats =
-                                            ENTITY_STATS[target.type] ||
-                                            ENTITY_STATS[target.itemType];
-                                        const hitDist = (targetStats?.size || 10) + 2;
-
-                                        if (actualDist <= hitDist) {
-                                            proj.active = false;
-                                            proj.hitThisTick = true;
-                                        }
-                                    } else if (proj.targetX !== undefined) {
-                                        // Target lost: detonate at last known coordinates
-                                        const actualDist = this.getToroidalDistance(
-                                            proj.currX,
-                                            proj.currY,
-                                            proj.targetX,
-                                            proj.targetY
-                                        );
-                                        if (actualDist <= 15) {
-                                            proj.active = false;
-                                            proj.hitThisTick = true;
-                                        }
-                                    }
-                                }
+                                this.updateSeekerProjectile(proj, stats, tempProjectiles);
                             } else {
                                 // Standard Projectile Logic (Buildings etc.)
 
@@ -1451,9 +1468,6 @@ export class GameState {
                                             hitByFlakDefense: new Set() // Fresh flak state for sub-bombs
                                         });
                                     }
-                                    console.log(
-                                        `[Cluster] ${proj.id} split into ${count} sub-bombs at tick ${t}`
-                                    );
                                 }
 
                                 const progress = t / proj.arrivalTick;
@@ -1502,14 +1516,6 @@ export class GameState {
                                             hp: GLOBAL_STATS.UNDEPLOYED_HP
                                         };
                                         const newEnt = this.addEntity(data);
-                                        console.log(
-                                            '--- LANDING ---',
-                                            newEnt.type,
-                                            newEnt.id,
-                                            'at',
-                                            newEnt.x,
-                                            newEnt.y
-                                        );
                                         if (
                                             data.sourceId &&
                                             data.intendedDx !== undefined &&
@@ -1522,16 +1528,7 @@ export class GameState {
                                                 data.intendedDx,
                                                 data.intendedDy
                                             );
-                                            console.log(
-                                                '--- LINK CREATED ---',
-                                                data.sourceId,
-                                                '->',
-                                                newEnt.id
-                                            );
                                         }
-                                        console.log(
-                                            `[Lifecycle] ${proj.owner} ${proj.type} landed at (${Math.round(proj.currX)}, ${Math.round(proj.currY)})`
-                                        );
                                     }
 
                                     // --- Napalm Special Logic (Always deploy fire on arrival) ---
@@ -1551,9 +1548,6 @@ export class GameState {
                                             isHazard: true,
                                             hp: nStats.hp
                                         });
-                                        console.log(
-                                            `[Napalm] ${proj.id} deployed fire from (${Math.round(proj.currX)}, ${Math.round(proj.currY)}) to original target.`
-                                        );
 
                                         // Push specialized landing snapshot for visual feedback
                                         snapshots.push({
@@ -2001,6 +1995,17 @@ export class GameState {
                     }
                 });
 
+                // Persistence: Remaining Seekers become real entities for the next turn
+                tempProjectiles.forEach((p) => {
+                    const stats = ENTITY_STATS[p.type] || ENTITY_STATS[p.itemType];
+                    // Only persist if seeker AND explicitly allowed to persist
+                    if (p.active && stats?.isSeeker && stats?.persistsAcrossTurns) {
+                        const data = { ...p };
+                        delete data.active;
+                        this.addEntity(data);
+                    }
+                });
+
                 // Update activeInProgress for next round
                 const hasActionsLeft = Object.keys(this.players).some((pid) => {
                     const actions = playerActionsMap[pid] || [];
@@ -2316,7 +2321,7 @@ export class GameState {
 
     triggerExplosion(x, y, stats, tempVisuals = [], impacts = new Set(), potentialTargets = []) {
         console.log(
-            `[Explosion] Triggered at (${Math.round(x)}, ${Math.round(y)}) with radius ${stats.radiusFull}`
+            `[Explosion-Trace] Triggered at (${Math.round(x)}, ${Math.round(y)}) with radius ${stats.radiusFull} by a seeker`
         );
 
         // 1. Visual Effect
@@ -2447,3 +2452,5 @@ export class GameState {
         }
     }
 }
+
+export default GameState;
