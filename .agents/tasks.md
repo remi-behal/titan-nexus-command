@@ -83,6 +83,16 @@
     - [ ] **Weapon finetuning**: <!-- id: 86 -->
         - [ ] Adjust weapon stats to make the game more fun. <!-- id: 87 -->
         - [ ] Flak defense - damage is applied the instant a projectile enters the cone, making the effect look bad. Brainstorm solutions. <!-- id: 88 -->
+        - [ ] Global vision for projectiles needs to be increased. <!-- id: 89 -->
+        - [ ] Nuke hazard should give vision to owner. <!-- id: 90 -->
+        - [ ] Fog of war not quite working correctly <!-- id: 91 -->
+            - [ ] can't see the fog...probably just a shading issue <!-- id: 92 -->
+            - [ ] Should be able to see player colour for ghosts <!-- id: 93 -->
+        - [ ] Cluster bomb preview should show where all projectiles land <!-- id: 94 -->
+        - [ ] Bug - echo artillery ignores EMP effect <!-- id: 95 -->
+        - [ ] Visuals - shields should recharge just before planning phase so that opponents know it will have 1 hp. Same idea with flak, it stays active during planning phase.
+        - [ ] Slingshot should warn launch and deny launch if you can see your new link will cross an existing link from that same hub. Maybe expand to warn if it crosses any links of your future launches also. <!-- id: 96 -->
+        - [ ]
     - [ ] Expand test coverage to `server/` and `client/` (Specifically for sockets and React components). <!-- id: 83 -->
 
 ---
