@@ -65,6 +65,9 @@ let lockedIn = {
 };
 
 const TURN_DURATION = parseInt(process.env.TURN_DURATION) || 30;
+const RESOLUTION_ROUND_DELAY = parseInt(process.env.RESOLUTION_ROUND_DELAY) || 2000;
+const RESOLUTION_SUB_TICK_DELAY = parseInt(process.env.RESOLUTION_SUB_TICK_DELAY) || 60;
+
 let timeRemaining = TURN_DURATION;
 let timerTimeout = null;
 
@@ -157,7 +160,7 @@ async function resolveTurn() {
             }
 
             // Dynamic Delay: Sub-ticks are fast, phase/round transitions are slow
-            const delay = snap.type === 'ROUND_SUB' ? 60 : 2000;
+            const delay = snap.type === 'ROUND_SUB' ? RESOLUTION_SUB_TICK_DELAY : RESOLUTION_ROUND_DELAY;
             await new Promise((resolve) => setTimeout(resolve, delay));
         }
     } catch (err) {
