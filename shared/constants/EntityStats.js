@@ -219,7 +219,7 @@ export const ENTITY_STATS = {
         damageTick: 1, // Damage taken by structures each round
         hp: 9999, // Immune to accidental deletion
         isHazard: true,
-        vision: 0
+        vision: 210
     },
     RECLAIMER: {
         hp: 1,

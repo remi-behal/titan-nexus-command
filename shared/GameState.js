@@ -186,11 +186,25 @@ export class GameState {
 
         return this.entities
             .filter((e) => e.owner === playerId)
-            .map((e) => ({
+            .map((e) => {
+            // Consistent statKey logic with isPositionVisible
+            const statKey =
+                (e.type === 'PROJECTILE' ||
+                    e.type === 'WEAPON' ||
+                    e.type === 'HOMING_MISSILE' ||
+                    e.type === 'SAM_MISSILE') &&
+                    e.itemType
+                    ? e.itemType
+                    : e.type;
+            const stats = ENTITY_STATS[statKey];
+            const radius = e.vision !== undefined ? e.vision : stats?.vision || 0;
+
+            return {
                 x: e.x,
                 y: e.y,
-                radius: ENTITY_STATS[e.type]?.vision || 0
-            }))
+                radius
+            };
+        })
             .filter((c) => c.radius > 0);
     }
 
