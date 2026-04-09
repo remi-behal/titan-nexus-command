@@ -1567,9 +1567,9 @@ const GameBoard = ({
                                             ctx.closePath();
                                         } else if (selectedItemType === 'EXTRACTOR') {
                                             // Triangle Preview
-                                            ctx.moveTo(targetX, targetY - size);
-                                            ctx.lineTo(targetX + size, targetY + size / 2);
-                                            ctx.lineTo(targetX - size, targetY + size / 2);
+                                            ctx.moveTo(targetX, targetY - previewSize);
+                                            ctx.lineTo(targetX + previewSize, targetY + previewSize / 2);
+                                            ctx.lineTo(targetX - previewSize, targetY + previewSize / 2);
                                             ctx.closePath();
 
                                             // Capture Radius Preview
@@ -1586,10 +1586,10 @@ const GameBoard = ({
                                             selectedItemType === 'FLAK_DEFENSE'
                                         ) {
                                             // Square Preview
-                                            ctx.rect(targetX - size, targetY - size, size * 2, size * 2);
+                                            ctx.rect(targetX - previewSize, targetY - previewSize, previewSize * 2, previewSize * 2);
                                         } else {
                                             // Default Circle for projectiles
-                                            ctx.arc(targetX, targetY, size, 0, Math.PI * 2);
+                                            ctx.arc(targetX, targetY, previewSize, 0, Math.PI * 2);
                                         }
                                         ctx.stroke();
 
@@ -1720,37 +1720,35 @@ const GameBoard = ({
                                     );
                                 }
                             });
-
-                            ctx.restore();
                         }
+                        ctx.restore();
                     }
-
-
-                    ctx.restore();
-
-                } catch (err) {
-                    console.error("Rendering Error:", err);
                 }
-                animationFrameId = requestAnimationFrame(updateAndDraw);
-            };
+                ctx.restore();
 
+            } catch (err) {
+                console.error("Rendering Error:", err);
+            }
             animationFrameId = requestAnimationFrame(updateAndDraw);
-            return () => cancelAnimationFrame(animationFrameId);
-        }, [
-            gameState,
-            launchMode,
-            isAiming,
-            selectedHubId,
-            selectedItemType,
-            mousePos,
-            committedActions,
-            showDebugPreview,
-            maxPullDistance,
-            myPlayerId,
-            cameraOffset,
-            HUB_RADIUS,
-            SLING_RING_RADIUS
-        ]);
+        };
+
+        animationFrameId = requestAnimationFrame(updateAndDraw);
+        return () => cancelAnimationFrame(animationFrameId);
+    }, [
+        gameState,
+        launchMode,
+        isAiming,
+        selectedHubId,
+        selectedItemType,
+        mousePos,
+        committedActions,
+        showDebugPreview,
+        maxPullDistance,
+        myPlayerId,
+        cameraOffset,
+        HUB_RADIUS,
+        SLING_RING_RADIUS
+    ]);
 
     // Helper: Calculate game coordinates from mouse event
     const getGameCoords = useCallback(
