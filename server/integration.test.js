@@ -12,38 +12,41 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
         const serverPath = path.resolve(__dirname, 'index.js');
         // Start server on an alternate port
         serverProcess = spawn('node', [serverPath], {
-            env: { ...process.env, PORT: '3005' },
+            env: { ...process.env, PORT: '3105' },
             stdio: 'pipe'
         });
+
+        // Drain stdout/stderr to prevent buffer freezing
+        serverProcess.stdout.on('data', () => { });
+        serverProcess.stderr.on('data', () => { });
 
         // Wait for server to listen
         await new Promise((resolve, reject) => {
             const timeout = setTimeout(
-                () => reject(new Error('Server failed to start in time')),
-                5000
+                () => reject(new Error('Server failed to start in 15s')),
+                15000
             );
-            serverProcess.stdout.on('data', (data) => {
+            serverProcess.stdout.on('data', function listener(data) {
                 if (data.toString().includes('SERVER RUNNING')) {
+                    serverProcess.stdout.off('data', listener);
                     clearTimeout(timeout);
                     resolve();
                 }
             });
-            serverProcess.stderr.on('data', (data) => {
-                console.error(`SERVER ERR: ${data}`);
-            });
         });
 
-        client1 = Client('http://localhost:3005');
-        client2 = Client('http://localhost:3005');
+        client1 = Client('http://localhost:3105');
+        client2 = Client('http://localhost:3105');
 
-        await new Promise((resolve) => {
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Auth timeout')), 10000);
             let authenticated = 0;
             const onAuth1 = (id) => {
                 p1Id = id;
-                if (++authenticated === 2) resolve();
+                if (++authenticated === 2) { clearTimeout(timeout); resolve(); }
             };
             const onAuth2 = (_id) => {
-                if (++authenticated === 2) resolve();
+                if (++authenticated === 2) { clearTimeout(timeout); resolve(); }
             };
             client1.on('playerAssignment', onAuth1);
             client2.on('playerAssignment', onAuth2);
@@ -51,7 +54,20 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
             client1.emit('authenticate', 'integration-token-p1');
             client2.emit('authenticate', 'integration-token-p2');
         });
-    });
+
+        // Lobby Handshake
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Lobby handshake timeout')), 10000);
+            client1.once('matchStarted', () => { clearTimeout(timeout); resolve(); });
+
+            client1.emit('lobby:claimSeat', 0);
+            client2.emit('lobby:claimSeat', 1);
+            setTimeout(() => {
+                client1.emit('lobby:ready', true);
+                client2.emit('lobby:ready', true);
+            }, 300);
+        });
+    }, 45000);
 
     afterAll(async () => {
         client1?.disconnect();

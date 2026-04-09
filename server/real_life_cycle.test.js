@@ -70,34 +70,41 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             await new Promise((resolve) => {
                 serverProcess.stdout.on('data', (data) => {
                     const out = data.toString();
+                    process.stdout.write('[Server Stdout]: ' + out);
                     if (out.includes('SERVER RUNNING')) resolve();
+                });
+                serverProcess.stderr.on('data', (data) => {
+                    process.stderr.write('[Server Stderr]: ' + data.toString());
                 });
             });
 
             // 2. Sequential connect - ensure p1 gets player1
             p1.connect();
             p1.emit('authenticate', 'p1-token-real-life');
-            await waitFor(() => p1Id === 'player1', 5000);
+            await new Promise((r) => setTimeout(r, 200));
+            p1.emit('lobby:claimSeat', 0);
+            await new Promise((r) => setTimeout(r, 200));
+            p1.emit('lobby:ready', true);
 
             p2.connect();
             p2.emit('authenticate', 'p2-token-real-life');
-            await waitFor(() => p2Id === 'player2', 5000);
+            await new Promise((r) => setTimeout(r, 200));
+            p2.emit('lobby:claimSeat', 1);
+            await new Promise((r) => setTimeout(r, 200));
+            p2.emit('lobby:ready', true);
 
-            await waitFor(() => p1State && p1State.entities.some((e) => e.owner === p1Id));
-            await waitFor(() => p2State && p2State.entities.some((e) => e.owner === p2Id));
+            await waitFor(() => p1Id === 'player1', 10000);
+            await waitFor(() => p2Id === 'player2', 10000);
+
+            // 3. Wait for game to initialize and be in PLANNING Turn 1
+            await waitFor(() => p1State && p1State.turn === 1 && p1State.phase === 'PLANNING', 10000);
+            await waitFor(() => p2State && p2State.turn === 1 && p2State.phase === 'PLANNING', 10000);
 
             const hub1p1 = p1State.entities.find((e) => e.owner === p1Id);
             const hub1p2 = p2State.entities.find((e) => e.owner === p2Id);
 
-            // --- Synchronization ---
-            // With a 1s timer, we might miss the window for Turn 1 during connection.
-            // Wait for any existing turn (1 or more) to finish and start the next fresh one.
-            const initialTurn = p1State.turn;
-            await waitFor(() => p1State.turn > initialTurn && p1State.phase === 'PLANNING', 15000);
-            const baseTurn = p1State.turn;
-
-            // --- TURN 1 (baseTurn) ---
-            // submitActions ALREADY locks in the player and triggers resolution if both are done.
+            // --- TURN 1 ---
+            const baseTurn = 1;
             p1.emit('submitActions', [
                 { playerId: p1Id, sourceId: hub1p1.id, itemType: 'HUB', angle: 45, distance: 300 }
             ]);

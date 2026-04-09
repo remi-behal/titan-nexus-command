@@ -13,24 +13,34 @@ describe('Server - Resolution Race Guard', () => {
     beforeAll(async () => {
         const serverPath = path.resolve(__dirname, 'index.js');
         serverProcess = spawn('node', [serverPath], {
-            env: { ...process.env, PORT: '3009' },
+            env: { ...process.env, PORT: '3109' },
             stdio: 'pipe'
         });
 
-        await new Promise((resolve) => {
-            serverProcess.stdout.on('data', (data) => {
+        // Drain stdout/stderr to prevent buffer freezing
+        serverProcess.stdout.on('data', () => { });
+        serverProcess.stderr.on('data', () => { });
+
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Server failed to start in 15s')), 15000);
+            serverProcess.stdout.on('data', function listener(data) {
                 const output = data.toString();
-                if (output.includes('SERVER RUNNING')) resolve();
+                if (output.includes('SERVER RUNNING')) {
+                    serverProcess.stdout.off('data', listener);
+                    clearTimeout(timeout);
+                    resolve();
+                }
             });
         });
 
-        client1 = Client('http://localhost:3009');
-        client2 = Client('http://localhost:3009');
+        client1 = Client('http://localhost:3109');
+        client2 = Client('http://localhost:3109');
 
-        await new Promise((resolve) => {
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Auth timeout')), 10000);
             let authenticated = 0;
             const onAuth = () => {
-                if (++authenticated === 2) resolve();
+                if (++authenticated === 2) { clearTimeout(timeout); resolve(); }
             };
             client1.on('playerAssignment', onAuth);
             client2.on('playerAssignment', onAuth);
@@ -38,7 +48,21 @@ describe('Server - Resolution Race Guard', () => {
             client1.emit('authenticate', 'race-token-p1');
             client2.emit('authenticate', 'race-token-p2');
         });
-    });
+
+        // Lobby Handshake
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Lobby handshake timeout')), 10000);
+            const onMatchStarted = () => { clearTimeout(timeout); resolve(); };
+            client1.once('matchStarted', onMatchStarted);
+
+            client1.emit('lobby:claimSeat', 0);
+            client2.emit('lobby:claimSeat', 1);
+            setTimeout(() => {
+                client1.emit('lobby:ready', true);
+                client2.emit('lobby:ready', true);
+            }, 300);
+        });
+    }, 45000);
 
     afterAll(async () => {
         client1?.disconnect();
@@ -64,7 +88,7 @@ describe('Server - Resolution Race Guard', () => {
 
         // 3. Send a "Malicious" submission while resolution is active
         // This simulates the user releasing a drag just after the timer expires
-        client1.once('syncStatus', () => {});
+        client1.once('syncStatus', () => { });
 
         // We want to verify that Turn 2 starts with UNLOCKED status,
         // even if we send a 'submitActions' right now.
