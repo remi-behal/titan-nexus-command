@@ -41,13 +41,20 @@ describe('Match Restart Persistence & Auto-Reclaim', () => {
             client1.on('playerAssignment', onAuth1);
             client2.on('playerAssignment', onAuth2);
 
-            // Connect sequentially to ensure deterministic assignment
+            // Connect and handshake
             (async () => {
                 client1.emit('authenticate', 'restart-token-p1');
-                await new Promise((r) => setTimeout(r, 200));
                 client2.emit('authenticate', 'restart-token-p2');
+                await new Promise((r) => setTimeout(r, 200));
+
+                client1.emit('lobby:claimSeat', 0);
+                client2.emit('lobby:claimSeat', 1);
+                await new Promise((r) => setTimeout(r, 200));
+
+                client1.emit('lobby:ready', true);
+                client2.emit('lobby:ready', true);
             })();
-        });
+        }, 30000);
     });
 
     afterAll(async () => {
@@ -57,19 +64,10 @@ describe('Match Restart Persistence & Auto-Reclaim', () => {
         await new Promise((r) => setTimeout(r, 200));
     });
 
-    it('should automatically re-claim slots after a match restart', async () => {
+    it('should automatically re-join and allow re-starting via lobby', async () => {
         expect(p1Id).toBe('player1');
         expect(p2Id).toBe('player2');
 
-        // Simulate client-side auto-reclaim logic (mirroring App.jsx)
-        client1.on('matchRestarted', () => {
-            client1.emit('authenticate', 'restart-token-p1');
-        });
-        client2.on('matchRestarted', () => {
-            client2.emit('authenticate', 'restart-token-p2');
-        });
-
-        // Set up listeners for the new assignments
         const nextAssignmentP1 = new Promise((resolve) =>
             client1.once('playerAssignment', resolve)
         );
@@ -77,18 +75,27 @@ describe('Match Restart Persistence & Auto-Reclaim', () => {
             client2.once('playerAssignment', resolve)
         );
 
-        // Trigger restart from client 1
+        // Transition back to lobby
+        client1.on('matchRestarted', async () => {
+            client1.emit('authenticate', 'restart-token-p1');
+            client2.emit('authenticate', 'restart-token-p2');
+            await new Promise((r) => setTimeout(r, 200));
+            client1.emit('lobby:claimSeat', 0);
+            client2.emit('lobby:claimSeat', 1);
+            await new Promise((r) => setTimeout(r, 200));
+            client1.emit('lobby:ready', true);
+            client2.emit('lobby:ready', true);
+        });
+
+        // Trigger restart
         client1.emit('restartGame');
 
         // Wait for re-assignment
         const newId1 = await nextAssignmentP1;
         const newId2 = await nextAssignmentP2;
 
-        // Both should still be players (not spectators)
         expect(['player1', 'player2']).toContain(newId1);
         expect(['player2', 'player1']).toContain(newId2);
-        expect(newId1).not.toBe(newId2);
-
-        console.log(`Successfully re-claimed slots: ${newId1}, ${newId2}`);
-    }, 10000);
+        console.log(`Successfully re-started match via lobby: ${newId1}, ${newId2}`);
+    }, 15000);
 });

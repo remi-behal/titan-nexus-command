@@ -111,6 +111,19 @@ function startMatch() {
     room.status = 'IN_GAME';
 
     safeEmit(io, 'matchStarted', { playerAssignments });
+
+    // Send individual assignments to each socket that was in a slot
+    playerIds.forEach(pid => {
+        const sid = activeSockets[pid];
+        if (sid) {
+            const socket = io.sockets.sockets.get(sid);
+            if (socket) {
+                socket.assignedPlayerId = pid;
+                safeEmit(socket, 'playerAssignment', pid);
+            }
+        }
+    });
+
     emitFilteredState();
     startTimer();
 }
@@ -123,11 +136,8 @@ function emitFilteredState(state = null) {
     const baseState = state || game.getState();
 
     io.sockets.sockets.forEach((socket) => {
-        // Find if this socket is one of the active player sockets
-        const playerId = Object.keys(activeSockets).find((pid) => activeSockets[pid] === socket.id);
-
-        if (playerId) {
-            safeEmit(socket, 'gameStateUpdate', game.getVisibleState(playerId, baseState));
+        if (socket.assignedPlayerId) {
+            safeEmit(socket, 'gameStateUpdate', game.getVisibleState(socket.assignedPlayerId, baseState));
         } else {
             // Spectators see everything
             safeEmit(socket, 'gameStateUpdate', baseState);
@@ -153,6 +163,8 @@ async function resolveTurn() {
             player1: turnActions.player1 || [],
             player2: turnActions.player2 || []
         };
+
+        console.log(`[Server] Resolving turn ${game.turn} with actions: P1=${actionsMap.player1.length}, P2=${actionsMap.player2.length}`);
 
         let snapshots;
         try {
@@ -199,27 +211,25 @@ async function resolveTurn() {
 
 io.on('connection', (socket) => {
     console.log(`User Connected: ${socket.id}`);
-    let assignedPlayerId = null;
-    let currentToken = null;
 
     socket.on('authenticate', (token) => {
         if (!token) return;
-        currentToken = token;
+        socket.currentToken = token;
         console.log(`Authenticating socket ${socket.id} with token ${token}`);
 
         const room = lobbyManager.getOrCreateRoom('default');
 
         if (matchStarted) {
             // Re-claim slot logic
-            assignedPlayerId = Object.keys(playerAssignments).find(
+            socket.assignedPlayerId = Object.keys(playerAssignments).find(
                 (pid) => playerAssignments[pid] === token
             );
 
-            if (assignedPlayerId) {
-                activeSockets[assignedPlayerId] = socket.id;
-                console.log(`Re-assigned ${assignedPlayerId} to socket ${socket.id}`);
-                safeEmit(socket, 'playerAssignment', assignedPlayerId);
-                safeEmit(socket, 'gameStateUpdate', game.getVisibleState(assignedPlayerId));
+            if (socket.assignedPlayerId) {
+                activeSockets[socket.assignedPlayerId] = socket.id;
+                console.log(`Re-assigned ${socket.assignedPlayerId} to socket ${socket.id}`);
+                safeEmit(socket, 'playerAssignment', socket.assignedPlayerId);
+                safeEmit(socket, 'gameStateUpdate', game.getVisibleState(socket.assignedPlayerId));
             } else {
                 console.log(`${socket.id} joined match as spectator`);
                 safeEmit(socket, 'playerAssignment', 'spectator');
@@ -235,7 +245,7 @@ io.on('connection', (socket) => {
 
     socket.on('lobby:claimSeat', (slotIndex) => {
         const room = lobbyManager.getOrCreateRoom('default');
-        const res = room.claimSeat(slotIndex, currentToken, socket.id);
+        const res = room.claimSeat(slotIndex, socket.currentToken, socket.id);
         if (res.success) {
             console.log(`Socket ${socket.id} claimed seat ${slotIndex}`);
             io.emit('lobby:update', room.getUpdate());
@@ -262,8 +272,8 @@ io.on('connection', (socket) => {
         safeEmit(
             socket,
             'gameStateUpdate',
-            assignedPlayerId && assignedPlayerId !== 'spectator'
-                ? game.getVisibleState(assignedPlayerId)
+            socket.assignedPlayerId && socket.assignedPlayerId !== 'spectator'
+                ? game.getVisibleState(socket.assignedPlayerId)
                 : game.getState()
         );
         safeEmit(socket, 'syncStatus', { lockedIn });
@@ -271,20 +281,47 @@ io.on('connection', (socket) => {
 
     socket.on('syncActions', (actions) => {
         if (!matchStarted || game.phase !== 'PLANNING') return;
-        if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
+        if (!socket.assignedPlayerId || socket.assignedPlayerId === 'spectator') return;
 
-        if (lockedIn[assignedPlayerId]) return;
+        if (lockedIn[socket.assignedPlayerId]) return;
 
         // Validation logic omitted for brevity in prototype, reuse from original if needed
-        turnActions[assignedPlayerId] = actions;
+        turnActions[socket.assignedPlayerId] = actions;
     });
 
     socket.on('submitActions', (actions) => {
-        if (!matchStarted || game.phase !== 'PLANNING') return;
-        if (!assignedPlayerId || assignedPlayerId === 'spectator') return;
+        if (!matchStarted || game.phase !== 'PLANNING') {
+            console.warn(`[Server] submitActions ignored: matchStarted=${matchStarted}, phase=${game.phase}`);
+            return;
+        }
+        if (!socket.assignedPlayerId || socket.assignedPlayerId === 'spectator') {
+            console.warn(`[Server] submitActions ignored: assignedPlayerId=${socket.assignedPlayerId}`);
+            return;
+        }
 
-        turnActions[assignedPlayerId] = actions;
-        lockedIn[assignedPlayerId] = true;
+        const validatedActions = [];
+        let totalCost = 0;
+        const player = game.players[socket.assignedPlayerId];
+
+        for (const action of actions) {
+            const sourceEntity = game.entities.find((e) => e.id === action.sourceId);
+            if (!sourceEntity || sourceEntity.owner !== socket.assignedPlayerId) {
+                console.warn(`[Server] Action REJECTED for ${socket.assignedPlayerId}: unauthorized source ${action.sourceId}`);
+                continue;
+            }
+
+            const cost = ENTITY_STATS[action.itemType]?.cost || 0;
+            if (player.energy < totalCost + cost) {
+                console.warn(`[Server] Action REJECTED for ${socket.assignedPlayerId}: insufficient energy (has ${player.energy}, needs ${totalCost + cost})`);
+                continue;
+            }
+
+            totalCost += cost;
+            validatedActions.push({ ...action, playerId: socket.assignedPlayerId });
+        }
+
+        turnActions[socket.assignedPlayerId] = validatedActions;
+        lockedIn[socket.assignedPlayerId] = true;
 
         safeEmit(io, 'syncStatus', { lockedIn });
 
@@ -298,6 +335,10 @@ io.on('connection', (socket) => {
         const room = lobbyManager.getOrCreateRoom('default');
         room.status = 'LOBBY';
         room.slots.forEach(s => { if (s) s.ready = false; });
+
+        // Reset assigned IDs on sockets
+        io.sockets.sockets.forEach(s => { s.assignedPlayerId = null; });
+
         io.emit('lobby:update', room.getUpdate());
         io.emit('matchRestarted');
     });
@@ -307,9 +348,9 @@ io.on('connection', (socket) => {
         if (!matchStarted) {
             lobbyManager.handleSocketDisconnect(socket.id);
             io.emit('lobby:update', lobbyManager.getOrCreateRoom('default').getUpdate());
-        } else if (assignedPlayerId) {
-            if (activeSockets[assignedPlayerId] === socket.id) {
-                activeSockets[assignedPlayerId] = null;
+        } else if (socket.assignedPlayerId) {
+            if (activeSockets[socket.assignedPlayerId] === socket.id) {
+                activeSockets[socket.assignedPlayerId] = null;
             }
         }
     });
