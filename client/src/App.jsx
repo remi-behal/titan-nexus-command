@@ -3,6 +3,7 @@ import './App.css';
 import { GameState } from '../../shared/GameState.js';
 import { ENTITY_STATS, GLOBAL_STATS } from '../../shared/constants/EntityStats.js';
 import GameBoard from './components/GameBoard';
+import { LobbyOverlay } from './components/LobbyOverlay';
 import { io } from 'socket.io-client';
 
 const socket = io('/', {
@@ -38,6 +39,11 @@ function App() {
     const [showDebugPreview, setShowDebugPreview] = useState(false);
     const [timeRemaining, setTimeRemaining] = useState(30);
     const [isResolving, setIsResolving] = useState(false);
+
+    // Lobby State
+    const [lobbyStatus, setLobbyStatus] = useState(null);
+    const [matchStarted, setMatchStarted] = useState(false);
+
     const isResolvingPhase = playerState?.phase === 'RESOLVING';
     const isResolvingUI = isResolving || isResolvingPhase;
     const isLocked = syncStatus?.lockedIn?.[myPlayerId] || false;
@@ -117,6 +123,15 @@ function App() {
         setCommittedActions([]);
         setSelectedHubId(null);
         setLaunchMode(false);
+        setMatchStarted(false);
+    };
+
+    const handleClaimSeat = (index) => {
+        socket.emit('lobby:claimSeat', index);
+    };
+
+    const handleReadyToggle = (isReady) => {
+        socket.emit('lobby:ready', isReady);
     };
 
     useEffect(() => {
@@ -128,7 +143,6 @@ function App() {
 
             const token = getSessionToken();
             socket.emit('authenticate', token);
-            socket.emit('requestState');
         };
 
         const onDisconnect = () => {
@@ -161,6 +175,23 @@ function App() {
             setTimeRemaining(timeLeft);
         };
 
+        const onLobbyUpdate = (update) => {
+            console.log('Lobby update:', update);
+            setLobbyStatus(update);
+            if (update.status === 'IN_GAME') {
+                setMatchStarted(true);
+            }
+        };
+
+        const onMatchStarted = (data) => {
+            console.log('Match started!', data);
+            setMatchStarted(true);
+            // After match starts, we might need a fresh assignment
+            const token = getSessionToken();
+            socket.emit('authenticate', token);
+            socket.emit('requestState');
+        };
+
         // CRASH REPORTER: Catch any runtime errors and show them on screen
         const handleGlobalError = (event) => {
             setLastError(`CRASH: ${event.message} at ${event.filename}:${event.lineno}`);
@@ -184,9 +215,9 @@ function App() {
 
         const onMatchRestarted = () => {
             console.log('Match restarted! Re-authenticating...');
+            setMatchStarted(false);
             const token = getSessionToken();
             socket.emit('authenticate', token);
-            socket.emit('requestState');
         };
 
         socket.on('connect', onConnect);
@@ -197,6 +228,8 @@ function App() {
         socket.on('timerUpdate', onTimerUpdate);
         socket.on('resolutionStatus', onResolutionStatus);
         socket.on('matchRestarted', onMatchRestarted);
+        socket.on('lobby:update', onLobbyUpdate);
+        socket.on('matchStarted', onMatchStarted);
         socket.on('connect_error', onError);
 
         // Initial check in case it connected before the effect ran
@@ -212,29 +245,23 @@ function App() {
             socket.off('timerUpdate', onTimerUpdate);
             socket.off('resolutionStatus', onResolutionStatus);
             socket.off('matchRestarted', onMatchRestarted);
+            socket.off('lobby:update', onLobbyUpdate);
+            socket.off('matchStarted', onMatchStarted);
             socket.off('connect_error', onError);
         };
     }, []);
 
-    // Sync actions to server as they are created locally
     useEffect(() => {
         if (!isLocked && !isResolvingUI && committedActions.length >= 0) {
             socket.emit('syncActions', committedActions);
         }
     }, [committedActions, isLocked, isResolvingUI]);
 
-    // Note: We used to auto-submit here, but the server is the primary authority for turn resolution.
-    // Letting the client auto-submit at 0 creates a race condition where it triggers for Turn 2
-    // while state is still synchronising.
-
-    // Defensive check: Stay on loading screen until we have BOTH state and an assignment
-    // Ensure we have a valid player object (with defaults if still loading)
     const pBase =
         playerState?.players && playerState.players[myPlayerId]
             ? playerState.players[myPlayerId]
             : { energy: 0, color: '#fff', alive: true };
 
-    // Calculate energy after local (but not yet sent) commitments
     const pendingCost = committedActions.reduce(
         (sum, act) => sum + (ENTITY_STATS[act.itemType]?.cost || 0),
         0
@@ -252,11 +279,9 @@ function App() {
                     <span className="badge">You: {myPlayerId || 'Pending'}</span>
                     <span className="energy">Energy: {pCurrent.energy}</span>
                     {(() => {
-                        // Calculate projected turn income
                         let projectedIncome = GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
                         playerState?.entities?.forEach((entity) => {
                             if (entity.owner === myPlayerId) {
-                                // Skip income from disabled entities
                                 if (entity.disabledUntilTurn > playerState.turn) return;
 
                                 const stats = ENTITY_STATS[entity.type];
@@ -264,7 +289,6 @@ function App() {
                                     projectedIncome += stats.energyGen;
                                     if (entity.type === 'EXTRACTOR') {
                                         const node = playerState.map.resources.find((res) => {
-                                            // Basic dist calculation (ignoring wrap for UI preview is usually fine, but let's be accurate)
                                             let dx = Math.abs(res.x - entity.x);
                                             let dy = Math.abs(res.y - entity.y);
                                             if (dx > playerState.map.width / 2)
@@ -479,7 +503,19 @@ function App() {
         </header>
     );
 
-    // Defensive check: Stay on loading screen until we have BOTH state and an assignment
+    if (!matchStarted) {
+        return (
+            <div className="App">
+                <LobbyOverlay
+                    lobbyUpdate={lobbyStatus}
+                    onClaimSeat={handleClaimSeat}
+                    onReadyToggle={handleReadyToggle}
+                    socketId={socket.id}
+                />
+            </div>
+        );
+    }
+
     if (!playerState || !myPlayerId) {
         return (
             <div className="App">
