@@ -80,12 +80,24 @@ describe('Match Restart Persistence & Auto-Reclaim', () => {
         expect(p1Id).toBe('player1');
         expect(p2Id).toBe('player2');
 
-        const nextAssignmentP1 = new Promise((resolve) =>
-            client1.once('playerAssignment', resolve)
-        );
-        const nextAssignmentP2 = new Promise((resolve) =>
-            client2.once('playerAssignment', resolve)
-        );
+        const nextAssignmentP1 = new Promise((resolve) => {
+            const handler = (id) => {
+                if (id && (id === 'player1' || id === 'player2')) {
+                    client1.off('playerAssignment', handler);
+                    resolve(id);
+                }
+            };
+            client1.on('playerAssignment', handler);
+        });
+        const nextAssignmentP2 = new Promise((resolve) => {
+            const handler = (id) => {
+                if (id && (id === 'player1' || id === 'player2')) {
+                    client2.off('playerAssignment', handler);
+                    resolve(id);
+                }
+            };
+            client2.on('playerAssignment', handler);
+        });
 
         // Transition back to lobby
         client1.on('matchRestarted', async () => {
