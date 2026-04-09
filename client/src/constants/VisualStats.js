@@ -33,5 +33,10 @@ export const VISUAL_STATS = {
         activeColor: '#00ffff',
         captureRadiusColor: 'rgba(0, 255, 255, 0.4)',
         tetherColor: 'rgba(131, 255, 100, 1)'
+    },
+    FOG_OF_WAR: {
+        GHOST_SATURATION: '35%',
+        GHOST_TRANS_ALPHA: 0.4,
+        GHOST_LINK_ALPHA: 0.2
     }
 };

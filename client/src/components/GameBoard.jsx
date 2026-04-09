@@ -3,6 +3,7 @@ import { GameState } from '../../../shared/GameState.js';
 import { ENTITY_STATS, GLOBAL_STATS } from '../../../shared/constants/EntityStats.js';
 import { VISUAL_STATS } from '../constants/VisualStats.js';
 import { shouldHighlightRing } from '../utils/uiLogic.js';
+import { getGhostColor } from '../utils/RenderingHelpers.js';
 
 /**
  * GameBoard Component
@@ -460,10 +461,7 @@ const GameBoard = ({
                             const baseColor = player ? player.color : '#666';
 
                             // Calculate desaturated color for ghost segments (Bug 1 fix)
-                            // We use a more robust regex to replace the saturation (%) in HSL colors.
-                            let ghostColor = baseColor.startsWith('hsl')
-                                ? baseColor.replace(/(\d+)%/, '10%')
-                                : '#888';
+                            const ghostColor = getGhostColor(baseColor, VISUAL_STATS.FOG_OF_WAR.GHOST_SATURATION);
 
                             // Determine path
                             let dx, dy;
@@ -677,11 +675,7 @@ const GameBoard = ({
 
                             if (displayAsGhost) {
                                 // Desaturate the color for ghosts (Bug 1 fix)
-                                if (color.startsWith('hsl')) {
-                                    color = color.replace(/(\d+)%/, '10%'); // Drop saturation to 10%
-                                } else {
-                                    color = '#888'; // Fallback gray
-                                }
+                                color = getGhostColor(color, VISUAL_STATS.FOG_OF_WAR.GHOST_SATURATION);
                             }
 
                             const isSelected = entity.id === selectedHubId && !displayAsGhost;

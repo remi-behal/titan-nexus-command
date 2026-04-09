@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { wrapCoordinate, getToroidalLineSegments, worldToScreen } from './RenderingHelpers.js';
+import { wrapCoordinate, getToroidalLineSegments, worldToScreen, getGhostColor } from './RenderingHelpers.js';
 
 describe('Rendering Helpers', () => {
     it('wrapCoordinate should handle negative and over-max values', () => {
@@ -36,5 +36,16 @@ describe('Rendering Helpers', () => {
         // (500 - 100) * 2 = 800
         expect(screen.x).toBe(800);
         expect(screen.y).toBe(800);
+    });
+
+    describe('getGhostColor', () => {
+        it('should transform highly saturated HSL to target ghost saturation', () => {
+            expect(getGhostColor('hsl(0, 70%, 50%)', '35%')).toBe('hsl(0, 35%, 50%)');
+            expect(getGhostColor('hsl(120, 100%, 25%)', '10%')).toBe('hsl(120, 10%, 25%)');
+        });
+        it('should fallback to gray for non-HSL colors', () => {
+            expect(getGhostColor('#ff0000')).toBe('#888');
+            expect(getGhostColor('rgb(255, 0, 0)')).toBe('#888');
+        });
     });
 });

@@ -50,3 +50,14 @@ export const worldToScreen = (worldX, worldY, cameraOffset, zoom) => {
         y: (worldY - cameraOffset.y) * zoom
     };
 };
+
+/**
+ * Calculates a desaturated "ghost" color for entities out of vision.
+ * @param {string} baseColor - The player's color (typically HSL).
+ * @param {string} saturation - The target saturation for the ghost.
+ */
+export const getGhostColor = (baseColor, saturation = '35%') => {
+    if (!baseColor || !baseColor.startsWith('hsl')) return '#888';
+    // We use a regex to find the first percentage value (saturation) and replace it.
+    return baseColor.replace(/(\d+)%/, saturation);
+};
