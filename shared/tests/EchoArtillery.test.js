@@ -228,4 +228,45 @@ describe('Echo Artillery Functional Tests', () => {
         expect(wasFiringP2R2).toBe(true);
         expect(wasFiringP1R3).toBe(true);
     });
+    it('should NOT trigger or fire if disabled by EMP', () => {
+        const p1Hub = game.entities.find((e) => e.owner === 'p1');
+        const p2Hub = game.entities.find((e) => e.owner === 'p2');
+
+        const echo = game.addEntity({
+            type: 'ECHO_ARTILLERY',
+            owner: 'p2',
+            x: p1Hub.x + 100,
+            y: p1Hub.y
+        });
+        game.addLink(p2Hub.id, echo.id, 'p2');
+
+        // Disable the Echo Artillery
+        echo.disabledUntilTurn = game.turn + 1;
+
+        const actions = {
+            p1: [
+                {
+                    playerId: 'p1',
+                    sourceId: p1Hub.id,
+                    itemType: 'WEAPON',
+                    angle: 0,
+                    distance: 100
+                }
+            ]
+        };
+
+        const snapshots = game.resolveTurn(actions);
+
+        const wasFiringR2 = snapshots.some(
+            (s) =>
+                s.type === 'ROUND_SUB' &&
+                s.round === 2 &&
+                s.state.entities.some(
+                    (e) => (e.type === 'WEAPON' || e.type === 'PROJECTILE') && e.owner === 'p2'
+                )
+        );
+
+        // Currently this fails (returns true) because of the bug
+        expect(wasFiringR2).toBe(false);
+    });
 });

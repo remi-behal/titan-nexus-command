@@ -187,24 +187,24 @@ export class GameState {
         return this.entities
             .filter((e) => e.owner === playerId)
             .map((e) => {
-            // Consistent statKey logic with isPositionVisible
-            const statKey =
-                (e.type === 'PROJECTILE' ||
-                    e.type === 'WEAPON' ||
-                    e.type === 'HOMING_MISSILE' ||
-                    e.type === 'SAM_MISSILE') &&
-                    e.itemType
-                    ? e.itemType
-                    : e.type;
-            const stats = ENTITY_STATS[statKey];
-            const radius = e.vision !== undefined ? e.vision : stats?.vision || 0;
+                // Consistent statKey logic with isPositionVisible
+                const statKey =
+                    (e.type === 'PROJECTILE' ||
+                        e.type === 'WEAPON' ||
+                        e.type === 'HOMING_MISSILE' ||
+                        e.type === 'SAM_MISSILE') &&
+                        e.itemType
+                        ? e.itemType
+                        : e.type;
+                const stats = ENTITY_STATS[statKey];
+                const radius = e.vision !== undefined ? e.vision : stats?.vision || 0;
 
-            return {
-                x: e.x,
-                y: e.y,
-                radius
-            };
-        })
+                return {
+                    x: e.x,
+                    y: e.y,
+                    radius
+                };
+            })
             .filter((c) => c.radius > 0);
     }
 
@@ -1027,6 +1027,14 @@ export class GameState {
 
             // Task 3: Collect Echo Artillery retaliation
             this.entities.forEach((echo) => {
+                if (
+                    echo.type === 'ECHO_ARTILLERY' &&
+                    echo.disabledUntilTurn > this.turn // Skip if disabled by EMP
+                ) {
+                    echo.pendingEchos = []; // Clear pending echos if disabled
+                    return;
+                }
+
                 if (
                     echo.type === 'ECHO_ARTILLERY' &&
                     echo.pendingEchos &&
@@ -2432,7 +2440,12 @@ export class GameState {
 
     triggerEchoArtillery(sourceX, sourceY, launcherId, round) {
         this.entities.forEach((ent) => {
-            if (ent.type === 'ECHO_ARTILLERY' && ent.owner !== launcherId && !ent.firedThisTurn) {
+            if (
+                ent.type === 'ECHO_ARTILLERY' &&
+                ent.owner !== launcherId &&
+                ent.disabledUntilTurn <= this.turn &&
+                !ent.firedThisTurn
+            ) {
                 const dist = this.getToroidalDistance(sourceX, sourceY, ent.x, ent.y);
                 if (dist <= (ENTITY_STATS.ECHO_ARTILLERY.detectionRange || 800)) {
                     ent.pendingEchos.push({ x: sourceX, y: sourceY, triggerRound: round });
