@@ -1538,204 +1538,225 @@ const GameBoard = ({
                                         ldy
                                     );
                                     ctx.setLineDash([]);
-                                    ctx.beginPath();
-                                    const size = stats?.size || 12;
-                                    if (selectedItemType === 'HUB' || selectedItemType === 'NUKE') {
-                                        // Hexagon Preview
-                                        for (let i = 0; i < 6; i++) {
-                                            const a = (i * 2 * Math.PI) / 6;
-                                            ctx.lineTo(
-                                                targetX + size * Math.cos(a),
-                                                targetY + size * Math.sin(a)
-                                            );
-                                        }
-                                        ctx.closePath();
-                                    } else if (selectedItemType === 'EXTRACTOR') {
-                                        // Triangle Preview
-                                        ctx.moveTo(targetX, targetY - size);
-                                        ctx.lineTo(targetX + size, targetY + size / 2);
-                                        ctx.lineTo(targetX - size, targetY + size / 2);
-                                        ctx.closePath();
 
-                                        // Capture Radius Preview
-                                        ctx.save();
-                                        ctx.strokeStyle = VISUAL_STATS.EXTRACTOR.captureRadiusColor;
-                                        ctx.setLineDash([5, 5]);
-                                        ctx.beginPath();
-                                        ctx.arc(targetX, targetY, GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS, 0, Math.PI * 2);
-                                        ctx.stroke();
-                                        ctx.restore();
-                                    } else if (
-                                        selectedItemType === 'SHIELD' ||
-                                        selectedItemType === 'LASER_POINT_DEFENSE' ||
-                                        selectedItemType === 'FLAK_DEFENSE'
-                                    ) {
-                                        // Square Preview
-                                        ctx.rect(targetX - size, targetY - size, size * 2, size * 2);
-                                    } else {
-                                        // Default Circle for projectiles
-                                        ctx.arc(targetX, targetY, size, 0, Math.PI * 2);
-                                    }
-                                    ctx.stroke();
+                                    const previewSize = stats?.size || 12;
 
-                                    // AOE Preview for explosive weapons (Nuke, Weapon, Super Bomb, OVERLOAD) or SHIELD
-                                    const explosionRadius = stats?.radiusFull || stats?.detectionRadius || stats?.range;
-                                    if (explosionRadius) {
-                                        ctx.save();
+                                    if (selectedItemType === 'CLUSTER_BOMB') {
+                                        const count = stats.subBombCount;
+                                        const totalSpread = stats.spreadDistance;
+                                        const step = totalSpread / (count - 1 || 1);
 
-                                        const vStats = VISUAL_STATS[selectedItemType];
-                                        const previewColor =
-                                            selectedItemType === 'NUKE'
-                                                ? 'rgba(255, 0, 0, 0.7)'
-                                                : selectedItemType === 'RECLAIMER'
-                                                    ? 'rgba(0, 255, 255, 0.7)'
-                                                    : selectedItemType === 'SHIELD'
-                                                        ? 'rgba(0, 255, 255, 0.5)'
-                                                        : vStats?.color
-                                                            ? `${vStats.color}b3`
-                                                            : 'rgba(255, 255, 255, 0.5)';
+                                        // Perpendicular unit vector
+                                        const px = -ldy / launchDistance;
+                                        const py = ldx / launchDistance;
 
-                                        // 1. Full Damage Inner Ring (Solid-ish) / Shield Barrier
-                                        ctx.strokeStyle = previewColor;
-                                        ctx.lineWidth =
-                                            selectedItemType === 'NUKE' ||
-                                                selectedItemType === 'RECLAIMER' ||
-                                                selectedItemType === 'OVERLOAD' ||
-                                                selectedItemType === 'SHIELD'
-                                                ? 3
-                                                : 2;
-                                        ctx.setLineDash([10, 5]);
-                                        ctx.beginPath();
+                                        for (let i = 0; i < count; i++) {
+                                            const offset = i * step - totalSpread / 2;
+                                            const subTargetX = (targetX + offset * px + mapW) % mapW;
+                                            const subTargetY = (targetY + offset * py + mapH) % mapH;
 
-                                        // Boundary is always circular for Shield now
-                                        ctx.arc(targetX, targetY, explosionRadius, 0, Math.PI * 2);
-                                        ctx.stroke();
-
-                                        // Add subtle boundary preview for Shield
-                                        if (selectedItemType === "SHIELD") {
-                                            // Just the boundary ring, no internal hexes for the preview
-                                        }
-                                        // 2. Splash Damage Outer Ring (Dashed/Subtle)
-                                        if (stats.radiusHalf && stats.radiusHalf > stats.radiusFull) {
-                                            ctx.strokeStyle =
-                                                selectedItemType === 'NUKE'
-                                                    ? 'rgba(255, 140, 0, 0.5)'
-                                                    : 'rgba(255, 255, 255, 0.3)';
-                                            ctx.lineWidth = 1.5;
-                                            ctx.setLineDash([5, 15]);
                                             ctx.beginPath();
-                                            ctx.arc(targetX, targetY, stats.radiusHalf, 0, Math.PI * 2);
+                                            ctx.arc(subTargetX, subTargetY, previewSize, 0, Math.PI * 2);
                                             ctx.stroke();
                                         }
-
-                                        ctx.restore();
-                                    }
-
-                                    // Napalm AOE Preview during aiming
-                                    if (selectedItemType === 'NAPALM') {
-                                        ctx.save();
-                                        const nStats = ENTITY_STATS.NAPALM_FIRE;
-                                        const { dx, dy } = getToroidalDistVector(
-                                            hub.x,
-                                            hub.y,
-                                            targetX,
-                                            targetY,
-                                            mapW,
-                                            mapH
-                                        );
-                                        const angle = Math.atan2(dy, dx);
-                                        const radius = nStats.width / 2;
-
-                                        ctx.translate(targetX, targetY);
-                                        ctx.rotate(angle);
-                                        ctx.strokeStyle = 'rgba(255, 140, 0, 0.6)';
-                                        ctx.lineWidth = 2;
-                                        ctx.setLineDash([5, 5]);
-
+                                    } else {
                                         ctx.beginPath();
-                                        // Remember: TargetX is the TIP, so we draw BACKWARDS (negative length)
-                                        ctx.arc(0, 0, radius, -Math.PI / 2, Math.PI / 2);
-                                        ctx.lineTo(-nStats.length, radius);
-                                        ctx.arc(-nStats.length, 0, radius, Math.PI / 2, -Math.PI / 2);
-                                        ctx.closePath();
+                                        if (selectedItemType === 'HUB' || selectedItemType === 'NUKE') {
+                                            // Hexagon Preview
+                                            for (let i = 0; i < 6; i++) {
+                                                const a = (i * 2 * Math.PI) / 6;
+                                                ctx.lineTo(
+                                                    targetX + previewSize * Math.cos(a),
+                                                    targetY + previewSize * Math.sin(a)
+                                                );
+                                            }
+                                            ctx.closePath();
+                                        } else if (selectedItemType === 'EXTRACTOR') {
+                                            // Triangle Preview
+                                            ctx.moveTo(targetX, targetY - size);
+                                            ctx.lineTo(targetX + size, targetY + size / 2);
+                                            ctx.lineTo(targetX - size, targetY + size / 2);
+                                            ctx.closePath();
+
+                                            // Capture Radius Preview
+                                            ctx.save();
+                                            ctx.strokeStyle = VISUAL_STATS.EXTRACTOR.captureRadiusColor;
+                                            ctx.setLineDash([5, 5]);
+                                            ctx.beginPath();
+                                            ctx.arc(targetX, targetY, GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS, 0, Math.PI * 2);
+                                            ctx.stroke();
+                                            ctx.restore();
+                                        } else if (
+                                            selectedItemType === 'SHIELD' ||
+                                            selectedItemType === 'LASER_POINT_DEFENSE' ||
+                                            selectedItemType === 'FLAK_DEFENSE'
+                                        ) {
+                                            // Square Preview
+                                            ctx.rect(targetX - size, targetY - size, size * 2, size * 2);
+                                        } else {
+                                            // Default Circle for projectiles
+                                            ctx.arc(targetX, targetY, size, 0, Math.PI * 2);
+                                        }
                                         ctx.stroke();
-                                        ctx.restore();
+
+                                        // AOE Preview for explosive weapons (Nuke, Weapon, Super Bomb, OVERLOAD) or SHIELD
+                                        const explosionRadius = stats?.radiusFull || stats?.detectionRadius || stats?.range;
+                                        if (explosionRadius) {
+                                            ctx.save();
+
+                                            const vStats = VISUAL_STATS[selectedItemType];
+                                            const previewColor =
+                                                selectedItemType === 'NUKE'
+                                                    ? 'rgba(255, 0, 0, 0.7)'
+                                                    : selectedItemType === 'RECLAIMER'
+                                                        ? 'rgba(0, 255, 255, 0.7)'
+                                                        : selectedItemType === 'SHIELD'
+                                                            ? 'rgba(0, 255, 255, 0.5)'
+                                                            : vStats?.color
+                                                                ? `${vStats.color}b3`
+                                                                : 'rgba(255, 255, 255, 0.5)';
+
+                                            // 1. Full Damage Inner Ring (Solid-ish) / Shield Barrier
+                                            ctx.strokeStyle = previewColor;
+                                            ctx.lineWidth =
+                                                selectedItemType === 'NUKE' ||
+                                                    selectedItemType === 'RECLAIMER' ||
+                                                    selectedItemType === 'OVERLOAD' ||
+                                                    selectedItemType === 'SHIELD'
+                                                    ? 3
+                                                    : 2;
+                                            ctx.setLineDash([10, 5]);
+                                            ctx.beginPath();
+
+                                            // Boundary is always circular for Shield now
+                                            ctx.arc(targetX, targetY, explosionRadius, 0, Math.PI * 2);
+                                            ctx.stroke();
+
+                                            // Add subtle boundary preview for Shield
+                                            if (selectedItemType === "SHIELD") {
+                                                // Just the boundary ring, no internal hexes for the preview
+                                            }
+                                            // 2. Splash Damage Outer Ring (Dashed/Subtle)
+                                            if (stats.radiusHalf && stats.radiusHalf > stats.radiusFull) {
+                                                ctx.strokeStyle =
+                                                    selectedItemType === 'NUKE'
+                                                        ? 'rgba(255, 140, 0, 0.5)'
+                                                        : 'rgba(255, 255, 255, 0.3)';
+                                                ctx.lineWidth = 1.5;
+                                                ctx.setLineDash([5, 15]);
+                                                ctx.beginPath();
+                                                ctx.arc(targetX, targetY, stats.radiusHalf, 0, Math.PI * 2);
+                                                ctx.stroke();
+                                            }
+
+                                            ctx.restore();
+                                        }
+
+                                        // Napalm AOE Preview during aiming
+                                        if (selectedItemType === 'NAPALM') {
+                                            ctx.save();
+                                            const nStats = ENTITY_STATS.NAPALM_FIRE;
+                                            const { dx, dy } = getToroidalDistVector(
+                                                hub.x,
+                                                hub.y,
+                                                targetX,
+                                                targetY,
+                                                mapW,
+                                                mapH
+                                            );
+                                            const angle = Math.atan2(dy, dx);
+                                            const radius = nStats.width / 2;
+
+                                            ctx.translate(targetX, targetY);
+                                            ctx.rotate(angle);
+                                            ctx.strokeStyle = 'rgba(255, 140, 0, 0.6)';
+                                            ctx.lineWidth = 2;
+                                            ctx.setLineDash([5, 5]);
+
+                                            ctx.beginPath();
+                                            // Remember: TargetX is the TIP, so we draw BACKWARDS (negative length)
+                                            ctx.arc(0, 0, radius, -Math.PI / 2, Math.PI / 2);
+                                            ctx.lineTo(-nStats.length, radius);
+                                            ctx.arc(-nStats.length, 0, radius, Math.PI / 2, -Math.PI / 2);
+                                            ctx.closePath();
+                                            ctx.stroke();
+                                            ctx.restore();
+                                        }
                                     }
                                 }
                             }
+
+                            // committed actions preview
+                            committedActions.forEach((action, index) => {
+                                const hub = visualEntities.current[action.sourceId];
+                                if (hub) {
+                                    const angleRad = (action.angle * Math.PI) / 180;
+                                    const ratio = action.distance / maxPullDistance;
+                                    const strengthColor = getStrengthColor(ratio);
+                                    const arrowLen = HUB_RADIUS * (1 + ratio * 0.5);
+                                    const ax = hub.x + Math.cos(angleRad) * arrowLen;
+                                    const ay = hub.y + Math.sin(angleRad) * arrowLen;
+
+                                    ctx.strokeStyle = strengthColor;
+                                    ctx.lineWidth = 4;
+                                    ctx.globalAlpha = 0.6;
+                                    ctx.beginPath();
+                                    ctx.moveTo(hub.x, hub.y);
+                                    ctx.lineTo(ax, ay);
+                                    ctx.stroke();
+                                    ctx.globalAlpha = 1.0;
+
+                                    ctx.fillStyle = strengthColor;
+                                    ctx.beginPath();
+                                    ctx.arc(
+                                        ax + Math.cos(angleRad) * 15,
+                                        ay + Math.sin(angleRad) * 15,
+                                        10,
+                                        0,
+                                        Math.PI * 2
+                                    );
+                                    ctx.fill();
+                                    ctx.fillStyle = '#fff';
+                                    ctx.font = 'bold 10px Arial';
+                                    ctx.textAlign = 'center';
+                                    ctx.fillText(
+                                        (index + 1).toString(),
+                                        ax + Math.cos(angleRad) * 15,
+                                        ay + Math.sin(angleRad) * 15 + 4
+                                    );
+                                }
+                            });
+
+                            ctx.restore();
                         }
-
-                        // committed actions preview
-                        committedActions.forEach((action, index) => {
-                            const hub = visualEntities.current[action.sourceId];
-                            if (hub) {
-                                const angleRad = (action.angle * Math.PI) / 180;
-                                const ratio = action.distance / maxPullDistance;
-                                const strengthColor = getStrengthColor(ratio);
-                                const arrowLen = HUB_RADIUS * (1 + ratio * 0.5);
-                                const ax = hub.x + Math.cos(angleRad) * arrowLen;
-                                const ay = hub.y + Math.sin(angleRad) * arrowLen;
-
-                                ctx.strokeStyle = strengthColor;
-                                ctx.lineWidth = 4;
-                                ctx.globalAlpha = 0.6;
-                                ctx.beginPath();
-                                ctx.moveTo(hub.x, hub.y);
-                                ctx.lineTo(ax, ay);
-                                ctx.stroke();
-                                ctx.globalAlpha = 1.0;
-
-                                ctx.fillStyle = strengthColor;
-                                ctx.beginPath();
-                                ctx.arc(
-                                    ax + Math.cos(angleRad) * 15,
-                                    ay + Math.sin(angleRad) * 15,
-                                    10,
-                                    0,
-                                    Math.PI * 2
-                                );
-                                ctx.fill();
-                                ctx.fillStyle = '#fff';
-                                ctx.font = 'bold 10px Arial';
-                                ctx.textAlign = 'center';
-                                ctx.fillText(
-                                    (index + 1).toString(),
-                                    ax + Math.cos(angleRad) * 15,
-                                    ay + Math.sin(angleRad) * 15 + 4
-                                );
-                            }
-                        });
-
-                        ctx.restore();
                     }
+
+
+                    ctx.restore();
+
+                } catch (err) {
+                    console.error("Rendering Error:", err);
                 }
+                animationFrameId = requestAnimationFrame(updateAndDraw);
+            };
 
-
-                ctx.restore();
-
-            } catch (err) {
-                console.error("Rendering Error:", err);
-            }
             animationFrameId = requestAnimationFrame(updateAndDraw);
-        };
-
-        animationFrameId = requestAnimationFrame(updateAndDraw);
-        return () => cancelAnimationFrame(animationFrameId);
-    }, [
-        gameState,
-        launchMode,
-        isAiming,
-        selectedHubId,
-        selectedItemType,
-        mousePos,
-        committedActions,
-        showDebugPreview,
-        maxPullDistance,
-        myPlayerId,
-        cameraOffset,
-        HUB_RADIUS,
-        SLING_RING_RADIUS
-    ]);
+            return () => cancelAnimationFrame(animationFrameId);
+        }, [
+            gameState,
+            launchMode,
+            isAiming,
+            selectedHubId,
+            selectedItemType,
+            mousePos,
+            committedActions,
+            showDebugPreview,
+            maxPullDistance,
+            myPlayerId,
+            cameraOffset,
+            HUB_RADIUS,
+            SLING_RING_RADIUS
+        ]);
 
     // Helper: Calculate game coordinates from mouse event
     const getGameCoords = useCallback(
