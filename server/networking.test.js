@@ -5,21 +5,36 @@ import path from 'path';
 
 describe('Server Networking - Reconnection and Resilience', () => {
     let serverProcess;
-    let url = 'http://localhost:3015';
+    let url = 'http://localhost:3095';
 
     beforeAll(async () => {
         const serverPath = path.resolve(__dirname, 'index.js');
         serverProcess = spawn('node', [serverPath], {
-            env: { ...process.env, PORT: '3015' },
+            env: { ...process.env, PORT: '3095' },
             stdio: 'pipe'
         });
 
         await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Server failed to start')), 5000);
+            const timeout = setTimeout(() => {
+                serverProcess.kill('SIGKILL');
+                reject(new Error('Main server failed to start within 5s'));
+            }, 5000);
+
             serverProcess.stdout.on('data', (data) => {
                 if (data.toString().includes('SERVER RUNNING')) {
                     clearTimeout(timeout);
                     resolve();
+                }
+            });
+
+            serverProcess.stderr.on('data', (data) => {
+                console.error(`[Server Stderr]: ${data.toString()}`);
+            });
+
+            serverProcess.on('exit', (code) => {
+                if (code !== null && code !== 0) {
+                    clearTimeout(timeout);
+                    reject(new Error(`Server process exited with code ${code}`));
                 }
             });
         });
@@ -150,7 +165,7 @@ describe('Server Networking - Reconnection and Resilience', () => {
 
     it('should delay outgoing messages when SIMULATED_LATENCY is set (id: 68)', async () => {
         const latency = 150;
-        const latencyServerPort = '3016';
+        const latencyServerPort = '3096';
         const serverPath = path.resolve(__dirname, 'index.js');
 
         const latencyServer = spawn('node', [serverPath], {
@@ -158,9 +173,28 @@ describe('Server Networking - Reconnection and Resilience', () => {
             stdio: 'pipe'
         });
 
-        await new Promise((resolve) => {
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                latencyServer.kill('SIGKILL');
+                reject(new Error('Latency server failed to start within 5s'));
+            }, 5000);
+
             latencyServer.stdout.on('data', (data) => {
-                if (data.toString().includes('SERVER RUNNING')) resolve();
+                if (data.toString().includes('SERVER RUNNING')) {
+                    clearTimeout(timeout);
+                    resolve();
+                }
+            });
+
+            latencyServer.stderr.on('data', (data) => {
+                console.error(`[Latency Server Stderr]: ${data.toString()}`);
+            });
+
+            latencyServer.on('exit', (code) => {
+                if (code !== null && code !== 0) {
+                    clearTimeout(timeout);
+                    reject(new Error(`Latency server process exited with code ${code}`));
+                }
             });
         });
 
