@@ -82,7 +82,7 @@
         - [ ] Multi-round projectiles. Brainstorm weapons <!-- id: 85 -->
     - [ ] **Weapon finetuning**: <!-- id: 86 -->
         - [ ] Adjust weapon stats to make the game more fun. <!-- id: 87 -->
-        - [ ] Flak defense - damage is applied the instant a projectile enters the cone, making the effect look bad. Brainstorm solutions. <!-- id: 88 -->
+        - [x] Flak defense and nuke hazard - damage is applied the instant a projectile enters the area of effect, making the effect look bad. Brainstorm solutions. <!-- id: 88 -->
         - [ ] Global vision for projectiles needs to be increased. <!-- id: 89 -->
         - [x] Nuke hazard should give vision to owner. <!-- id: 90 -->
         - [ ] Fog of war not quite working correctly <!-- id: 91 -->

@@ -1095,7 +1095,8 @@ export class GameState {
                             totalDistanceMoved: 0,
                             active: true,
                             hp: stats.hp || 1,
-                            hitByFlakDefense: new Set()
+                            hitByFlakDefense: new Set(),
+                            scheduledEffects: [] // List of { type: 'incinerate'|'damage', amount, tick, sourceId }
                         });
                         console.log(
                             `[Echo-Firing] Artillery ${echo.id} firing retaliation at (${Math.round(target.x)}, ${Math.round(target.y)})`
@@ -1219,7 +1220,8 @@ export class GameState {
                                     : GLOBAL_STATS.UNDEPLOYED_HP,
                             active: true,
                             hitByFlakDefense: new Set(), // Track unique flak hits per round
-                            hasSplit: false
+                            hasSplit: false,
+                            scheduledEffects: []
                         });
                         console.log(
                             `[Launch] ${action.playerId} fired ${action.itemType} from ${source.id}`
@@ -1252,6 +1254,31 @@ export class GameState {
                         // Reset per-round flak tracking for active projectiles
                         tempProjectiles.forEach((proj) => {
                             if (proj.hitByFlakDefense) proj.hitByFlakDefense.clear();
+
+                            // --- Process Scheduled Effects ---
+                            if (proj.active && proj.scheduledEffects && proj.scheduledEffects.length > 0) {
+                                for (let i = proj.scheduledEffects.length - 1; i >= 0; i--) {
+                                    const effect = proj.scheduledEffects[i];
+                                    if (t >= effect.tick) {
+                                        if (effect.type === 'incinerate') {
+                                            proj.active = false;
+                                            proj.hitThisTick = false; // Incinerated mid-air
+                                            console.log(`[Scheduled] Projectile ${proj.id} incinerated by ${effect.sourceId} at tick ${t}`);
+                                        } else if (effect.type === 'damage') {
+                                            proj.hp -= effect.amount;
+                                            console.log(`[Scheduled] Projectile ${proj.id} took ${effect.amount} damage from ${effect.sourceId} at tick ${t}. HP: ${proj.hp}`);
+                                            if (proj.hp <= 0) {
+                                                proj.active = false;
+                                                const pStats = ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
+                                                if (pStats?.deathEffect === 'DETONATE') {
+                                                    proj.hitThisTick = true;
+                                                }
+                                            }
+                                        }
+                                        proj.scheduledEffects.splice(i, 1);
+                                    }
+                                }
+                            }
                         });
 
                         this.entities.forEach((def) => {
@@ -1288,20 +1315,21 @@ export class GameState {
                                         while (diff < -180) diff += 360;
 
                                         if (Math.abs(diff) <= stats.arc / 2) {
-                                            proj.hp -= stats.damage;
-                                            proj.hitByFlakDefense.add(def.id);
-                                            tempVisuals.push({
-                                                type: 'SPARK',
-                                                x: proj.currX,
-                                                y: proj.currY,
-                                                duration: 15
-                                            });
-                                            if (proj.hp <= 0) {
-                                                proj.active = false;
-                                                const pStats = ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
-                                                if (pStats?.deathEffect === 'DETONATE') {
-                                                    proj.hitThisTick = true;
-                                                }
+                                            // Check if already scheduled a hit from this source
+                                            if (!proj.scheduledEffects.some(e => e.sourceId === def.id)) {
+                                                const delay = 5 + Math.floor(Math.random() * 5);
+                                                proj.scheduledEffects.push({
+                                                    type: 'damage',
+                                                    amount: stats.damage,
+                                                    tick: t + delay,
+                                                    sourceId: def.id
+                                                });
+                                                tempVisuals.push({
+                                                    type: 'SPARK',
+                                                    x: proj.currX,
+                                                    y: proj.currY,
+                                                    duration: 15
+                                                });
                                             }
                                         }
                                     }
@@ -1410,7 +1438,8 @@ export class GameState {
                                         searchMode: false, // Start locked
                                         totalDistanceMoved: 0,
                                         intendedDistance: 1000, // Fuel limit
-                                        hitByFlakDefense: new Set()
+                                        hitByFlakDefense: new Set(),
+                                        scheduledEffects: []
                                     };
 
                                     tempProjectiles.push(samMissile);
@@ -1733,11 +1762,17 @@ export class GameState {
                                     }
 
                                     if (isHit) {
-                                        console.log(
-                                            `[Hazard] Projectile ${proj.id} incinerated by ${h.type} at (${Math.round(h.x)}, ${Math.round(h.y)})`
-                                        );
-                                        proj.active = false;
-                                        proj.hitThisTick = false; // Destroyed mid-air, no detonation
+                                        if (!proj.scheduledEffects.some(e => e.sourceId === h.id)) {
+                                            const delay = 5 + Math.floor(Math.random() * 5);
+                                            proj.scheduledEffects.push({
+                                                type: 'incinerate',
+                                                tick: t + delay,
+                                                sourceId: h.id
+                                            });
+                                            console.log(
+                                                `[Hazard] Projectile ${proj.id} entry detected by ${h.type} at (${Math.round(h.x)}, ${Math.round(h.y)}). Delaying destruction.`
+                                            );
+                                        }
                                     }
                                 });
                             }
