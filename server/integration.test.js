@@ -50,6 +50,16 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
 
             client1.emit('authenticate', 'integration-token-p1');
             client2.emit('authenticate', 'integration-token-p2');
+
+            // Lobby Handshake
+            (async () => {
+                await new Promise((r) => setTimeout(r, 200));
+                client1.emit('lobby:claimSeat', 0);
+                client2.emit('lobby:claimSeat', 1);
+                await new Promise((r) => setTimeout(r, 200));
+                client1.emit('lobby:ready', true);
+                client2.emit('lobby:ready', true);
+            })();
         });
     });
 
