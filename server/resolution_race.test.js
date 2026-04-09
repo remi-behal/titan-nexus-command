@@ -37,6 +37,16 @@ describe('Server - Resolution Race Guard', () => {
 
             client1.emit('authenticate', 'race-token-p1');
             client2.emit('authenticate', 'race-token-p2');
+
+            // Lobby Handshake
+            (async () => {
+                await new Promise((r) => setTimeout(r, 200));
+                client1.emit('lobby:claimSeat', 0);
+                client2.emit('lobby:claimSeat', 1);
+                await new Promise((r) => setTimeout(r, 200));
+                client1.emit('lobby:ready', true);
+                client2.emit('lobby:ready', true);
+            })();
         });
     });
 
@@ -64,7 +74,7 @@ describe('Server - Resolution Race Guard', () => {
 
         // 3. Send a "Malicious" submission while resolution is active
         // This simulates the user releasing a drag just after the timer expires
-        client1.once('syncStatus', () => {});
+        client1.once('syncStatus', () => { });
 
         // We want to verify that Turn 2 starts with UNLOCKED status,
         // even if we send a 'submitActions' right now.
