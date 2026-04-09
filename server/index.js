@@ -235,22 +235,42 @@ io.on('connection', (socket) => {
                 safeEmit(socket, 'playerAssignment', 'spectator');
                 safeEmit(socket, 'gameStateUpdate', game.getState());
             }
+            safeEmit(socket, 'lobby:update', room.getUpdate()); // Send lobby state on reconnect
             safeEmit(io, 'syncStatus', { lockedIn });
         } else {
             // Lobby Phase
             console.log(`Socket ${socket.id} in lobby`);
+
+            // Check if this token already has a seat reserved
+            const reservedSlotIndex = room.slots.findIndex(s => s && s.token === token);
+            if (reservedSlotIndex !== -1) {
+                socket.assignedPlayerId = `player${reservedSlotIndex + 1}`;
+                room.slots[reservedSlotIndex].socketId = socket.id; // Update socket ID
+                safeEmit(socket, 'playerAssignment', socket.assignedPlayerId);
+            } else if (room.slots.filter(s => s !== null).length >= room.maxPlayers) {
+                // If lobby is full and token is not found, they are a spectator
+                safeEmit(socket, 'playerAssignment', 'spectator');
+            } else {
+                // Send null assignment if no seat claimed yet (legacy compat)
+                safeEmit(socket, 'playerAssignment', null);
+            }
+
             safeEmit(socket, 'lobby:update', room.getUpdate());
         }
     });
 
     socket.on('lobby:claimSeat', (slotIndex) => {
+        console.log(`[Lobby] Socket ${socket.id} attempting to claim seat ${slotIndex} (Token: ${socket.currentToken})`);
         const room = lobbyManager.getOrCreateRoom('default');
         const res = room.claimSeat(slotIndex, socket.currentToken, socket.id);
         if (res.success) {
-            console.log(`Socket ${socket.id} claimed seat ${slotIndex}`);
+            console.log(`[Lobby] Slot ${slotIndex} CLAIMED by ${socket.id}`);
+            // Assign ID immediately for lobby phase (supports legacy tests)
+            socket.assignedPlayerId = `player${slotIndex + 1}`;
+            safeEmit(socket, 'playerAssignment', socket.assignedPlayerId);
             io.emit('lobby:update', room.getUpdate());
         } else {
-            console.warn(`Claim seat failed: ${res.message}`);
+            console.warn(`[Lobby] Claim seat failed for ${socket.id}: ${res.message}`);
         }
     });
 
@@ -334,9 +354,15 @@ io.on('connection', (socket) => {
         matchStarted = false;
         const room = lobbyManager.getOrCreateRoom('default');
         room.status = 'LOBBY';
-        room.slots.forEach(s => { if (s) s.ready = false; });
+        room.slots = new Array(room.maxPlayers).fill(null); // Full reset of slots
 
-        // Reset assigned IDs on sockets
+        // Reset all match tracking globals
+        playerAssignments = { player1: null, player2: null };
+        activeSockets = { player1: null, player2: null };
+        turnActions = { player1: null, player2: null };
+        lockedIn = { player1: false, player2: false };
+
+        // Reset all sockets
         io.sockets.sockets.forEach(s => { s.assignedPlayerId = null; });
 
         io.emit('lobby:update', room.getUpdate());

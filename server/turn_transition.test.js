@@ -13,42 +13,55 @@ describe('Server - Turn Transition & Timer Continuity', () => {
     beforeAll(async () => {
         const serverPath = path.resolve(__dirname, 'index.js');
         serverProcess = spawn('node', [serverPath], {
-            env: { ...process.env, PORT: '3008' },
+            env: { ...process.env, PORT: '3108' },
             stdio: 'pipe'
         });
 
-        await new Promise((resolve) => {
-            serverProcess.stdout.on('data', (data) => {
+        // Drain stdout/stderr to prevent buffer freezing
+        serverProcess.stdout.on('data', () => { });
+        serverProcess.stderr.on('data', () => { });
+
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Server failed to start in 15s')), 15000);
+            serverProcess.stdout.on('data', function listener(data) {
                 const output = data.toString();
-                if (output.includes('SERVER RUNNING')) resolve();
+                if (output.includes('SERVER RUNNING')) {
+                    serverProcess.stdout.off('data', listener);
+                    clearTimeout(timeout);
+                    resolve();
+                }
             });
         });
 
-        client1 = Client('http://localhost:3008');
-        client2 = Client('http://localhost:3008');
+        client1 = Client('http://localhost:3108');
+        client2 = Client('http://localhost:3108');
 
-        await new Promise((resolve) => {
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Auth timeout')), 10000);
             let authenticated = 0;
             const onAuth = () => {
-                if (++authenticated === 2) resolve();
+                if (++authenticated === 2) { clearTimeout(timeout); resolve(); }
             };
             client1.on('playerAssignment', onAuth);
             client2.on('playerAssignment', onAuth);
 
             client1.emit('authenticate', 'transition-token-p1');
             client2.emit('authenticate', 'transition-token-p2');
+        });
 
-            // Lobby Handshake
-            (async () => {
-                await new Promise((r) => setTimeout(r, 200));
-                client1.emit('lobby:claimSeat', 0);
-                client2.emit('lobby:claimSeat', 1);
-                await new Promise((r) => setTimeout(r, 200));
+        // Lobby Handshake
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Lobby handshake timeout')), 10000);
+            client1.once('matchStarted', () => { clearTimeout(timeout); resolve(); });
+
+            client1.emit('lobby:claimSeat', 0);
+            client2.emit('lobby:claimSeat', 1);
+            setTimeout(() => {
                 client1.emit('lobby:ready', true);
                 client2.emit('lobby:ready', true);
-            })();
+            }, 300);
         });
-    });
+    }, 45000);
 
     afterAll(async () => {
         client1?.disconnect();

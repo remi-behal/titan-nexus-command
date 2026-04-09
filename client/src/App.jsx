@@ -152,6 +152,7 @@ function App() {
 
         const onUpdate = (newState) => {
             setPlayerState(newState);
+            setMatchStarted(true);
 
             // Reset local committed state ONLY when the turn has advanced
             if (newState.turn > turnRef.current) {

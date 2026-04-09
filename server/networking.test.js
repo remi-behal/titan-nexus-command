@@ -5,12 +5,12 @@ import path from 'path';
 
 describe('Server Networking - Reconnection and Resilience', () => {
     let serverProcess;
-    let url = 'http://localhost:3015';
+    let url = 'http://localhost:3025';
 
     beforeAll(async () => {
         const serverPath = path.resolve(__dirname, 'index.js');
         serverProcess = spawn('node', [serverPath], {
-            env: { ...process.env, PORT: '3015' },
+            env: { ...process.env, PORT: '3025' },
             stdio: 'pipe'
         });
 
@@ -40,12 +40,24 @@ describe('Server Networking - Reconnection and Resilience', () => {
         resetClient.disconnect();
     };
 
+    const lobbyHandshake = async (client, seatIndex, token) => {
+        client.emit('authenticate', token);
+        await new Promise((r) => setTimeout(r, 200));
+        client.emit('lobby:claimSeat', seatIndex);
+        await new Promise((r) => setTimeout(r, 200));
+        client.emit('lobby:ready', true);
+    };
+
     it('should send current game state immediately upon reconnection (id: 67)', async () => {
         await resetServer();
         let client = Client(url);
 
-        // Connect initial
-        client.emit('authenticate', 'test-token-id-67');
+        // Connect initial and start match
+        // Note: We need a second client to start the match
+        const client2 = Client(url);
+        await lobbyHandshake(client, 0, 'token-id-67-p1');
+        await lobbyHandshake(client2, 1, 'token-id-67-p2');
+
         const firstStatePromise = new Promise((resolve) => client.once('gameStateUpdate', resolve));
         await firstStatePromise;
 
@@ -54,13 +66,13 @@ describe('Server Networking - Reconnection and Resilience', () => {
 
         // Reconnect
         client.connect();
-        client.emit('authenticate', 'test-token-id-67');
+        client.emit('authenticate', 'token-id-67-p1');
 
         // Wait for fresh state update
         const secondStatePromise = new Promise((resolve, reject) => {
             const timeout = setTimeout(
                 () => reject(new Error('Did not receive state after reconnect')),
-                2000
+                5000
             );
             client.once('gameStateUpdate', (state) => {
                 clearTimeout(timeout);
@@ -70,10 +82,11 @@ describe('Server Networking - Reconnection and Resilience', () => {
 
         const state = await secondStatePromise;
         expect(state).toBeDefined();
-        expect(state.turn).toBeGreaterThanOrEqual(0);
+        expect(state.turn).toBeGreaterThanOrEqual(1);
 
         client.disconnect();
-    });
+        client2.disconnect();
+    }, 15000);
 
     it('should process actions even if a player disconnects after locking in (id: 69)', async () => {
         await resetServer();
@@ -81,19 +94,41 @@ describe('Server Networking - Reconnection and Resilience', () => {
         let client2 = Client(url);
 
         // Register listeners BEFORE emiting authenticate to avoid race conditions
-        const p1Assign = new Promise((resolve) => client1.once('playerAssignment', resolve));
-        const p2Assign = new Promise((resolve) => client2.once('playerAssignment', resolve));
+        const p1Assign = new Promise((resolve) => {
+            client1.on('playerAssignment', function listener(id) {
+                if (id) {
+                    client1.off('playerAssignment', listener);
+                    resolve(id);
+                }
+            });
+        });
+        const p2Assign = new Promise((resolve) => {
+            client2.on('playerAssignment', function listener(id) {
+                if (id) {
+                    client2.off('playerAssignment', listener);
+                    resolve(id);
+                }
+            });
+        });
 
-        // Wait for connection AND assignment
-        client1.emit('authenticate', 'test-token-p1');
-        client2.emit('authenticate', 'test-token-p2');
+        // Wait for connection AND assignment via handshake
+        await lobbyHandshake(client1, 0, 'test-token-p1');
+        await lobbyHandshake(client2, 1, 'test-token-p2');
 
         const [id1, id2] = await Promise.all([p1Assign, p2Assign]);
         expect(id1).toBe('player1');
         expect(id2).toBe('player2');
 
         // Get initial state
-        const statePromise = new Promise((resolve) => client1.once('gameStateUpdate', resolve));
+        const statePromise = new Promise((resolve) => {
+            const onUpdate = (s) => {
+                if (s.turn >= 1) {
+                    client1.off('gameStateUpdate', onUpdate);
+                    resolve(s);
+                }
+            };
+            client1.on('gameStateUpdate', onUpdate);
+        });
         client1.emit('requestState');
         const state = await statePromise;
         const p1Hub = state.entities.find((e) => e.owner === 'player1' && (e.type === 'HUB' || e.itemType === 'HUB'));
@@ -146,11 +181,11 @@ describe('Server Networking - Reconnection and Resilience', () => {
         expect(resolutionStarted).toBe(true);
 
         client2.disconnect();
-    });
+    }, 15000);
 
     it('should delay outgoing messages when SIMULATED_LATENCY is set (id: 68)', async () => {
         const latency = 150;
-        const latencyServerPort = '3016';
+        const latencyServerPort = '3026';
         const serverPath = path.resolve(__dirname, 'index.js');
 
         const latencyServer = spawn('node', [serverPath], {
@@ -165,21 +200,35 @@ describe('Server Networking - Reconnection and Resilience', () => {
         });
 
         const client = Client(`http://localhost:${latencyServerPort}`);
-        client.emit('authenticate', 'latency-test-token');
+        const client2 = Client(`http://localhost:${latencyServerPort}`);
+
+        // Handshake to start match so we get gameStateUpdate
+        await lobbyHandshake(client, 0, 'latency-test-token-p1');
+        await lobbyHandshake(client2, 1, 'latency-test-token-p2');
 
         const startTime = Date.now();
-        const statePromise = new Promise((resolve) => client.once('gameStateUpdate', resolve));
+        const statePromise = new Promise((resolve) => {
+            const onUpdate = (s) => {
+                if (s.turn >= 1) {
+                    client.off('gameStateUpdate', onUpdate);
+                    resolve(s);
+                }
+            };
+            client.on('gameStateUpdate', onUpdate);
+        });
 
+        client.emit('requestState');
         await statePromise;
         const duration = Date.now() - startTime;
 
         // cleanup early
         client.disconnect();
+        client2.disconnect();
         latencyServer.kill('SIGKILL');
         await new Promise((r) => setTimeout(r, 200));
 
         expect(duration).toBeGreaterThanOrEqual(latency);
-    }, 10000);
+    }, 15000);
 
     it('should persist individual player slots using session tokens (id: 67)', async () => {
         await resetServer();
@@ -189,28 +238,34 @@ describe('Server Networking - Reconnection and Resilience', () => {
         const token3 = 'token-spectator';
 
         const client1 = Client(url);
-        client1.emit('authenticate', token1);
-        const p1Assign = await new Promise((resolve, reject) => {
-            const t = setTimeout(() => reject(new Error('P1 Timeout')), 2000);
-            client1.once('playerAssignment', (id) => {
-                clearTimeout(t);
-                resolve(id);
-            });
-        });
-        expect(p1Assign).toBe('player1');
+        const client2 = Client(url);
+
+        // Start match to lock in slots
+        await lobbyHandshake(client1, 0, token1);
+        await lobbyHandshake(client2, 1, token2);
+
+        // Wait for match start
+        await new Promise(r => client1.once('matchStarted', r));
+
+        // Disconnect P1
         client1.disconnect();
 
-        const client2 = Client(url);
-        client2.emit('authenticate', token2);
-        const p2Assign = await new Promise((resolve) => client2.once('playerAssignment', resolve));
-        expect(p2Assign).toBe('player2');
-        client2.disconnect();
+        const getAssignment = (client) => {
+            return new Promise((resolve) => {
+                client.on('playerAssignment', function listener(id) {
+                    if (id) {
+                        client.off('playerAssignment', listener);
+                        resolve(id);
+                    }
+                });
+            });
+        };
 
-        // Client 3 tries to join after 1 and 2 disconnect
+        // Client 3 tries to join (should be spectator because slot 0 is reserved)
         const client3 = Client(url);
         client3.emit('authenticate', token3);
-        const p3Assign = await new Promise((resolve) => client3.once('playerAssignment', resolve));
-        expect(p3Assign).toBe('spectator'); // Both slots reserved
+        const p3Assign = await getAssignment(client3);
+        expect(p3Assign).toBe('spectator');
         client3.disconnect();
 
         // Client 1 reconnects
@@ -221,5 +276,6 @@ describe('Server Networking - Reconnection and Resilience', () => {
         );
         expect(p1ReAssign).toBe('player1'); // Reclaims slot
         client1Reconnect.disconnect();
-    });
+        client2.disconnect();
+    }, 20000);
 });
