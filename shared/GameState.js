@@ -147,7 +147,10 @@ export class GameState {
             const radius = e.vision !== undefined ? e.vision : stats?.vision || 0;
             if (radius === 0) return false;
 
-            const dist = this.getToroidalDistance(e.x, e.y, x, y);
+            const ex = e.currX !== undefined ? e.currX : e.x;
+            const ey = e.currY !== undefined ? e.currY : e.y;
+
+            const dist = this.getToroidalDistance(ex, ey, x, y);
             if (dist > radius) return false;
 
             // Projectile-Specific Vision Override: 60 degree cone
@@ -158,8 +161,8 @@ export class GameState {
                 (e.itemType === 'HOMING_MISSILE' || e.type === 'HOMING_MISSILE')
             ) {
                 const vec = this.constructor.getToroidalVector(
-                    e.x,
-                    e.y,
+                    ex,
+                    ey,
                     x,
                     y,
                     this.map.width,
@@ -175,6 +178,29 @@ export class GameState {
             }
 
             return true;
+        });
+    }
+
+    /**
+     * Helper to check if a position is protected by a Cloaking Field.
+     * @param {string} ownerId - The owner of the potential cloaking field.
+     * @param {array} [entities] - Optional list of entities to check (for historical snapshots).
+     */
+    isPositionCloaked(ownerId, x, y, entities = null) {
+        const sourceEntities = entities || this.entities;
+        return sourceEntities.some((e) => {
+            if (
+                e.owner === ownerId &&
+                e.type === 'CLOAKING_FIELD' &&
+                e.deployed !== false &&
+                (e.disabledUntilTurn || 0) <= this.turn
+            ) {
+                const ex = e.currX !== undefined ? e.currX : e.x;
+                const ey = e.currY !== undefined ? e.currY : e.y;
+                const dist = this.getToroidalDistance(ex, ey, x, y);
+                return dist <= (ENTITY_STATS.CLOAKING_FIELD.cloakRange || 300);
+            }
+            return false;
         });
     }
 
@@ -209,6 +235,50 @@ export class GameState {
     }
 
     /**
+     * Updates the 'scouted' status of all entities based on current vision.
+     * This is used during resolveTurn to persist vision from transient projectiles.
+     * @param {array} extraEntities - Temporary entities (like projectiles) to check vision from.
+     */
+    updateScouting(extraEntities = []) {
+        const observerIds = Object.keys(this.players);
+        const allEntities = [...this.entities, ...extraEntities];
+
+        this.entities.forEach((ent) => {
+            if (ent.scouted) return;
+
+            for (const observerId of observerIds) {
+                if (ent.owner === observerId) continue;
+
+                const ex = ent.currX !== undefined ? ent.currX : ent.x;
+                const ey = ent.currY !== undefined ? ent.currY : ent.y;
+
+                // Cloaking Check: Follows logic from getVisibleState
+                const isCloaked = this.isPositionCloaked(ent.owner, ex, ey, allEntities);
+                if (isCloaked) {
+                    const detectionRange = ENTITY_STATS.CLOAKING_FIELD.detectionRange || 75;
+                    const canSee = allEntities.some((e) => {
+                        if (e.owner !== observerId) return false;
+                        const observerX = e.currX !== undefined ? e.currX : e.x;
+                        const observerY = e.currY !== undefined ? e.currY : e.y;
+                        const dist = this.getToroidalDistance(observerX, observerY, ex, ey);
+                        return dist <= detectionRange;
+                    });
+                    if (canSee) {
+                        ent.scouted = true;
+                        break;
+                    }
+                } else {
+                    // Standard Vision
+                    if (this.isPositionVisible(observerId, ex, ey, allEntities)) {
+                        ent.scouted = true;
+                        break;
+                    }
+                }
+            }
+        });
+    }
+
+    /**
      * Returns a filtered version of the state based on what a player can see.
      * @param {string} playerId - The player requesting the state.
      * @param {object} [baseState] - Optional state object to filter (defaults to current state).
@@ -220,7 +290,22 @@ export class GameState {
             return state;
         }
 
-        const isVisible = (x, y) => {
+        const isVisible = (x, y, targetOwnerId = null) => {
+            if (
+                targetOwnerId &&
+                targetOwnerId !== playerId &&
+                this.isPositionCloaked(targetOwnerId, x, y, state.entities)
+            ) {
+                // Cloaked: only visible at detectionRange (75px)
+                const detectionRange = ENTITY_STATS.CLOAKING_FIELD.detectionRange || 75;
+                return state.entities.some((e) => {
+                    if (e.owner !== playerId) return false;
+                    const ex = e.currX !== undefined ? e.currX : e.x;
+                    const ey = e.currY !== undefined ? e.currY : e.y;
+                    const dist = this.getToroidalDistance(ex, ey, x, y);
+                    return dist <= detectionRange;
+                });
+            }
             return this.isPositionVisible(playerId, x, y, state.entities);
         };
 
@@ -235,8 +320,10 @@ export class GameState {
             if (!fullFrom || !fullTo) return false;
 
             // Check endpoints
-            const fromVisible = fullFrom.owner === playerId || isVisible(fullFrom.x, fullFrom.y);
-            const toVisible = fullTo.owner === playerId || isVisible(fullTo.x, fullTo.y);
+            const fromVisible =
+                fullFrom.owner === playerId || isVisible(fullFrom.x, fullFrom.y, fullFrom.owner);
+            const toVisible =
+                fullTo.owner === playerId || isVisible(fullTo.x, fullTo.y, fullTo.owner);
 
             if (fromVisible || toVisible) {
                 entitiesRequiredByLinks.add(l.from);
@@ -265,7 +352,7 @@ export class GameState {
                 const ratio = i / segments;
                 const sx = this.wrapX(fullFrom.x + dx * ratio);
                 const sy = this.wrapY(fullFrom.y + dy * ratio);
-                if (isVisible(sx, sy)) {
+                if (isVisible(sx, sy, l.owner)) {
                     entitiesRequiredByLinks.add(l.from);
                     entitiesRequiredByLinks.add(l.to);
                     return true;
@@ -275,17 +362,25 @@ export class GameState {
             return false;
         });
 
-        // Filter entities: own entities always visible, others only if in vision OR required by a visible link
+        // Filter entities: own entities always visible, others only if in vision OR required by a visible link OR ghost memory
         state.entities = sourceEntities
             .map((e) => {
                 const isOwn = e.owner === playerId;
-                const inVision = isVisible(e.x, e.y);
+                const inVision = isVisible(e.x, e.y, e.owner);
                 const isLinkEndpoint = entitiesRequiredByLinks.has(e.id);
+                // Standard vision: can we see this spot?
+                const canSeeSpot = this.isPositionVisible(playerId, e.x, e.y, sourceEntities);
 
-                if (isOwn || inVision || isLinkEndpoint) {
+                // Conditions to return entity:
+                if (
+                    isOwn ||
+                    inVision ||
+                    isLinkEndpoint ||
+                    (e.scouted && !canSeeSpot)
+                ) {
                     return {
                         ...e,
-                        scouted: isOwn || inVision // Only true if actively seen or owned
+                        scouted: isOwn || inVision || e.scouted
                     };
                 }
                 return null;
@@ -600,11 +695,12 @@ export class GameState {
 
         const entity = {
             id,
+            disabledUntilTurn: 0,
+            scouted: data.scouted || false,
             ...data,
             fuel: finalFuel,
             maxFuel: finalMaxFuel,
-            hp: data.hp || stats.hp || GLOBAL_STATS.DEFAULT_HP,
-            disabledUntilTurn: 0
+            hp: data.hp || stats.hp || GLOBAL_STATS.DEFAULT_HP
         };
 
         if (data.type === 'NUKE' && data.detonationTurn === undefined) {
@@ -690,6 +786,9 @@ export class GameState {
                 );
                 if (dist > stats.homingRange) return;
 
+                const isCloaked = this.isPositionCloaked(ent.owner, ent.x !== undefined ? ent.x : ent.currX, ent.y !== undefined ? ent.y : ent.currY);
+                if (isCloaked) return;
+
                 const vec = this.constructor.getToroidalVector(
                     proj.currX,
                     proj.currY,
@@ -727,6 +826,17 @@ export class GameState {
                 target = tempProjectiles.find(
                     (p) => p.id === proj.targetId && p.active
                 );
+            }
+
+            if (target && (target.hp > 0 || target.active)) {
+                // Cloaking Check: Break lock if target enters a Cloaking Field
+                const targetX = target.x !== undefined ? target.x : target.currX;
+                const targetY = target.y !== undefined ? target.y : target.currY;
+                const dist = this.getToroidalDistance(proj.currX, proj.currY, targetX, targetY);
+
+                if (this.isPositionCloaked(target.owner, targetX, targetY)) {
+                    target = null; // Lose target
+                }
             }
 
             if (target && (target.hp > 0 || target.active)) {
@@ -1815,6 +1925,9 @@ export class GameState {
                                 }
                             }
                         }
+
+                        // Update scouting for all entities (permanent persistence)
+                        this.updateScouting(tempProjectiles);
 
                         if (t % snapshotStep === 0 || t === subTicks) {
                             // OPTIMIZATION: Only push sub-tick snapshot if something is actually happening (visuals or active missiles)
