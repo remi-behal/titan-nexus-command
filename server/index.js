@@ -223,9 +223,9 @@ io.on('connection', (socket) => {
             // Re-claim slot logic
             socket.assignedPlayerId = Object.keys(playerAssignments).find(
                 (pid) => playerAssignments[pid] === token
-            );
+            ) || 'spectator';
 
-            if (socket.assignedPlayerId) {
+            if (socket.assignedPlayerId !== 'spectator') {
                 activeSockets[socket.assignedPlayerId] = socket.id;
                 console.log(`Re-assigned ${socket.assignedPlayerId} to socket ${socket.id}`);
                 safeEmit(socket, 'playerAssignment', socket.assignedPlayerId);
@@ -236,7 +236,13 @@ io.on('connection', (socket) => {
                 safeEmit(socket, 'gameStateUpdate', game.getState());
             }
             safeEmit(socket, 'lobby:update', room.getUpdate()); // Send lobby state on reconnect
-            safeEmit(io, 'syncStatus', { lockedIn });
+
+            // Only send valid player lock status
+            const filteredLockedIn = {
+                player1: lockedIn.player1,
+                player2: lockedIn.player2
+            };
+            safeEmit(io, 'syncStatus', { lockedIn: filteredLockedIn });
         } else {
             // Lobby Phase
             console.log(`Socket ${socket.id} in lobby`);
@@ -249,6 +255,7 @@ io.on('connection', (socket) => {
                 safeEmit(socket, 'playerAssignment', socket.assignedPlayerId);
             } else if (room.slots.filter(s => s !== null).length >= room.maxPlayers) {
                 // If lobby is full and token is not found, they are a spectator
+                socket.assignedPlayerId = 'spectator';
                 safeEmit(socket, 'playerAssignment', 'spectator');
             } else {
                 // Send null assignment if no seat claimed yet (legacy compat)
@@ -296,7 +303,11 @@ io.on('connection', (socket) => {
                 ? game.getVisibleState(socket.assignedPlayerId)
                 : game.getState()
         );
-        safeEmit(socket, 'syncStatus', { lockedIn });
+        const filteredLockedIn = {
+            player1: lockedIn.player1,
+            player2: lockedIn.player2
+        };
+        safeEmit(socket, 'syncStatus', { lockedIn: filteredLockedIn });
     });
 
     socket.on('syncActions', (actions) => {
@@ -309,13 +320,32 @@ io.on('connection', (socket) => {
         turnActions[socket.assignedPlayerId] = actions;
     });
 
+    socket.on('passTurn', () => {
+        if (!matchStarted || game.phase !== 'PLANNING') return;
+        if (socket.assignedPlayerId !== 'player1' && socket.assignedPlayerId !== 'player2') return;
+
+        console.log(`[Server] Player ${socket.assignedPlayerId} PASSED turn`);
+        lockedIn[socket.assignedPlayerId] = true;
+        turnActions[socket.assignedPlayerId] = [];
+
+        const filteredLockedIn = {
+            player1: lockedIn.player1,
+            player2: lockedIn.player2
+        };
+        safeEmit(io, 'syncStatus', { lockedIn: filteredLockedIn });
+
+        if (lockedIn.player1 && lockedIn.player2) {
+            resolveTurn();
+        }
+    });
+
     socket.on('submitActions', (actions) => {
         if (!matchStarted || game.phase !== 'PLANNING') {
             console.warn(`[Server] submitActions ignored: matchStarted=${matchStarted}, phase=${game.phase}`);
             return;
         }
-        if (!socket.assignedPlayerId || socket.assignedPlayerId === 'spectator') {
-            console.warn(`[Server] submitActions ignored: assignedPlayerId=${socket.assignedPlayerId}`);
+        if (socket.assignedPlayerId !== 'player1' && socket.assignedPlayerId !== 'player2') {
+            console.warn(`[Server] submitActions ignored: unauthorized assignedPlayerId=${socket.assignedPlayerId}`);
             return;
         }
 
@@ -343,7 +373,11 @@ io.on('connection', (socket) => {
         turnActions[socket.assignedPlayerId] = validatedActions;
         lockedIn[socket.assignedPlayerId] = true;
 
-        safeEmit(io, 'syncStatus', { lockedIn });
+        const filteredLockedIn = {
+            player1: lockedIn.player1,
+            player2: lockedIn.player2
+        };
+        safeEmit(io, 'syncStatus', { lockedIn: filteredLockedIn });
 
         if (lockedIn.player1 && lockedIn.player2) {
             resolveTurn();

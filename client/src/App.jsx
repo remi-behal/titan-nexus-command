@@ -264,13 +264,20 @@ function App() {
             : { energy: 0, color: '#fff', alive: true };
 
     const pendingCost = committedActions.reduce(
-        (sum, act) => sum + (ENTITY_STATS[act.itemType]?.cost || 0),
+        (sum, act) => {
+            const stats = ENTITY_STATS[act.itemType];
+            return sum + (stats?.cost || 0);
+        },
         0
     );
     const pCurrent = {
         ...pBase,
         energy: Math.max(0, pBase.energy - pendingCost)
     };
+
+    const isSpectator = myPlayerId === 'spectator';
+    const isUnassigned = !myPlayerId;
+    const interactionBlocked = isLocked || isResolvingUI || isSpectator || isUnassigned;
 
     const header = (
         <header className="game-header">
@@ -281,29 +288,31 @@ function App() {
                     <span className="energy">Energy: {pCurrent.energy}</span>
                     {(() => {
                         let projectedIncome = GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
-                        playerState?.entities?.forEach((entity) => {
-                            if (entity.owner === myPlayerId) {
-                                if (entity.disabledUntilTurn > playerState.turn) return;
+                        if (playerState?.entities && myPlayerId && !isSpectator) {
+                            playerState.entities.forEach((entity) => {
+                                if (entity.owner === myPlayerId) {
+                                    if (entity.disabledUntilTurn > playerState.turn) return;
 
-                                const stats = ENTITY_STATS[entity.type];
-                                if (stats && stats.energyGen) {
-                                    projectedIncome += stats.energyGen;
-                                    if (entity.type === 'EXTRACTOR') {
-                                        const node = playerState.map.resources.find((res) => {
-                                            let dx = Math.abs(res.x - entity.x);
-                                            let dy = Math.abs(res.y - entity.y);
-                                            if (dx > playerState.map.width / 2)
-                                                dx = playerState.map.width - dx;
-                                            if (dy > playerState.map.height / 2)
-                                                dy = playerState.map.height - dy;
-                                            const dist = Math.sqrt(dx * dx + dy * dy);
-                                            return dist <= GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS;
-                                        });
-                                        if (node) projectedIncome += node.value;
+                                    const stats = ENTITY_STATS[entity.type];
+                                    if (stats && stats.energyGen) {
+                                        projectedIncome += stats.energyGen;
+                                        if (entity.type === 'EXTRACTOR') {
+                                            const node = playerState.map.resources.find((res) => {
+                                                let dx = Math.abs(res.x - entity.x);
+                                                let dy = Math.abs(res.y - entity.y);
+                                                if (dx > playerState.map.width / 2)
+                                                    dx = playerState.map.width - dx;
+                                                if (dy > playerState.map.height / 2)
+                                                    dy = playerState.map.height - dy;
+                                                const dist = Math.sqrt(dx * dx + dy * dy);
+                                                return dist <= GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS;
+                                            });
+                                            if (node) projectedIncome += node.value;
+                                        }
                                     }
                                 }
-                            }
-                        });
+                            });
+                        }
                         return (
                             <span className="income" title="Projected income next turn">
                                 {' '}
@@ -348,7 +357,7 @@ function App() {
                 <select
                     value={selectedItemType}
                     onChange={(e) => setSelectedItemType(e.target.value)}
-                    disabled={isLocked || isResolvingUI}
+                    disabled={interactionBlocked}
                 >
                     <option value="HUB" disabled={pCurrent.energy < ENTITY_STATS.HUB.cost}>
                         New Hub ({ENTITY_STATS.HUB.cost} E)
@@ -434,13 +443,13 @@ function App() {
                         value="SMART_SAM_DEFENSE"
                         disabled={pCurrent.energy < (ENTITY_STATS.SMART_SAM_DEFENSE?.cost || 10)}
                     >
-                        Smart SAM Defense ({ENTITY_STATS.SMART_SAM_DEFENSE?.cost || 10} E)
+                        Smart SAM Defense ({ENTITY_STATS.SMART_SAM_MISSILE?.cost || 15} E)
                     </option>
                     <option
                         value="CLOAKING_FIELD"
-                        disabled={pCurrent.energy < (ENTITY_STATS.CLOAKING_FIELD?.cost || 10)}
+                        disabled={pCurrent.energy < (ENTITY_STATS.CLOAKING_FIELD?.cost || 60)}
                     >
-                        Cloaking Field ({ENTITY_STATS.CLOAKING_FIELD?.cost || 10} E)
+                        Cloaking Field ({ENTITY_STATS.CLOAKING_FIELD?.cost || 60} E)
                     </option>
                 </select>
 
@@ -465,8 +474,7 @@ function App() {
                             onClick={() => setLaunchMode((active) => !active)}
                             disabled={
                                 !selectedHubId ||
-                                isLocked ||
-                                isResolvingUI ||
+                                interactionBlocked ||
                                 pCurrent.energy < (ENTITY_STATS[selectedItemType]?.cost || 0) ||
                                 !hasFuel ||
                                 isDisabled
@@ -476,18 +484,22 @@ function App() {
                                 ? 'Observation Phase'
                                 : isLocked
                                     ? 'Mission Locked'
-                                    : fuelCostWarning
-                                        ? fuelCostWarning
-                                        : pCurrent.energy < (ENTITY_STATS[selectedItemType]?.cost || 0)
-                                            ? `Insufficient Energy (${ENTITY_STATS[selectedItemType]?.cost} E)`
-                                            : launchMode
-                                                ? 'Cancel Aiming'
-                                                : 'Launch New Structure'}
+                                    : isSpectator
+                                        ? 'Spectator Mode'
+                                        : isUnassigned
+                                            ? 'Authenticating...'
+                                            : fuelCostWarning
+                                                ? fuelCostWarning
+                                                : pCurrent.energy < (ENTITY_STATS[selectedItemType]?.cost || 0)
+                                                    ? `Insufficient Energy (${ENTITY_STATS[selectedItemType]?.cost} E)`
+                                                    : launchMode
+                                                        ? 'Cancel Aiming'
+                                                        : 'Launch New Structure'}
                         </button>
                     );
                 })()}
 
-                {committedActions.length > 0 && !isLocked && !isResolvingUI && (
+                {committedActions.length > 0 && !interactionBlocked && (
                     <button className="clear-btn" onClick={handleClearActions}>
                         Clear All ({committedActions.length})
                     </button>
@@ -496,15 +508,19 @@ function App() {
                 <button
                     className={`execute-btn ${isLocked ? 'waiting' : ''}`}
                     onClick={handleExecuteTurn}
-                    disabled={isLocked || isResolvingUI}
+                    disabled={interactionBlocked}
                 >
                     {isResolvingUI
                         ? 'Resolving...'
                         : isLocked
                             ? 'Waiting for others...'
-                            : committedActions.length > 0
-                                ? `Complete Turn (${committedActions.length})`
-                                : 'Complete Turn'}
+                            : isSpectator
+                                ? 'Observation Only'
+                                : isUnassigned
+                                    ? '...'
+                                    : committedActions.length > 0
+                                        ? `Complete Turn (${committedActions.length})`
+                                        : 'Complete Turn'}
                 </button>
             </div>
         </header>
@@ -588,9 +604,11 @@ function App() {
 
             <footer className="debug-info">
                 <p>
-                    {selectedHubId
-                        ? `Hub ${selectedHubId} Selected. ${launchMode ? 'Action: Pull back to sling!' : 'Click "Launch" to aim.'}`
-                        : 'Click your Hub to select it.'}
+                    {isSpectator
+                        ? "You are observing this match."
+                        : selectedHubId
+                            ? `Hub ${selectedHubId} Selected. ${launchMode ? 'Action: Pull back to sling!' : 'Click "Launch" to aim.'}`
+                            : 'Click your Hub to select it.'}
                 </p>
             </footer>
 

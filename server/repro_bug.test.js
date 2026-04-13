@@ -6,31 +6,31 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-describe('Server - Resolution Race Guard', () => {
+describe('Reproduce Turn Button Bug', () => {
     let serverProcess;
     let client1, client2;
 
     beforeAll(async () => {
         const serverPath = path.resolve(__dirname, 'index.js');
         serverProcess = spawn('node', [serverPath], {
-            env: { ...process.env, PORT: '3111' },
+            env: { ...process.env, PORT: '3112' },
             stdio: 'pipe'
         });
 
         await new Promise((resolve, reject) => {
             const timeout = setTimeout(() => reject(new Error('Server failed to start in 30s')), 30000);
-            serverProcess.stdout.on('data', function listener(data) {
-                const output = data.toString();
-                if (output.includes('SERVER RUNNING')) {
+            const listener = (data) => {
+                if (data.toString().includes('SERVER RUNNING')) {
                     serverProcess.stdout.off('data', listener);
                     clearTimeout(timeout);
                     resolve();
                 }
-            });
+            };
+            serverProcess.stdout.on('data', listener);
         });
 
-        client1 = Client('http://localhost:3111');
-        client2 = Client('http://localhost:3111');
+        client1 = Client('http://localhost:3112');
+        client2 = Client('http://localhost:3112');
 
         await new Promise((resolve) => {
             let auths = 0;
@@ -58,8 +58,34 @@ describe('Server - Resolution Race Guard', () => {
         serverProcess.kill('SIGKILL');
     });
 
-    it.skip('should ignore submissions sent DURING resolution', async () => {
-        // This test is skipped because it requires complex timing during resolveTurn
-        // but the goal is to verify the server process is healthy.
+    it('should NOT lock out P2 when P1 submits actions', async () => {
+        let syncStatus;
+        client1.emit('submitActions', []);
+
+        await new Promise(r => {
+            const listener = (status) => {
+                if (status.lockedIn.player1 === true) {
+                    syncStatus = status;
+                    client2.off('syncStatus', listener);
+                    r();
+                }
+            };
+            client2.on('syncStatus', listener);
+        });
+
+        expect(syncStatus.lockedIn.player1).toBe(true);
+        expect(syncStatus.lockedIn.player2).toBe(false);
+    });
+
+    it('should support passTurn and resolve turn', async () => {
+        let received = false;
+        client2.on('syncStatus', (status) => {
+            if (status.lockedIn.player2 === true) received = true;
+        });
+
+        client2.emit('passTurn');
+        await new Promise(r => setTimeout(r, 1000));
+
+        expect(received).toBe(true);
     });
 });
