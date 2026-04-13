@@ -1765,48 +1765,49 @@ const GameBoard = ({
                                     }
                                 }
                             }
-
-                            // committed actions preview
-                            committedActions.forEach((action, index) => {
-                                const hub = visualEntities.current[action.sourceId];
-                                if (hub) {
-                                    const angleRad = (action.angle * Math.PI) / 180;
-                                    const ratio = action.distance / maxPullDistance;
-                                    const strengthColor = getStrengthColor(ratio);
-                                    const arrowLen = HUB_RADIUS * (1 + ratio * 0.5);
-                                    const ax = hub.x + Math.cos(angleRad) * arrowLen;
-                                    const ay = hub.y + Math.sin(angleRad) * arrowLen;
-
-                                    ctx.strokeStyle = strengthColor;
-                                    ctx.lineWidth = 4;
-                                    ctx.globalAlpha = 0.6;
-                                    ctx.beginPath();
-                                    ctx.moveTo(hub.x, hub.y);
-                                    ctx.lineTo(ax, ay);
-                                    ctx.stroke();
-                                    ctx.globalAlpha = 1.0;
-
-                                    ctx.fillStyle = strengthColor;
-                                    ctx.beginPath();
-                                    ctx.arc(
-                                        ax + Math.cos(angleRad) * 15,
-                                        ay + Math.sin(angleRad) * 15,
-                                        10,
-                                        0,
-                                        Math.PI * 2
-                                    );
-                                    ctx.fill();
-                                    ctx.fillStyle = '#fff';
-                                    ctx.font = 'bold 10px Arial';
-                                    ctx.textAlign = 'center';
-                                    ctx.fillText(
-                                        (index + 1).toString(),
-                                        ax + Math.cos(angleRad) * 15,
-                                        ay + Math.sin(angleRad) * 15 + 4
-                                    );
-                                }
-                            });
                         }
+
+                        // committed actions preview - moved out of isAiming block to stay visible
+                        committedActions.forEach((action, index) => {
+                            const hub = visualEntities.current[action.sourceId];
+                            if (hub) {
+                                const angleRad = (action.angle * Math.PI) / 180;
+                                const ratio = action.distance / maxPullDistance;
+                                const strengthColor = getStrengthColor(ratio);
+                                const arrowLen = HUB_RADIUS * (1 + ratio * 0.5);
+                                const ax = hub.x + Math.cos(angleRad) * arrowLen;
+                                const ay = hub.y + Math.sin(angleRad) * arrowLen;
+
+                                ctx.strokeStyle = strengthColor;
+                                ctx.lineWidth = 4;
+                                ctx.globalAlpha = 0.6;
+                                ctx.beginPath();
+                                ctx.moveTo(hub.x, hub.y);
+                                ctx.lineTo(ax, ay);
+                                ctx.stroke();
+                                ctx.globalAlpha = 1.0;
+
+                                ctx.fillStyle = strengthColor;
+                                ctx.beginPath();
+                                ctx.arc(
+                                    ax + Math.cos(angleRad) * 15,
+                                    ay + Math.sin(angleRad) * 15,
+                                    10,
+                                    0,
+                                    Math.PI * 2
+                                );
+                                ctx.fill();
+                                ctx.fillStyle = '#fff';
+                                ctx.font = 'bold 10px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.fillText(
+                                    (index + 1).toString(),
+                                    ax + Math.cos(angleRad) * 15,
+                                    ay + Math.sin(angleRad) * 15 + 4
+                                );
+                            }
+                        });
+
                         ctx.restore();
                     }
                 }
