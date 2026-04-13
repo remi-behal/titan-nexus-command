@@ -1237,6 +1237,92 @@ const GameBoard = ({
 
                                         ctx.restore();
                                     }
+                                } else if (entity.type === 'CLOAKING_FIELD') {
+                                    // 1. Render Central Structure (The Emitter)
+                                    ctx.save();
+                                    const time = Date.now();
+                                    const isOwner = entity.owner === myPlayerId;
+
+                                    let drawX = entity.x;
+                                    let drawY = entity.y;
+
+                                    if (!isOwner && !isDisabled) {
+                                        // Obfuscate center with slight jitter to prevent easy sniping
+                                        drawX += Math.sin(time / 50) * 2;
+                                        drawY += Math.cos(time / 70) * 2;
+                                        ctx.globalAlpha *= 0.6;
+                                    }
+
+                                    ctx.translate(drawX, drawY);
+
+                                    // Base Diamond/Rhombus shape
+                                    ctx.beginPath();
+                                    ctx.moveTo(0, -radius);
+                                    ctx.lineTo(radius, 0);
+                                    ctx.lineTo(0, radius);
+                                    ctx.lineTo(-radius, 0);
+                                    ctx.closePath();
+                                    ctx.fillStyle = color;
+                                    ctx.fill();
+
+                                    // Inner rotating/pulsing core
+                                    const rotation = time / 600;
+                                    ctx.rotate(rotation);
+                                    ctx.strokeStyle = '#fff';
+                                    ctx.lineWidth = 2;
+                                    ctx.strokeRect(-radius * 0.4, -radius * 0.4, radius * 0.8, radius * 0.8);
+
+                                    ctx.restore();
+
+                                    // 2. Render Cloaking Radius (Static for owner, Intermittent for enemy)
+                                    const cloakRange = ENTITY_STATS.CLOAKING_FIELD.cloakRange || 300;
+
+                                    if (isOwner) {
+                                        // Owner sees a permanent faint range circle
+                                        ctx.save();
+                                        ctx.beginPath();
+                                        ctx.arc(entity.x, entity.y, cloakRange, 0, Math.PI * 2);
+                                        ctx.strokeStyle = color;
+                                        ctx.lineWidth = 2;
+                                        ctx.globalAlpha = 0.2;
+                                        ctx.stroke();
+
+                                        // Light fill
+                                        ctx.fillStyle = color;
+                                        ctx.globalAlpha = 0.05;
+                                        ctx.fill();
+                                        ctx.restore();
+                                    } else if (!isDisabled) {
+                                        // Enemy sees an intermittent shimmer (every 5 seconds)
+                                        const shimmerCycle = 5000;
+                                        const shimmerDuration = 1000;
+                                        const seed = entity.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+                                        const offset = seed % shimmerCycle;
+                                        const elapsed = (time + offset) % shimmerCycle;
+
+                                        if (elapsed < shimmerDuration) {
+                                            const progress = elapsed / shimmerDuration;
+                                            const shimmerAlpha = Math.sin(progress * Math.PI) * 0.3;
+
+                                            ctx.save();
+                                            // Wavy effect: Draw the circle with a slight distortion
+                                            ctx.beginPath();
+                                            const segments = 64;
+                                            for (let i = 0; i <= segments; i++) {
+                                                const ang = (i / segments) * Math.PI * 2;
+                                                const distortion = Math.sin(ang * 12 + time / 150) * 8 * progress;
+                                                const r = cloakRange + distortion;
+                                                const px = entity.x + Math.cos(ang) * r;
+                                                const py = entity.y + Math.sin(ang) * r;
+                                                if (i === 0) ctx.moveTo(px, py);
+                                                else ctx.lineTo(px, py);
+                                            }
+                                            ctx.strokeStyle = "rgba(200, 200, 255, " + shimmerAlpha + ")";
+                                            ctx.lineWidth = 4;
+                                            ctx.stroke();
+                                            ctx.restore();
+                                        }
+                                    }
                                 } else if (entity.type === 'NUKE') {
                                     // Enhanced Nuke Icon (Landed)
                                     ctx.save();
