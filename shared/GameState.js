@@ -724,6 +724,9 @@ export class GameState {
                 );
                 if (dist > stats.homingRange) return;
 
+                const isCloaked = this.isPositionCloaked(ent.owner, ent.x !== undefined ? ent.x : ent.currX, ent.y !== undefined ? ent.y : ent.currY);
+                if (isCloaked) return;
+
                 const vec = this.constructor.getToroidalVector(
                     proj.currX,
                     proj.currY,
@@ -761,6 +764,17 @@ export class GameState {
                 target = tempProjectiles.find(
                     (p) => p.id === proj.targetId && p.active
                 );
+            }
+
+            if (target && (target.hp > 0 || target.active)) {
+                // Cloaking Check: Break lock if target enters a Cloaking Field
+                const targetX = target.x !== undefined ? target.x : target.currX;
+                const targetY = target.y !== undefined ? target.y : target.currY;
+                const dist = this.getToroidalDistance(proj.currX, proj.currY, targetX, targetY);
+
+                if (this.isPositionCloaked(target.owner, targetX, targetY)) {
+                    target = null; // Lose target
+                }
             }
 
             if (target && (target.hp > 0 || target.active)) {
