@@ -436,6 +436,12 @@ function App() {
                     >
                         Smart SAM Defense ({ENTITY_STATS.SMART_SAM_DEFENSE?.cost || 10} E)
                     </option>
+                    <option
+                        value="CLOAKING_FIELD"
+                        disabled={pCurrent.energy < (ENTITY_STATS.CLOAKING_FIELD?.cost || 10)}
+                    >
+                        Cloaking Field ({ENTITY_STATS.CLOAKING_FIELD?.cost || 10} E)
+                    </option>
                 </select>
 
                 {(() => {
