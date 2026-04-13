@@ -276,6 +276,16 @@ export const ENTITY_STATS = {
         speed: SPEED_TIERS.NORMAL,
         isInterceptable: true,
         deathEffect: 'DETONATE'
+    },
+    CLOAKING_FIELD: {
+        hp: 2,
+        cost: 60,
+        vision: 150,
+        cloakRange: 300,
+        detectionRange: 75,
+        size: 20,
+        speed: SPEED_TIERS.SLOW,
+        deathEffect: 'DISINTEGRATE'
     }
 };
 
