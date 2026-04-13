@@ -179,6 +179,25 @@ export class GameState {
     }
 
     /**
+     * Helper to check if a position is protected by a Cloaking Field.
+     * @param {string} ownerId - The owner of the potential cloaking field.
+     */
+    isPositionCloaked(ownerId, x, y) {
+        return this.entities.some((e) => {
+            if (
+                e.owner === ownerId &&
+                e.type === 'CLOAKING_FIELD' &&
+                e.deployed !== false &&
+                (e.disabledUntilTurn || 0) <= this.turn
+            ) {
+                const dist = this.getToroidalDistance(e.x, e.y, x, y);
+                return dist <= (ENTITY_STATS.CLOAKING_FIELD.cloakRange || 300);
+            }
+            return false;
+        });
+    }
+
+    /**
      * Returns a list of vision circles { x, y, radius } for a given player.
      */
     getVisionCircles(playerId) {
@@ -220,7 +239,20 @@ export class GameState {
             return state;
         }
 
-        const isVisible = (x, y) => {
+        const isVisible = (x, y, targetOwnerId = null) => {
+            if (
+                targetOwnerId &&
+                targetOwnerId !== playerId &&
+                this.isPositionCloaked(targetOwnerId, x, y)
+            ) {
+                // Cloaked: only visible at detectionRange (75px)
+                const detectionRange = ENTITY_STATS.CLOAKING_FIELD.detectionRange || 75;
+                return this.entities.some((e) => {
+                    if (e.owner !== playerId) return false;
+                    const dist = this.getToroidalDistance(e.x, e.y, x, y);
+                    return dist <= detectionRange;
+                });
+            }
             return this.isPositionVisible(playerId, x, y, state.entities);
         };
 
@@ -235,8 +267,10 @@ export class GameState {
             if (!fullFrom || !fullTo) return false;
 
             // Check endpoints
-            const fromVisible = fullFrom.owner === playerId || isVisible(fullFrom.x, fullFrom.y);
-            const toVisible = fullTo.owner === playerId || isVisible(fullTo.x, fullTo.y);
+            const fromVisible =
+                fullFrom.owner === playerId || isVisible(fullFrom.x, fullFrom.y, fullFrom.owner);
+            const toVisible =
+                fullTo.owner === playerId || isVisible(fullTo.x, fullTo.y, fullTo.owner);
 
             if (fromVisible || toVisible) {
                 entitiesRequiredByLinks.add(l.from);
@@ -265,7 +299,7 @@ export class GameState {
                 const ratio = i / segments;
                 const sx = this.wrapX(fullFrom.x + dx * ratio);
                 const sy = this.wrapY(fullFrom.y + dy * ratio);
-                if (isVisible(sx, sy)) {
+                if (isVisible(sx, sy, l.owner)) {
                     entitiesRequiredByLinks.add(l.from);
                     entitiesRequiredByLinks.add(l.to);
                     return true;
@@ -279,7 +313,7 @@ export class GameState {
         state.entities = sourceEntities
             .map((e) => {
                 const isOwn = e.owner === playerId;
-                const inVision = isVisible(e.x, e.y);
+                const inVision = isVisible(e.x, e.y, e.owner);
                 const isLinkEndpoint = entitiesRequiredByLinks.has(e.id);
 
                 if (isOwn || inVision || isLinkEndpoint) {
@@ -600,11 +634,11 @@ export class GameState {
 
         const entity = {
             id,
+            disabledUntilTurn: 0,
             ...data,
             fuel: finalFuel,
             maxFuel: finalMaxFuel,
-            hp: data.hp || stats.hp || GLOBAL_STATS.DEFAULT_HP,
-            disabledUntilTurn: 0
+            hp: data.hp || stats.hp || GLOBAL_STATS.DEFAULT_HP
         };
 
         if (data.type === 'NUKE' && data.detonationTurn === undefined) {
