@@ -589,6 +589,7 @@ const GameBoard = ({
                     const fctx = fogCanvas.getContext('2d');
 
                     // 1. Draw solid fog overlay
+                    fctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform to identity
                     fctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                     fctx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
 
