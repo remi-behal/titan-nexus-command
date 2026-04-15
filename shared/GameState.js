@@ -2232,12 +2232,16 @@ export class GameState {
 
         this.turn += 1;
 
-        // Replenish Fuel for the next turn's planning phase
+        // Replenish Fuel and Recharge Shields for the next turn's planning phase
         this.entities.forEach((e) => {
+            // 1. Passive Replenishment (Always happens)
             if (e.fuel !== undefined) {
                 const regen = ENTITY_STATS[e.type]?.fuelRegen || 0;
                 e.fuel = Math.min(e.maxFuel, e.fuel + regen);
             }
+
+            // 2. Active System Recharge (Blocked by EMP/Disabled status)
+            if (e.disabledUntilTurn >= this.turn) return;
 
             if (e.type === 'SHIELD') {
                 const stats = ENTITY_STATS.SHIELD;
@@ -2245,12 +2249,6 @@ export class GameState {
                     stats.barrierHpMax,
                     (e.barrierHp || 0) + (stats.rechargeRate || 1)
                 );
-            }
-
-            if (e.type === 'FLAK_DEFENSE') {
-                e.flakActive = false;
-                e.flakAngle = null;
-                e.flakTriggerTick = null;
             }
         });
 
