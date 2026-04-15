@@ -2148,6 +2148,14 @@ export class GameState {
                     }
                 });
 
+                // Clean up flak state for this round
+                this.entities.forEach((e) => {
+                    if (e.type === 'FLAK_DEFENSE') {
+                        e.flakActive = false;
+                        e.flakAngle = null;
+                        e.flakTriggerTick = null;
+                    }
+                });
 
                 // Persistence: Remaining Seekers become real entities for the next turn
                 tempProjectiles.forEach((p) => {
