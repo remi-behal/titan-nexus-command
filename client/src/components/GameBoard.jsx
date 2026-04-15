@@ -590,6 +590,8 @@ const GameBoard = ({
 
                     // 1. Draw solid fog overlay
                     fctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform to identity
+                    fctx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
+                    fctx.globalCompositeOperation = 'source-over';
                     fctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                     fctx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
 

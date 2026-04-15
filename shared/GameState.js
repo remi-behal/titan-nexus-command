@@ -1019,14 +1019,6 @@ export class GameState {
                 }
                 return;
             }
-
-            if (ent.type === 'SHIELD') {
-                const stats = ENTITY_STATS.SHIELD;
-                ent.barrierHp = Math.min(
-                    stats.barrierHpMax,
-                    (ent.barrierHp || 0) + (stats.rechargeRate || 1)
-                );
-            }
         });
 
         // 1. Generate Energy for all active players
@@ -2156,14 +2148,6 @@ export class GameState {
                     }
                 });
 
-                // Clean up flak state for this round
-                this.entities.forEach((e) => {
-                    if (e.type === 'FLAK_DEFENSE') {
-                        e.flakActive = false;
-                        e.flakAngle = null;
-                        e.flakTriggerTick = null;
-                    }
-                });
 
                 // Persistence: Remaining Seekers become real entities for the next turn
                 tempProjectiles.forEach((p) => {
@@ -2245,6 +2229,20 @@ export class GameState {
             if (e.fuel !== undefined) {
                 const regen = ENTITY_STATS[e.type]?.fuelRegen || 0;
                 e.fuel = Math.min(e.maxFuel, e.fuel + regen);
+            }
+
+            if (e.type === 'SHIELD') {
+                const stats = ENTITY_STATS.SHIELD;
+                e.barrierHp = Math.min(
+                    stats.barrierHpMax,
+                    (e.barrierHp || 0) + (stats.rechargeRate || 1)
+                );
+            }
+
+            if (e.type === 'FLAK_DEFENSE') {
+                e.flakActive = false;
+                e.flakAngle = null;
+                e.flakTriggerTick = null;
             }
         });
 
