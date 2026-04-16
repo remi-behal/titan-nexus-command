@@ -18,6 +18,7 @@ export const EXPERIMENTAL_STATS = {
         vision: 100,
         size: 15, // Large projectile for visual distinction
         speed: SPEED_TIERS.VERY_FAST, // VERY FAST (7 px/tick)
-        deathEffect: 'DETONATE'
+        deathEffect: 'DETONATE',
+        category: 'SPECIAL'
     }
 };

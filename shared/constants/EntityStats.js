@@ -21,7 +21,8 @@ export const ENTITY_STATS = {
         size: 40, // Base radius for rendering and selection
         labelOffset: 35,
         speed: SPEED_TIERS.SLOW,
-        deathEffect: 'DISINTEGRATE'
+        deathEffect: 'DISINTEGRATE',
+        category: 'UTILITY'
     },
     /** @see [defenses.md#laser-point-defense](../../.agents/defenses.md#laser-point-defense) */
     LASER_POINT_DEFENSE: {
@@ -34,7 +35,8 @@ export const ENTITY_STATS = {
         size: 15, // Half-width for the square render
         labelOffset: 35,
         speed: SPEED_TIERS.SLOW,
-        deathEffect: 'DISINTEGRATE'
+        deathEffect: 'DISINTEGRATE',
+        category: 'DEFENSE'
     },
     /** @see [structures.md#extractors](../../.agents/structures.md#extractors) */
     EXTRACTOR: {
@@ -45,7 +47,8 @@ export const ENTITY_STATS = {
         size: 20,
         labelOffset: 35,
         speed: SPEED_TIERS.SLOW,
-        deathEffect: 'DISINTEGRATE'
+        deathEffect: 'DISINTEGRATE',
+        category: 'UTILITY'
     },
     /** @see [weapons.md#dumb-bomb](../../.agents/weapons.md#dumb-bomb) */
     WEAPON: {
@@ -59,7 +62,8 @@ export const ENTITY_STATS = {
         size: 8, // Radius for the projectile render
         labelOffset: 35,
         speed: SPEED_TIERS.NORMAL,
-        deathEffect: 'DETONATE'
+        deathEffect: 'DETONATE',
+        category: 'OFFENSE'
     },
     /** @see [weapons.md#cluster-bomb](../../.agents/weapons.md#cluster-bomb) */
     CLUSTER_BOMB: {
@@ -75,7 +79,8 @@ export const ENTITY_STATS = {
         deathEffect: 'DETONATE',
         splitTickRatio: 0.6, // Splits at 60% of its travel time
         subBombCount: 3,
-        spreadDistance: 200 // Total width of the perpendicular line
+        spreadDistance: 200, // Total width of the perpendicular line
+        category: 'OFFENSE'
     },
     /** @see [weapons.md#homing-missile](../../.agents/weapons.md#homing-missile) */
     HOMING_MISSILE: {
@@ -95,7 +100,8 @@ export const ENTITY_STATS = {
         searchCone: 60, //degrees
         turnRadius: 5,
         isSeeker: true,
-        deathEffect: 'DETONATE'
+        deathEffect: 'DETONATE',
+        category: 'OFFENSE'
     },
     /** @see [defenses.md#light-sam-defense](../../.agents/defenses.md#light-sam-defense) */
     LIGHT_SAM_DEFENSE: {
@@ -108,7 +114,8 @@ export const ENTITY_STATS = {
         size: 15,
         labelOffset: 35,
         speed: SPEED_TIERS.SLOW,
-        deathEffect: 'DISINTEGRATE'
+        deathEffect: 'DISINTEGRATE',
+        category: 'DEFENSE'
     },
     /** @see [defenses.md#sam-missile](../../.agents/defenses.md#sam-missile) */
     SAM_MISSILE: {
@@ -142,7 +149,8 @@ export const ENTITY_STATS = {
         labelOffset: 35,
         speed: SPEED_TIERS.SLOW,
         isDefense: true,
-        deathEffect: 'DISINTEGRATE'
+        deathEffect: 'DISINTEGRATE',
+        category: 'DEFENSE'
     },
     SMART_SAM_MISSILE: {
         hp: 2,
@@ -179,7 +187,8 @@ export const ENTITY_STATS = {
         damage: 1,
         labelOffset: 35,
         speed: SPEED_TIERS.SLOW,
-        deathEffect: 'DISINTEGRATE'
+        deathEffect: 'DISINTEGRATE',
+        category: 'DEFENSE'
     },
     /** @see [weapons.md#nuke](../../.agents/weapons.md#nuke) */
     NUKE: {
@@ -193,7 +202,8 @@ export const ENTITY_STATS = {
         size: 25,
         speed: SPEED_TIERS.SLOW,
         landAsStructure: true,
-        deathEffect: 'DISINTEGRATE' // Silent death if destroyed early
+        deathEffect: 'DISINTEGRATE', // Silent death if destroyed early
+        category: 'OFFENSE'
     },
     NAPALM: {
         hp: 1,
@@ -203,7 +213,8 @@ export const ENTITY_STATS = {
         speed: SPEED_TIERS.NORMAL,
         minRange: 200, // Bug 1: Prevent self-hits
         landAsStructure: false, // Bug 2: Don't leave a shell entity
-        deathEffect: 'DETONATE'
+        deathEffect: 'DETONATE',
+        category: 'OFFENSE'
     },
     NAPALM_FIRE: {
         hp: 9999,
@@ -231,7 +242,8 @@ export const ENTITY_STATS = {
         isInterceptable: false,
         onlyFriendly: true,
         landAsStructure: false,
-        deathEffect: 'RECLAIM'
+        deathEffect: 'RECLAIM',
+        category: 'UTILITY'
     },
     OVERLOAD: {
         hp: 1,
@@ -242,7 +254,8 @@ export const ENTITY_STATS = {
         detectionRadius: 30,
         isInterceptable: true,
         landAsStructure: false,
-        deathEffect: 'DETONATE'
+        deathEffect: 'DETONATE',
+        category: 'SPECIAL'
     },
     ECHO_ARTILLERY: {
         hp: 2,
@@ -252,7 +265,8 @@ export const ENTITY_STATS = {
         detectionRange: 800,
         isInterceptable: false,
         accuracyDeviationAngle: 10, // ±5 degrees
-        accuracyDeviationDistance: 0.1 // ±5% distance
+        accuracyDeviationDistance: 0.1, // ±5% distance
+        category: 'SPECIAL'
     },
     SHIELD: {
         hp: 2,
@@ -263,7 +277,8 @@ export const ENTITY_STATS = {
         cost: 45,
         size: 20,
         speed: SPEED_TIERS.SLOW,
-        deathEffect: 'DISINTEGRATE'
+        deathEffect: 'DISINTEGRATE',
+        category: 'DEFENSE'
     },
     EMP: {
         hp: 1,
@@ -275,7 +290,8 @@ export const ENTITY_STATS = {
         size: 8,
         speed: SPEED_TIERS.NORMAL,
         isInterceptable: true,
-        deathEffect: 'DETONATE'
+        deathEffect: 'DETONATE',
+        category: 'SPECIAL'
     },
     CLOAKING_FIELD: {
         hp: 2,
@@ -285,8 +301,9 @@ export const ENTITY_STATS = {
         detectionRange: 75,
         size: 20,
         speed: SPEED_TIERS.SLOW,
-        deathEffect: 'DISINTEGRATE'
-    }
+        deathEffect: 'DISINTEGRATE',
+        category: 'UTILITY'
+    },
 };
 
 export const RESOURCE_NODE_STATS = {
