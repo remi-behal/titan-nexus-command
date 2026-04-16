@@ -2,7 +2,7 @@
     position: absolute;
     transform: translate(-50%, -50%);
     z-index: 1000;
-    pointer-events: auto;
+    pointer-events: none;
 }
 
 .radial-menu-container svg {
@@ -15,6 +15,7 @@
     stroke-width: 1;
     transition: all 0.2s ease;
     cursor: pointer;
+    pointer-events: auto;
 }
 
 .menu-segment:hover path {
@@ -46,6 +47,7 @@
     stroke-width: 2;
     cursor: pointer;
     transition: all 0.2s ease;
+    pointer-events: auto;
 }
 
 .menu-center:hover {
