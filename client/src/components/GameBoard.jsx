@@ -1987,8 +1987,30 @@ const GameBoard = forwardRef(({
             if (isPanning) {
                 const dx = Math.abs(e.clientX - mouseDownPosRef.current.x);
                 const dy = Math.abs(e.clientY - mouseDownPosRef.current.y);
-                if (dx < 5 && dy < 5) {
-                    onSelectHub(null);
+                const isShortClick = dx < 5 && dy < 5;
+
+                if (isShortClick) {
+                    const { x: gameX, y: gameY } = getGameCoords(e);
+
+                    // Check for hub click
+                    const clickedHub = gameState.entities.find((ent) => {
+                        if (ent.type !== 'HUB') return false;
+                        const d = getToroidalDist(
+                            ent.x,
+                            ent.y,
+                            gameX,
+                            gameY,
+                            gameState.map.width,
+                            gameState.map.height
+                        );
+                        return d < HUB_RADIUS;
+                    });
+
+                    if (clickedHub && clickedHub.owner === myPlayerId) {
+                        onSelectHub(clickedHub.id);
+                    } else {
+                        onSelectHub(null);
+                    }
                 }
             }
 
@@ -2040,25 +2062,7 @@ const GameBoard = forwardRef(({
             return;
         }
 
-        // 2. Normal mode: Check for DIRECT click on any Hub (Selection)
-        // Shortest path aware selection
-        const clickedHub = gameState.entities.find((ent) => {
-            if (ent.type !== 'HUB') return false;
-            const d = getToroidalDist(
-                ent.x,
-                ent.y,
-                x,
-                y,
-                gameState.map.width,
-                gameState.map.height
-            );
-            return d < HUB_RADIUS;
-        });
-
-        if (clickedHub && clickedHub.owner === myPlayerId) {
-            onSelectHub(clickedHub.id);
-            return;
-        }
+        // 2. Normal mode: Selection handled in mouseup
 
         // 3. Middle click or Left click on empty space starts pan tracking
         if (e.button === 0 || e.button === 1) {
@@ -2066,8 +2070,6 @@ const GameBoard = forwardRef(({
             panStartRef.current = { x: e.clientX, y: e.clientY };
             mouseDownPosRef.current = { x: e.clientX, y: e.clientY };
         }
-
-        // 4. Removed mousedown deselect (moved to mouseup threshold check)
     };
 
     return (

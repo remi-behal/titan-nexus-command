@@ -495,15 +495,7 @@ function App() {
                     cameraOffset={cameraOffset}
                     setCameraOffset={setCameraOffset}
                     onSelectHub={(id) => {
-                        // If same hub clicked, toggle off then on to ensure re-mount
-                        if (id === selectedHubId) {
-                            setSelectedHubId(null);
-                            setTimeout(() => {
-                                setSelectedHubId(id);
-                            }, 0);
-                        } else {
-                            setSelectedHubId(id);
-                        }
+                        setSelectedHubId(id);
                     }}
                     onAimStart={handleAimStart}
                     onAimUpdate={() => { }}
