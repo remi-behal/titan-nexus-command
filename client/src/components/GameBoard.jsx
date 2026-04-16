@@ -1936,12 +1936,21 @@ const GameBoard = forwardRef(({
             offsetY = (rh - ch / scale) / 2;
         }
 
+        let dx = gameX - cameraOffset.x;
+        let dy = gameY - cameraOffset.y;
+
+        // Toroidal wrap: pick the shortest path
+        if (dx > gameState.map.width / 2) dx -= gameState.map.width;
+        if (dx < -gameState.map.width / 2) dx += gameState.map.width;
+        if (dy > gameState.map.height / 2) dy -= gameState.map.height;
+        if (dy < -gameState.map.height / 2) dy += gameState.map.height;
+
         // Viewport-absolute coordinates (master baseline)
-        const xScreen = ((gameX - cameraOffset.x) * ZOOM_LEVEL) / scale + rect.left + offsetX;
-        const yScreen = ((gameY - cameraOffset.y) * ZOOM_LEVEL) / scale + rect.top + offsetY;
+        const xScreen = (dx * ZOOM_LEVEL) / scale + rect.left + offsetX;
+        const yScreen = (dy * ZOOM_LEVEL) / scale + rect.top + offsetY;
 
         return { x: xScreen, y: yScreen };
-    }, [cameraOffset, ZOOM_LEVEL]);
+    }, [cameraOffset, ZOOM_LEVEL, gameState.map.width, gameState.map.height]);
 
     useImperativeHandle(ref, () => ({
         getScreenCoords
@@ -2032,7 +2041,10 @@ const GameBoard = forwardRef(({
         getGameCoords,
         onAimEnd,
         onAimUpdate,
-        onSelectHub
+        onSelectHub,
+        HUB_RADIUS,
+        myPlayerId,
+        setCameraOffset
     ]);
 
     const handleMouseDown = (e) => {

@@ -286,11 +286,8 @@ function App() {
                 x: pos.x - rect.left,
                 y: pos.y - rect.top
             });
-        } else {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setHubScreenPos(pos);
         }
-    }, [selectedHubId, cameraOffset, playerState]);
+    }, [selectedHubId, cameraOffset, playerState, hubScreenPos]);
 
     // Close menu when resolution starts or turn is submitted
     useEffect(() => {
