@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { GameState } from '../../../shared/GameState.js';
 import { ENTITY_STATS, GLOBAL_STATS } from '../../../shared/constants/EntityStats.js';
 import { VISUAL_STATS } from '../constants/VisualStats.js';
@@ -52,7 +52,7 @@ const drawToroidalLine = (
     ctx.stroke();
 };
 
-const GameBoard = ({
+const GameBoard = forwardRef(({
     gameState,
     myPlayerId,
     selectedHubId,
@@ -65,11 +65,12 @@ const GameBoard = ({
     onSelectHub,
     committedActions,
     showDebugPreview,
-    maxPullDistance
-}) => {
+    maxPullDistance,
+    cameraOffset,
+    setCameraOffset
+}, ref) => {
     const canvasRef = useRef(null);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-    const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 });
     const [isPanning, setIsPanning] = useState(false);
     const [panStart, setPanStart] = useState({ x: 0, y: 0 });
     const ZOOM_LEVEL = 2; // 50% zoom in
@@ -1493,6 +1494,42 @@ const GameBoard = ({
                                     ctx.arc(entity.x, entity.y, SLING_RING_RADIUS, 0, Math.PI * 2);
                                     ctx.stroke();
                                     ctx.restore();
+
+                                    // Task 4: Draw North-offset ghosted icon of selected item
+                                    if (selectedItemType && selectedItemType !== 'HUB') {
+                                        ctx.save();
+                                        ctx.globalAlpha = 0.5;
+                                        ctx.translate(entity.x, entity.y - 60);
+
+                                        // Draw simplified ghost of the structure
+                                        ctx.beginPath();
+                                        ctx.strokeStyle = '#fff';
+                                        ctx.setLineDash([2, 4]);
+                                        ctx.lineWidth = 1;
+
+                                        const iconSize = (ENTITY_STATS[selectedItemType]?.size || 15) * 0.8;
+
+                                        if (selectedItemType.includes('DEFENSE') || selectedItemType === 'SHIELD') {
+                                            ctx.strokeRect(-iconSize, -iconSize, iconSize * 2, iconSize * 2);
+                                        } else if (selectedItemType === 'EXTRACTOR') {
+                                            ctx.moveTo(0, -iconSize);
+                                            ctx.lineTo(iconSize, iconSize);
+                                            ctx.lineTo(-iconSize, iconSize);
+                                            ctx.closePath();
+                                            ctx.stroke();
+                                        } else {
+                                            ctx.arc(0, 0, iconSize, 0, Math.PI * 2);
+                                            ctx.stroke();
+                                        }
+
+                                        // Label for the ghost
+                                        ctx.fillStyle = '#fff';
+                                        ctx.font = '8px Arial';
+                                        ctx.textAlign = 'center';
+                                        ctx.fillText(selectedItemType, 0, iconSize + 10);
+
+                                        ctx.restore();
+                                    }
                                 }
                             }
                             ctx.restore();
@@ -1875,6 +1912,39 @@ const GameBoard = ({
         [cameraOffset, gameState.map.width, gameState.map.height]
     );
 
+    const getScreenCoords = useCallback((gameX, gameY) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return { x: 0, y: 0 };
+
+        const rect = canvas.getBoundingClientRect();
+        const cw = canvas.width;
+        const ch = canvas.height;
+        const rw = rect.width;
+        const rh = rect.height;
+        const canvasRatio = cw / ch;
+        const rectRatio = rw / rh;
+
+        let scale, offsetX, offsetY;
+        if (rectRatio > canvasRatio) {
+            scale = ch / rh;
+            offsetX = (rw - cw / scale) / 2;
+            offsetY = 0;
+        } else {
+            scale = cw / rw;
+            offsetX = 0;
+            offsetY = (rh - ch / scale) / 2;
+        }
+
+        const xScreen = ((gameX - cameraOffset.x) * ZOOM_LEVEL) / scale + rect.left + offsetX;
+        const yScreen = ((gameY - cameraOffset.y) * ZOOM_LEVEL) / scale + rect.top + offsetY;
+
+        return { x: xScreen, y: yScreen };
+    }, [cameraOffset, ZOOM_LEVEL]);
+
+    useImperativeHandle(ref, () => ({
+        getScreenCoords
+    }));
+
     // Effect: Global Mouse Listeners for Panning & Aiming
     useEffect(() => {
         const handleGlobalMouseMove = (e) => {
@@ -2022,6 +2092,6 @@ const GameBoard = ({
             />
         </div>
     );
-};
+});
 
 export default GameBoard;
