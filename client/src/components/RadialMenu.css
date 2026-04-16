@@ -1,0 +1,62 @@
+.radial-menu-container {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    pointer-events: auto;
+}
+
+.radial-menu-container svg {
+    filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.5));
+}
+
+.menu-segment path {
+    fill: rgba(30, 30, 40, 0.85);
+    stroke: rgba(255, 255, 255, 0.2);
+    stroke-width: 1;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.menu-segment:hover path {
+    fill: rgba(60, 60, 80, 0.95);
+    stroke: rgba(255, 255, 255, 0.6);
+}
+
+.menu-segment.disabled path {
+    fill: rgba(20, 20, 20, 0.9);
+    cursor: not-allowed;
+}
+
+.menu-segment text {
+    fill: #fff;
+    font-size: 10px;
+    font-weight: bold;
+    pointer-events: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.menu-segment.disabled text {
+    fill: #555;
+}
+
+.menu-center {
+    fill: rgba(40, 40, 50, 0.9);
+    stroke: rgba(255, 255, 255, 0.3);
+    stroke-width: 2;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.menu-center:hover {
+    fill: rgba(80, 40, 40, 0.9);
+    stroke: rgba(255, 100, 100, 0.6);
+}
+
+.center-icon {
+    fill: #fff;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    pointer-events: none;
+}
