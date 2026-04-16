@@ -280,6 +280,14 @@ function App() {
         setHubScreenPos(pos);
     }, [selectedHubId, cameraOffset, playerState]);
 
+    // Close menu when resolution starts or turn is submitted
+    useEffect(() => {
+        if (isResolvingUI || isLocked) {
+            setSelectedHubId(null);
+            setLaunchMode(false);
+        }
+    }, [isResolvingUI, isLocked]);
+
     const pBase =
         playerState?.players && playerState.players[myPlayerId]
             ? playerState.players[myPlayerId]

@@ -10,7 +10,7 @@ const RadialMenu = ({ x, y, onSelect, onCancel, playerEnergy, hubFuel }) => {
     // Filter items by category
     const getItemsInCategory = (cat) => {
         return Object.entries(ENTITY_STATS)
-            .filter(([_, stats]) => stats.category === cat)
+            .filter(([, stats]) => stats.category === cat)
             .map(([type, stats]) => ({ type, ...stats }));
     };
 
@@ -81,7 +81,6 @@ const RadialMenu = ({ x, y, onSelect, onCancel, playerEnergy, hubFuel }) => {
                         y={Math.sin(startAngle + angleStep / 2) * (innerRadius + (outerRadius - innerRadius) / 2)}
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        transform={`rotate(${(startAngle + angleStep / 2) * (180 / Math.PI) + 90}, ${Math.cos(startAngle + angleStep / 2) * (innerRadius + (outerRadius - innerRadius) / 2)}, ${Math.sin(startAngle + angleStep / 2) * (innerRadius + (outerRadius - innerRadius) / 2)})`}
                     >
                         {label.length > 10 ? label.substring(0, 8) + '...' : label}
                     </text>

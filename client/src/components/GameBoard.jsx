@@ -1935,8 +1935,8 @@ const GameBoard = forwardRef(({
             offsetY = (rh - ch / scale) / 2;
         }
 
-        const xScreen = ((gameX - cameraOffset.x) * ZOOM_LEVEL) / scale + rect.left + offsetX;
-        const yScreen = ((gameY - cameraOffset.y) * ZOOM_LEVEL) / scale + rect.top + offsetY;
+        const xScreen = ((gameX - cameraOffset.x) * ZOOM_LEVEL) / scale + offsetX;
+        const yScreen = ((gameY - cameraOffset.y) * ZOOM_LEVEL) / scale + offsetY;
 
         return { x: xScreen, y: yScreen };
     }, [cameraOffset, ZOOM_LEVEL]);
@@ -2064,7 +2064,10 @@ const GameBoard = forwardRef(({
         }
 
         // 4. Clicked empty space or an enemy hub - deselect
-        onSelectHub(null);
+        // Only deselect if we didn't just start a pan (button 0/1)
+        if (e.button !== 0 && e.button !== 1) {
+            onSelectHub(null);
+        }
     };
 
     return (
