@@ -266,6 +266,34 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('lobby:autoJoin', () => {
+        const room = lobbyManager.getOrCreateRoom('default');
+        console.log(`[Lobby] Auto-join requested by ${socket.id}`);
+
+        // Find first available slot
+        let slotIndex = room.slots.findIndex(s => s === null);
+        if (slotIndex === -1) {
+            console.warn(`[Lobby] Auto-join failed: Room full`);
+            return;
+        }
+
+        const res = room.claimSeat(slotIndex, socket.currentToken, socket.id);
+        if (res.success) {
+            console.log(`[Lobby] Slot ${slotIndex} AUTO-CLAIMED by ${socket.id}`);
+            socket.assignedPlayerId = `player${slotIndex + 1}`;
+            safeEmit(socket, 'playerAssignment', socket.assignedPlayerId);
+            room.toggleReady(socket.id, true);
+            io.emit('lobby:update', room.getUpdate());
+
+            // Auto-start if 2 players are ready
+            const filledSlots = room.slots.filter(s => s !== null);
+            if (filledSlots.length === 2 && filledSlots.every(s => s.ready)) {
+                console.log(`[Lobby] Auto-starting match from autoJoin`);
+                startMatch();
+            }
+        }
+    });
+
     socket.on('lobby:claimSeat', (slotIndex) => {
         console.log(`[Lobby] Socket ${socket.id} attempting to claim seat ${slotIndex} (Token: ${socket.currentToken})`);
         const room = lobbyManager.getOrCreateRoom('default');

@@ -173,6 +173,13 @@ function App() {
         const onAssignment = (assignedId) => {
             console.log('Assigned as:', assignedId);
             setMyPlayerId(assignedId);
+
+            // AUTO-START LOGIC
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('autoStart') === '1' && !assignedId) {
+                console.log('[AutoStart] Attempting auto-join...');
+                socket.emit('lobby:autoJoin');
+            }
         };
 
         const onSyncStatus = (status) => {

@@ -42,6 +42,24 @@ export const LobbyOverlay = ({ lobbyUpdate, onClaimSeat, onReadyToggle, socketId
                     </button>
                 )}
 
+                {new URLSearchParams(window.location.search).get('debug') === '1' && (
+                    <button
+                        className="quick-start-button"
+                        onClick={() => socket.emit('lobby:autoJoin')}
+                        style={{
+                            marginTop: '1rem',
+                            padding: '0.5rem 1rem',
+                            backgroundColor: '#3a3a3a',
+                            color: '#fff',
+                            border: '1px solid #555',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Quick Start (Debug)
+                    </button>
+                )}
+
                 <p style={{ marginTop: '1rem', opacity: 0.7, fontSize: '0.9rem' }}>
                     Match starts when both players are ready.
                 </p>
