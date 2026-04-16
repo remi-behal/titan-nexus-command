@@ -1936,20 +1936,57 @@ const GameBoard = forwardRef(({
             offsetY = (rh - ch / scale) / 2;
         }
 
-        let dx = gameX - cameraOffset.x;
-        let dy = gameY - cameraOffset.y;
-
-        // Toroidal wrap: pick the shortest path
-        if (dx > gameState.map.width / 2) dx -= gameState.map.width;
-        if (dx < -gameState.map.width / 2) dx += gameState.map.width;
-        if (dy > gameState.map.height / 2) dy -= gameState.map.height;
-        if (dy < -gameState.map.height / 2) dy += gameState.map.height;
+        const dx = gameX - cameraOffset.x;
+        const dy = gameY - cameraOffset.y;
 
         // Viewport-absolute coordinates (master baseline)
-        const xScreen = (dx * ZOOM_LEVEL) / scale + rect.left + offsetX;
-        const yScreen = (dy * ZOOM_LEVEL) / scale + rect.top + offsetY;
+        const primaryX = (dx * ZOOM_LEVEL) / scale + rect.left + offsetX;
+        const primaryY = (dy * ZOOM_LEVEL) / scale + rect.top + offsetY;
 
-        return { x: xScreen, y: yScreen };
+        // We need to account for the 3x3 tiling in the GameBoard.
+        // The menu should follow the instance that is actually ON SCREEN.
+        const mapPixelW = (gameState.map.width * ZOOM_LEVEL) / scale;
+        const mapPixelH = (gameState.map.height * ZOOM_LEVEL) / scale;
+
+        const xInstances = [primaryX - mapPixelW, primaryX, primaryX + mapPixelW];
+        const yInstances = [primaryY - mapPixelH, primaryY, primaryY + mapPixelH];
+
+        // Find the instance closest to viewport center that is also ideally on screen
+        const viewportCenterX = rect.left + rw / 2;
+        const viewportCenterY = rect.top + rh / 2;
+
+        const findBest = (instances, center, min, max) => {
+            let best = instances[1]; // default to primary
+            let minCenterDist = Infinity;
+            let foundVisible = false;
+
+            for (const val of instances) {
+                const isVisible = val >= min && val <= max;
+                const dist = Math.abs(val - center);
+
+                if (isVisible && !foundVisible) {
+                    best = val;
+                    minCenterDist = dist;
+                    foundVisible = true;
+                } else if (isVisible && foundVisible) {
+                    if (dist < minCenterDist) {
+                        best = val;
+                        minCenterDist = dist;
+                    }
+                } else if (!foundVisible) {
+                    if (dist < minCenterDist) {
+                        best = val;
+                        minCenterDist = dist;
+                    }
+                }
+            }
+            return best;
+        };
+
+        const finalX = findBest(xInstances, viewportCenterX, rect.left, rect.left + rw);
+        const finalY = findBest(yInstances, viewportCenterY, rect.top, rect.top + rh);
+
+        return { x: finalX, y: finalY };
     }, [cameraOffset, ZOOM_LEVEL, gameState.map.width, gameState.map.height]);
 
     useImperativeHandle(ref, () => ({

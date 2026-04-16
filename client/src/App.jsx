@@ -281,13 +281,16 @@ function App() {
         const gameWorld = document.querySelector('.game-world');
         if (gameWorld) {
             const rect = gameWorld.getBoundingClientRect();
+            const nx = pos.x - rect.left;
+            const ny = pos.y - rect.top;
+
             // eslint-disable-next-line react-hooks/set-state-in-effect
-            setHubScreenPos({
-                x: pos.x - rect.left,
-                y: pos.y - rect.top
-            });
+            setHubScreenPos({ x: nx, y: ny });
+        } else {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setHubScreenPos(pos);
         }
-    }, [selectedHubId, cameraOffset, playerState, hubScreenPos]);
+    }, [selectedHubId, cameraOffset, playerState]);
 
     // Close menu when resolution starts or turn is submitted
     useEffect(() => {
