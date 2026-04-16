@@ -277,7 +277,7 @@ function App() {
 
         const pos = gameBoardRef.current.getScreenCoords(hub.x, hub.y);
 
-        // Normalize pos to the .game-world container
+        // Normalize viewport-absolute pos to the .game-world container
         const gameWorld = document.querySelector('.game-world');
         if (gameWorld) {
             const rect = gameWorld.getBoundingClientRect();
@@ -495,10 +495,12 @@ function App() {
                     cameraOffset={cameraOffset}
                     setCameraOffset={setCameraOffset}
                     onSelectHub={(id) => {
+                        // If same hub clicked, toggle off then on to ensure re-mount
                         if (id === selectedHubId) {
-                            // Re-trigger open if already selected
                             setSelectedHubId(null);
-                            setTimeout(() => setSelectedHubId(id), 0);
+                            setTimeout(() => {
+                                setSelectedHubId(id);
+                            }, 0);
                         } else {
                             setSelectedHubId(id);
                         }

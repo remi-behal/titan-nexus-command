@@ -72,8 +72,8 @@ const GameBoard = forwardRef(({
     const canvasRef = useRef(null);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [isPanning, setIsPanning] = useState(false);
-    const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-    const [mouseDownPos, setMouseDownPos] = useState({ x: 0, y: 0 });
+    const panStartRef = useRef({ x: 0, y: 0 });
+    const mouseDownPosRef = useRef({ x: 0, y: 0 });
     const ZOOM_LEVEL = 2; // 50% zoom in
 
     const HUB_RADIUS = ENTITY_STATS.HUB.size;
@@ -1936,9 +1936,9 @@ const GameBoard = forwardRef(({
             offsetY = (rh - ch / scale) / 2;
         }
 
-        // Relative to the canvas top-left in the DOM
-        const xScreen = ((gameX - cameraOffset.x) * ZOOM_LEVEL) / scale + offsetX;
-        const yScreen = ((gameY - cameraOffset.y) * ZOOM_LEVEL) / scale + offsetY;
+        // Viewport-absolute coordinates (master baseline)
+        const xScreen = ((gameX - cameraOffset.x) * ZOOM_LEVEL) / scale + rect.left + offsetX;
+        const yScreen = ((gameY - cameraOffset.y) * ZOOM_LEVEL) / scale + rect.top + offsetY;
 
         return { x: xScreen, y: yScreen };
     }, [cameraOffset, ZOOM_LEVEL]);
@@ -1958,31 +1958,23 @@ const GameBoard = forwardRef(({
                 onAimUpdate(x, y);
             } else if (isPanning) {
                 // Determine raw movement in screen pixels
-                const dx = e.clientX - panStart.x;
-                const dy = e.clientY - panStart.y;
+                const dx = e.clientX - panStartRef.current.x;
+                const dy = e.clientY - panStartRef.current.y;
 
                 // Move camera (account for canvas scale)
                 const canvas = canvasRef.current;
                 const rect = canvas.getBoundingClientRect();
-                if (!rect.width || !rect.height) return; // Guard against NaN
+                if (!rect.width || !rect.height) return;
 
                 const scale = canvas.width / rect.width;
                 if (isNaN(scale) || !isFinite(scale)) return;
 
                 setCameraOffset((prev) => ({
-                    x:
-                        (prev.x -
-                            (((dx * scale) / ZOOM_LEVEL) % gameState.map.width) +
-                            gameState.map.width) %
-                        gameState.map.width,
-                    y:
-                        (prev.y -
-                            (((dy * scale) / ZOOM_LEVEL) % gameState.map.height) +
-                            gameState.map.height) %
-                        gameState.map.height
+                    x: (prev.x - (((dx * scale) / ZOOM_LEVEL) % gameState.map.width) + gameState.map.width) % gameState.map.width,
+                    y: (prev.y - (((dy * scale) / ZOOM_LEVEL) % gameState.map.height) + gameState.map.height) % gameState.map.height
                 }));
 
-                setPanStart({ x: e.clientX, y: e.clientY });
+                panStartRef.current = { x: e.clientX, y: e.clientY };
             }
         };
 
@@ -1992,13 +1984,10 @@ const GameBoard = forwardRef(({
                 onAimEnd(x, y);
             }
 
-            // If it was a short click (not a pan), handle deselection
             if (isPanning) {
-                const dx = Math.abs(e.clientX - mouseDownPos.x);
-                const dy = Math.abs(e.clientY - mouseDownPos.y);
-                const isShortClick = dx < 5 && dy < 5;
-
-                if (isShortClick) {
+                const dx = Math.abs(e.clientX - mouseDownPosRef.current.x);
+                const dy = Math.abs(e.clientY - mouseDownPosRef.current.y);
+                if (dx < 5 && dy < 5) {
                     onSelectHub(null);
                 }
             }
@@ -2016,9 +2005,6 @@ const GameBoard = forwardRef(({
     }, [
         isAiming,
         isPanning,
-        panStart,
-        mouseDownPos.x,
-        mouseDownPos.y,
         gameState.map.width,
         gameState.map.height,
         getGameCoords,
@@ -2077,8 +2063,8 @@ const GameBoard = forwardRef(({
         // 3. Middle click or Left click on empty space starts pan tracking
         if (e.button === 0 || e.button === 1) {
             setIsPanning(true);
-            setPanStart({ x: e.clientX, y: e.clientY });
-            setMouseDownPos({ x: e.clientX, y: e.clientY });
+            panStartRef.current = { x: e.clientX, y: e.clientY };
+            mouseDownPosRef.current = { x: e.clientX, y: e.clientY };
         }
 
         // 4. Removed mousedown deselect (moved to mouseup threshold check)
