@@ -3,6 +3,7 @@ import './App.css';
 import { GameState } from '../../shared/GameState.js';
 import { ENTITY_STATS, GLOBAL_STATS } from '../../shared/constants/EntityStats.js';
 import GameBoard from './components/GameBoard';
+import RadialMenu from './components/RadialMenu';
 import { LobbyOverlay } from './components/LobbyOverlay';
 import { io } from 'socket.io-client';
 
@@ -43,6 +44,12 @@ function App() {
     // Lobby State
     const [lobbyStatus, setLobbyStatus] = useState(null);
     const [matchStarted, setMatchStarted] = useState(false);
+    const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 });
+    const ZOOM_LEVEL = 2; // Match GameBoard's zoom
+
+    // Help RadialMenu track its hub
+    const [hubScreenPos, setHubScreenPos] = useState(null);
+    const gameBoardRef = useRef(null);
 
     const isResolvingPhase = playerState?.phase === 'RESOLVING';
     const isResolvingUI = isResolving || isResolvingPhase;
@@ -258,6 +265,21 @@ function App() {
         }
     }, [committedActions, isLocked, isResolvingUI]);
 
+    // Update hub screen position whenever selectedHubId, camera, or state changes
+    useEffect(() => {
+        if (!selectedHubId || !playerState) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setHubScreenPos(null);
+            return;
+        }
+        const hub = playerState.entities.find(e => e.id === selectedHubId);
+        if (!hub || !gameBoardRef.current) return;
+
+        const pos = gameBoardRef.current.getScreenCoords(hub.x, hub.y);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setHubScreenPos(pos);
+    }, [selectedHubId, cameraOffset, playerState]);
+
     const pBase =
         playerState?.players && playerState.players[myPlayerId]
             ? playerState.players[myPlayerId]
@@ -354,151 +376,6 @@ function App() {
                     </label>
                 </div>
 
-                <select
-                    value={selectedItemType}
-                    onChange={(e) => setSelectedItemType(e.target.value)}
-                    disabled={interactionBlocked}
-                >
-                    <option value="HUB" disabled={pCurrent.energy < ENTITY_STATS.HUB.cost}>
-                        New Hub ({ENTITY_STATS.HUB.cost} E)
-                    </option>
-                    <option value="WEAPON" disabled={pCurrent.energy < ENTITY_STATS.WEAPON.cost}>
-                        Weapon ({ENTITY_STATS.WEAPON.cost} E)
-                    </option>
-                    <option
-                        value="EXTRACTOR"
-                        disabled={pCurrent.energy < ENTITY_STATS.EXTRACTOR.cost}
-                    >
-                        Extractor ({ENTITY_STATS.EXTRACTOR.cost} E)
-                    </option>
-                    <option
-                        value="LASER_POINT_DEFENSE"
-                        disabled={pCurrent.energy < ENTITY_STATS.LASER_POINT_DEFENSE.cost}
-                    >
-                        Laser Point Defense ({ENTITY_STATS.LASER_POINT_DEFENSE.cost} E)
-                    </option>
-                    <option
-                        value="LIGHT_SAM_DEFENSE"
-                        disabled={pCurrent.energy < ENTITY_STATS.LIGHT_SAM_DEFENSE.cost}
-                    >
-                        Light SAM Defense ({ENTITY_STATS.LIGHT_SAM_DEFENSE.cost} E)
-                    </option>
-                    <option
-                        value="HOMING_MISSILE"
-                        disabled={pCurrent.energy < ENTITY_STATS.HOMING_MISSILE.cost}
-                    >
-                        Homing Missile ({ENTITY_STATS.HOMING_MISSILE.cost} E)
-                    </option>
-                    <option
-                        value="FLAK_DEFENSE"
-                        disabled={pCurrent.energy < ENTITY_STATS.FLAK_DEFENSE.cost}
-                    >
-                        Flak Defense ({ENTITY_STATS.FLAK_DEFENSE.cost} E)
-                    </option>
-                    <option
-                        value="SHIELD"
-                        disabled={pCurrent.energy < ENTITY_STATS.SHIELD.cost}
-                    >
-                        Shield Defense ({ENTITY_STATS.SHIELD.cost} E)
-                    </option>
-                    <option
-                        value="CLUSTER_BOMB"
-                        disabled={pCurrent.energy < ENTITY_STATS.CLUSTER_BOMB.cost}
-                    >
-                        Cluster Bomb ({ENTITY_STATS.CLUSTER_BOMB.cost} E)
-                    </option>
-                    <option value="NUKE" disabled={pCurrent.energy < ENTITY_STATS.NUKE.cost}>
-                        Nuke ({ENTITY_STATS.NUKE.cost} E)
-                    </option>
-                    <option value="NAPALM" disabled={pCurrent.energy < ENTITY_STATS.NAPALM.cost}>
-                        Napalm ({ENTITY_STATS.NAPALM.cost} E)
-                    </option>
-                    <option
-                        value="OVERLOAD"
-                        disabled={pCurrent.energy < ENTITY_STATS.OVERLOAD.cost}
-                    >
-                        Overload ({ENTITY_STATS.OVERLOAD.cost} E)
-                    </option>
-                    <option
-                        value="EMP"
-                        disabled={pCurrent.energy < ENTITY_STATS.EMP.cost}
-                    >
-                        EMP Weapon ({ENTITY_STATS.EMP.cost} E)
-                    </option>
-                    <option
-                        value="ECHO_ARTILLERY"
-                        disabled={pCurrent.energy < ENTITY_STATS.ECHO_ARTILLERY.cost}
-                    >
-                        Echo Artillery ({ENTITY_STATS.ECHO_ARTILLERY.cost} E)
-                    </option>
-
-                    <option
-                        value="SUPER_BOMB"
-                        disabled={pCurrent.energy < (ENTITY_STATS.SUPER_BOMB?.cost || 10)}
-                    >
-                        Super Bomb [TEST] ({ENTITY_STATS.SUPER_BOMB?.cost || 10} E)
-                    </option>
-                    <option value="RECLAIMER">Reclaimer (0 E, 1 Fuel)</option>
-                    <option
-                        value="SMART_SAM_DEFENSE"
-                        disabled={pCurrent.energy < (ENTITY_STATS.SMART_SAM_DEFENSE?.cost || 10)}
-                    >
-                        Smart SAM Defense ({ENTITY_STATS.SMART_SAM_MISSILE?.cost || 15} E)
-                    </option>
-                    <option
-                        value="CLOAKING_FIELD"
-                        disabled={pCurrent.energy < (ENTITY_STATS.CLOAKING_FIELD?.cost || 60)}
-                    >
-                        Cloaking Field ({ENTITY_STATS.CLOAKING_FIELD?.cost || 60} E)
-                    </option>
-                </select>
-
-                {(() => {
-                    const selectedEntity = playerState?.entities?.find(
-                        (e) => e.id === selectedHubId
-                    );
-                    const isDisabled = selectedEntity?.disabledUntilTurn > playerState?.turn;
-                    const pendingFuelSpent = committedActions.filter(
-                        (a) => a.sourceId === selectedHubId
-                    ).length;
-                    const remainingFuel =
-                        selectedEntity?.fuel !== undefined
-                            ? selectedEntity.fuel - pendingFuelSpent
-                            : Infinity;
-                    const hasFuel = remainingFuel > 0;
-                    const fuelCostWarning = !hasFuel ? 'Out of Fuel' : isDisabled ? 'Hub Offline (EMP)' : null;
-
-                    return (
-                        <button
-                            className={`launch-btn ${launchMode ? 'active' : ''}`}
-                            onClick={() => setLaunchMode((active) => !active)}
-                            disabled={
-                                !selectedHubId ||
-                                interactionBlocked ||
-                                pCurrent.energy < (ENTITY_STATS[selectedItemType]?.cost || 0) ||
-                                !hasFuel ||
-                                isDisabled
-                            }
-                        >
-                            {isResolvingUI
-                                ? 'Observation Phase'
-                                : isLocked
-                                    ? 'Mission Locked'
-                                    : isSpectator
-                                        ? 'Spectator Mode'
-                                        : isUnassigned
-                                            ? 'Authenticating...'
-                                            : fuelCostWarning
-                                                ? fuelCostWarning
-                                                : pCurrent.energy < (ENTITY_STATS[selectedItemType]?.cost || 0)
-                                                    ? `Insufficient Energy (${ENTITY_STATS[selectedItemType]?.cost} E)`
-                                                    : launchMode
-                                                        ? 'Cancel Aiming'
-                                                        : 'Launch New Structure'}
-                        </button>
-                    );
-                })()}
-
                 {committedActions.length > 0 && !interactionBlocked && (
                     <button className="clear-btn" onClick={handleClearActions}>
                         Clear All ({committedActions.length})
@@ -523,7 +400,7 @@ function App() {
                                         : 'Complete Turn'}
                 </button>
             </div>
-        </header>
+        </header >
     );
 
     if (!matchStarted) {
@@ -582,6 +459,7 @@ function App() {
                 )}
 
                 <GameBoard
+                    ref={gameBoardRef}
                     gameState={playerState}
                     myPlayerId={myPlayerId}
                     selectedHubId={selectedHubId}
@@ -592,11 +470,37 @@ function App() {
                     showDebugPreview={showDebugPreview}
                     maxPullDistance={MAX_PULL_DISTANCE}
                     isResolving={isResolvingUI}
+                    cameraOffset={cameraOffset}
+                    setCameraOffset={setCameraOffset}
                     onSelectHub={setSelectedHubId}
                     onAimStart={handleAimStart}
                     onAimUpdate={() => { }}
                     onAimEnd={handleAimEnd}
                 />
+
+                {selectedHubId && !launchMode && !interactionBlocked && playerState && (() => {
+                    const hub = playerState.entities.find(e => e.id === selectedHubId);
+                    if (!hub) return null;
+
+                    // We need to calculate where the hub is on screen
+                    // GameBoard already has the math, but we'll approximate/sync here
+                    // or ideally get it from the gameBoardRef if we added a method.
+                    // For now, let's assume GameBoard exposes it or we calculate it.
+                    return (
+                        <RadialMenu
+                            x={hubScreenPos?.x || 0}
+                            y={hubScreenPos?.y || 0}
+                            playerEnergy={pCurrent.energy}
+                            hubFuel={hub.fuel !== undefined ? hub.fuel - committedActions.filter(a => a.sourceId === selectedHubId).length : 99}
+                            onSelect={(type) => {
+                                setSelectedItemType(type);
+                                setLaunchMode(true);
+                            }}
+                            onCancel={() => setSelectedHubId(null)}
+                        />
+                    );
+                })()}
+
                 {launchMode && !isResolvingUI && (
                     <div className="hint-overlay">Pull back from the Hub to Aim & Launch!</div>
                 )}
