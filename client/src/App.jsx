@@ -164,10 +164,10 @@ function App() {
             // Reset local committed state ONLY when the turn has advanced
             if (newState.turn > turnRef.current) {
                 setCommittedActions([]);
+                setSelectedHubId(null);
+                setLaunchMode(false);
                 turnRef.current = newState.turn;
             }
-            setSelectedHubId(null);
-            setLaunchMode(false);
         };
 
         const onAssignment = (assignedId) => {
@@ -276,14 +276,28 @@ function App() {
         if (!hub || !gameBoardRef.current) return;
 
         const pos = gameBoardRef.current.getScreenCoords(hub.x, hub.y);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setHubScreenPos(pos);
+
+        // Normalize pos to the .game-world container
+        const gameWorld = document.querySelector('.game-world');
+        if (gameWorld) {
+            const rect = gameWorld.getBoundingClientRect();
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setHubScreenPos({
+                x: pos.x - rect.left,
+                y: pos.y - rect.top
+            });
+        } else {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setHubScreenPos(pos);
+        }
     }, [selectedHubId, cameraOffset, playerState]);
 
     // Close menu when resolution starts or turn is submitted
     useEffect(() => {
         if (isResolvingUI || isLocked) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setSelectedHubId(null);
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setLaunchMode(false);
         }
     }, [isResolvingUI, isLocked]);
@@ -480,7 +494,15 @@ function App() {
                     isResolving={isResolvingUI}
                     cameraOffset={cameraOffset}
                     setCameraOffset={setCameraOffset}
-                    onSelectHub={setSelectedHubId}
+                    onSelectHub={(id) => {
+                        if (id === selectedHubId) {
+                            // Re-trigger open if already selected
+                            setSelectedHubId(null);
+                            setTimeout(() => setSelectedHubId(id), 0);
+                        } else {
+                            setSelectedHubId(id);
+                        }
+                    }}
                     onAimStart={handleAimStart}
                     onAimUpdate={() => { }}
                     onAimEnd={handleAimEnd}
@@ -488,7 +510,10 @@ function App() {
 
                 {selectedHubId && !launchMode && !interactionBlocked && playerState && (() => {
                     const hub = playerState.entities.find(e => e.id === selectedHubId);
-                    if (!hub) return null;
+                    if (!hub) {
+                        console.log('RadialMenu check: Hub not found for ID', selectedHubId);
+                        return null;
+                    }
 
                     // We need to calculate where the hub is on screen
                     // GameBoard already has the math, but we'll approximate/sync here

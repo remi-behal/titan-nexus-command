@@ -73,6 +73,7 @@ const GameBoard = forwardRef(({
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [isPanning, setIsPanning] = useState(false);
     const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+    const [mouseDownPos, setMouseDownPos] = useState({ x: 0, y: 0 });
     const ZOOM_LEVEL = 2; // 50% zoom in
 
     const HUB_RADIUS = ENTITY_STATS.HUB.size;
@@ -1935,6 +1936,7 @@ const GameBoard = forwardRef(({
             offsetY = (rh - ch / scale) / 2;
         }
 
+        // Relative to the canvas top-left in the DOM
         const xScreen = ((gameX - cameraOffset.x) * ZOOM_LEVEL) / scale + offsetX;
         const yScreen = ((gameY - cameraOffset.y) * ZOOM_LEVEL) / scale + offsetY;
 
@@ -1989,6 +1991,18 @@ const GameBoard = forwardRef(({
                 const { x, y } = getGameCoords(e);
                 onAimEnd(x, y);
             }
+
+            // If it was a short click (not a pan), handle deselection
+            if (isPanning) {
+                const dx = Math.abs(e.clientX - mouseDownPos.x);
+                const dy = Math.abs(e.clientY - mouseDownPos.y);
+                const isShortClick = dx < 5 && dy < 5;
+
+                if (isShortClick) {
+                    onSelectHub(null);
+                }
+            }
+
             setIsPanning(false);
         };
 
@@ -2003,11 +2017,14 @@ const GameBoard = forwardRef(({
         isAiming,
         isPanning,
         panStart,
+        mouseDownPos.x,
+        mouseDownPos.y,
         gameState.map.width,
         gameState.map.height,
         getGameCoords,
         onAimEnd,
-        onAimUpdate
+        onAimUpdate,
+        onSelectHub
     ]);
 
     const handleMouseDown = (e) => {
@@ -2057,17 +2074,14 @@ const GameBoard = forwardRef(({
             return;
         }
 
-        // 3. Middle click or Left click on empty space starts pan
+        // 3. Middle click or Left click on empty space starts pan tracking
         if (e.button === 0 || e.button === 1) {
             setIsPanning(true);
             setPanStart({ x: e.clientX, y: e.clientY });
+            setMouseDownPos({ x: e.clientX, y: e.clientY });
         }
 
-        // 4. Clicked empty space or an enemy hub - deselect
-        // Only deselect if we didn't just start a pan (button 0/1)
-        if (e.button !== 0 && e.button !== 1) {
-            onSelectHub(null);
-        }
+        // 4. Removed mousedown deselect (moved to mouseup threshold check)
     };
 
     return (
