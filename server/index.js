@@ -332,6 +332,7 @@ io.on('connection', (socket) => {
                 ? game.getVisibleState(socket.assignedPlayerId)
                 : game.getState()
         );
+        safeEmit(socket, 'playerAssignment', socket.assignedPlayerId || 'spectator');
         const filteredLockedIn = {
             player1: lockedIn.player1,
             player2: lockedIn.player2

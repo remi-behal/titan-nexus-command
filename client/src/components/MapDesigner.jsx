@@ -107,6 +107,14 @@ const MapDesigner = ({ onSave, onBack }) => {
                 newState.resources = prev.resources.filter(r => dist(r, coords) > 30);
                 newState.lakes = prev.lakes.filter(l => dist(l, coords) > l.radius);
                 newState.mountains = prev.mountains.filter(m => dist(m, coords) > m.radius);
+            } else if (selectedTool === TOOLS.PLAYER1_BASE) {
+                newState.playerBases = prev.playerBases.map(b =>
+                    b.owner === 'player1' ? { ...b, x: coords.x, y: coords.y } : b
+                );
+            } else if (selectedTool === TOOLS.PLAYER2_BASE) {
+                newState.playerBases = prev.playerBases.map(b =>
+                    b.owner === 'player2' ? { ...b, x: coords.x, y: coords.y } : b
+                );
             }
             return newState;
         });
@@ -153,6 +161,14 @@ const MapDesigner = ({ onSave, onBack }) => {
                     className={selectedTool === TOOLS.MOUNTAIN ? 'active' : ''}
                     onClick={() => setSelectedTool(TOOLS.MOUNTAIN)}
                 >+ Mountain</button>
+                <button
+                    className={selectedTool === TOOLS.PLAYER1_BASE ? 'active' : ''}
+                    onClick={() => setSelectedTool(TOOLS.PLAYER1_BASE)}
+                >P1 Base</button>
+                <button
+                    className={selectedTool === TOOLS.PLAYER2_BASE ? 'active' : ''}
+                    onClick={() => setSelectedTool(TOOLS.PLAYER2_BASE)}
+                >P2 Base</button>
                 <button
                     className={selectedTool === TOOLS.DELETE ? 'active' : ''}
                     onClick={() => setSelectedTool(TOOLS.DELETE)}

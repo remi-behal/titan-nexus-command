@@ -51,7 +51,13 @@ describe('Auto-Start Integration', () => {
 
         // Auto-join client 1
         const update1 = await new Promise((resolve) => {
-            client1.once('lobby:update', resolve);
+            const listener = (update) => {
+                if (update.slots[0] !== null) {
+                    client1.off('lobby:update', listener);
+                    resolve(update);
+                }
+            };
+            client1.on('lobby:update', listener);
             client1.emit('lobby:autoJoin');
         });
 
