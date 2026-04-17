@@ -5,6 +5,7 @@ import cors from 'cors';
 import { GameState } from '../shared/GameState.js';
 import { ENTITY_STATS } from '../shared/constants/EntityStats.js';
 import { LobbyManager } from './LobbyManager.js';
+import { mapService } from './MapService.js';
 
 const app = express();
 app.use(cors());
@@ -429,6 +430,22 @@ io.on('connection', (socket) => {
 
         io.emit('lobby:update', room.getUpdate());
         io.emit('matchRestarted');
+    });
+
+    socket.on('map:save', ({ name, data }) => {
+        try {
+            console.log(`[MapService] Saving map: ${name}`);
+            const fileName = mapService.saveMap(name, data);
+            socket.emit('map:saveSuccess', fileName);
+        } catch (err) {
+            console.error('[MapService] Failed to save map:', err);
+            socket.emit('map:saveError', err.message);
+        }
+    });
+
+    socket.on('map:list', () => {
+        const maps = mapService.listMaps();
+        socket.emit('map:listUpdate', maps);
     });
 
     socket.on('disconnect', () => {

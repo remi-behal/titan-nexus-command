@@ -5,6 +5,7 @@ import { ENTITY_STATS, GLOBAL_STATS } from '../../shared/constants/EntityStats.j
 import GameBoard from './components/GameBoard';
 import RadialMenu from './components/RadialMenu';
 import { LobbyOverlay } from './components/LobbyOverlay';
+import MapDesigner from './components/MapDesigner';
 import { io } from 'socket.io-client';
 
 const socket = io('/', {
@@ -40,6 +41,7 @@ function App() {
     const [showDebugPreview, setShowDebugPreview] = useState(false);
     const [timeRemaining, setTimeRemaining] = useState(30);
     const [isResolving, setIsResolving] = useState(false);
+    const [currentView, setCurrentView] = useState('LOBBY'); // 'LOBBY', 'GAME', 'DESIGNER'
 
     // Lobby State
     const [lobbyStatus, setLobbyStatus] = useState(null);
@@ -139,6 +141,13 @@ function App() {
 
     const handleReadyToggle = (isReady) => {
         socket.emit('lobby:ready', isReady);
+    };
+
+    const handleMapSave = (mapData) => {
+        const name = prompt('Enter a name for your map:');
+        if (name) {
+            socket.emit('map:save', { name, data: mapData });
+        }
     };
 
     useEffect(() => {
@@ -432,6 +441,17 @@ function App() {
         </header >
     );
 
+    if (currentView === 'DESIGNER') {
+        return (
+            <div className="App">
+                <MapDesigner
+                    onSave={handleMapSave}
+                    onBack={() => setCurrentView('LOBBY')}
+                />
+            </div>
+        );
+    }
+
     if (!matchStarted) {
         return (
             <div className="App">
@@ -439,6 +459,7 @@ function App() {
                     lobbyUpdate={lobbyStatus}
                     onClaimSeat={handleClaimSeat}
                     onReadyToggle={handleReadyToggle}
+                    onOpenDesigner={() => setCurrentView('DESIGNER')}
                     socketId={socket.id}
                 />
             </div>

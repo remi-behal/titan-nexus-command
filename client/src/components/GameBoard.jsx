@@ -1990,7 +1990,8 @@ const GameBoard = forwardRef(({
     }, [cameraOffset, ZOOM_LEVEL, gameState.map.width, gameState.map.height]);
 
     useImperativeHandle(ref, () => ({
-        getScreenCoords
+        getScreenCoords,
+        getGameCoords
     }));
 
     // Effect: Global Mouse Listeners for Panning & Aiming

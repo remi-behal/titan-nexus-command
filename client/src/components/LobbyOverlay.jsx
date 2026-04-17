@@ -1,7 +1,7 @@
 import React from 'react';
 import './LobbyOverlay.css';
 
-export const LobbyOverlay = ({ lobbyUpdate, onClaimSeat, onReadyToggle, socketId }) => {
+export const LobbyOverlay = ({ lobbyUpdate, onClaimSeat, onReadyToggle, onOpenDesigner, socketId }) => {
     if (!lobbyUpdate) return null;
 
     const mySeat = lobbyUpdate.slots.find(s => s && s.socketId === socketId);
@@ -59,6 +59,24 @@ export const LobbyOverlay = ({ lobbyUpdate, onClaimSeat, onReadyToggle, socketId
                         Quick Start (Debug)
                     </button>
                 )}
+
+                <button
+                    className="designer-button"
+                    onClick={onOpenDesigner}
+                    style={{
+                        marginTop: '1rem',
+                        padding: '0.8rem 1.5rem',
+                        backgroundColor: '#2980b9',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        width: '100%'
+                    }}
+                >
+                    Design Custom Map
+                </button>
 
                 <p style={{ marginTop: '1rem', opacity: 0.7, fontSize: '0.9rem' }}>
                     Match starts when both players are ready.
