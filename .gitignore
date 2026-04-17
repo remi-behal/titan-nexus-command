@@ -81,3 +81,4 @@ coverage
 ag_output.txt
 .agents/tmp/
 docs/plans/
+shared/maps/
