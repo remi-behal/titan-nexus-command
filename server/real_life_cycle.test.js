@@ -65,16 +65,17 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             });
         };
 
+        const serverLogs = [];
         try {
             // 1. Wait for server
             await new Promise((resolve) => {
                 serverProcess.stdout.on('data', (data) => {
                     const out = data.toString();
-                    process.stdout.write('[Server Stdout]: ' + out);
+                    serverLogs.push('[Server Stdout]: ' + out);
                     if (out.includes('SERVER RUNNING')) resolve();
                 });
                 serverProcess.stderr.on('data', (data) => {
-                    process.stderr.write('[Server Stderr]: ' + data.toString());
+                    serverLogs.push('[Server Stderr]: ' + data.toString());
                 });
             });
 
@@ -215,6 +216,9 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
                 )
             ).toBeUndefined();
 
+        } catch (e) {
+            process.stderr.write('--- SERVER LOGS START ---\n' + serverLogs.join('') + '\n--- SERVER LOGS END ---\n');
+            throw e;
         } finally {
             p1?.disconnect();
             p2?.disconnect();
