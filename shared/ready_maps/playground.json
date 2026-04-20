@@ -1,0 +1,21 @@
+{
+  "width": 2000,
+  "height": 2000,
+  "resources": [],
+  "lakes": [],
+  "mountains": [],
+  "playerBases": [
+    {
+      "id": "p1",
+      "x": 250,
+      "y": 500,
+      "owner": "player1"
+    },
+    {
+      "id": "p2",
+      "x": 750,
+      "y": 500,
+      "owner": "player2"
+    }
+  ]
+}

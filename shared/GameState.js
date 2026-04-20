@@ -393,53 +393,80 @@ export class GameState {
     /**
      * Initialize a new game for a set of players
      */
-    initializeGame(playerIds) {
+    initializeGame(playerIds, mapConfig = null) {
         this.turn = 1;
         this.entities = [];
         this.links = [];
         this.players = {};
         this.winner = null;
 
-        playerIds.forEach((id, index) => {
-            // Create Player data
-            this.players[id] = {
-                energy: GLOBAL_STATS.STARTING_ENERGY, // Starting energy
-                color: `hsl(${index * 60}, 70%, 50%)`,
-                alive: true
-            };
+        if (mapConfig) {
+            // Use injected map configuration
+            this.map.width = mapConfig.width || GLOBAL_STATS.MAP_WIDTH;
+            this.map.height = mapConfig.height || GLOBAL_STATS.MAP_HEIGHT;
+            this.map.resources = [...(mapConfig.resources || [])];
+            this.map.lakes = [...(mapConfig.lakes || [])];
+            this.map.mountains = [...(mapConfig.mountains || [])];
 
-            // Create initial Hub for each player
-            const startX = 250 + index * 500; // Spread at 25% and 75% width
-            const startY = 500;
+            playerIds.forEach((id, index) => {
+                this.players[id] = {
+                    energy: GLOBAL_STATS.STARTING_ENERGY,
+                    color: `hsl(${index * 60}, 70%, 50%)`,
+                    alive: true
+                };
 
-            this.addEntity({
-                type: 'HUB',
-                owner: id,
-                x: startX,
-                y: startY,
-                hp: ENTITY_STATS.HUB.hp,
-                isStarter: true
+                // Find base by owner or by index
+                const pKey = `player${index + 1}`;
+                const base = mapConfig.playerBases?.find(b => b.owner === pKey) ||
+                    mapConfig.playerBases?.[index];
+
+                if (base) {
+                    this.addEntity({
+                        type: 'HUB',
+                        owner: id,
+                        x: base.x,
+                        y: base.y,
+                        hp: ENTITY_STATS.HUB.hp,
+                        isStarter: true
+                    });
+                }
             });
-        });
+        } else {
+            // Default Hardcoded Layout (backward compatibility for tests)
+            playerIds.forEach((id, index) => {
+                this.players[id] = {
+                    energy: GLOBAL_STATS.STARTING_ENERGY,
+                    color: `hsl(${index * 60}, 70%, 50%)`,
+                    alive: true
+                };
 
-        // Mock resource nodes (Standard: 5 bonus, Super: 15 bonus)
-        const { STANDARD, SUPER } = RESOURCE_NODE_STATS;
-        this.map.resources = [
-            { id: 'res1', x: 500, y: 250, ...STANDARD }, // Top quadrant
-            { id: 'res2', x: 1500, y: 750, ...STANDARD }, // Bottom quadrant
-            { id: 'res3', x: 1000, y: 500, ...SUPER }, // Super node (Center)
-            { id: 'res4', x: 1000, y: 1500, ...STANDARD } // Far side
-        ];
+                const startX = 250 + index * 500;
+                const startY = 500;
 
-        // Seed a test lake (Phase 6)
-        this.map.lakes = [{ id: 'lake1', x: 1000, y: 560, radius: 100 }];
+                this.addEntity({
+                    type: 'HUB',
+                    owner: id,
+                    x: startX,
+                    y: startY,
+                    hp: ENTITY_STATS.HUB.hp,
+                    isStarter: true
+                });
+            });
 
-        // Seed a mountain range (Phase 6)
-        this.map.mountains = [
-            { id: 'mtn1', x: 1200, y: 1500, radius: 100 },
-            { id: 'mtn2', x: 1350, y: 1500, radius: 100 },
-            { id: 'mtn3', x: 1500, y: 1500, radius: 100 }
-        ];
+            const { STANDARD, SUPER } = RESOURCE_NODE_STATS;
+            this.map.resources = [
+                { id: 'res1', x: 500, y: 250, ...STANDARD },
+                { id: 'res2', x: 1500, y: 750, ...STANDARD },
+                { id: 'res3', x: 1000, y: 500, ...SUPER },
+                { id: 'res4', x: 1000, y: 1500, ...STANDARD }
+            ];
+            this.map.lakes = [{ id: 'lake1', x: 1000, y: 560, radius: 100 }];
+            this.map.mountains = [
+                { id: 'mtn1', x: 1200, y: 1500, radius: 100 },
+                { id: 'mtn2', x: 1350, y: 1500, radius: 100 },
+                { id: 'mtn3', x: 1500, y: 1500, radius: 100 }
+            ];
+        }
     }
 
     /**

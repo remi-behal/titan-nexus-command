@@ -107,7 +107,18 @@ function startMatch() {
     activeSockets.player1 = room.slots[0]?.socketId || null;
     activeSockets.player2 = room.slots[1]?.socketId || null;
 
-    game.initializeGame(playerIds);
+    // Load custom map if selected
+    let mapConfig = null;
+    if (room.selectedMapName) {
+        mapConfig = mapService.loadReadyMap(room.selectedMapName);
+        if (mapConfig) {
+            console.log(`[Server] Starting match with custom map: ${room.selectedMapName}`);
+        } else {
+            console.warn(`[Server] Failed to load custom map: ${room.selectedMapName}. Falling back to default.`);
+        }
+    }
+
+    game.initializeGame(playerIds, mapConfig);
     matchStarted = true;
     room.status = 'IN_GAME';
 
@@ -447,6 +458,24 @@ io.on('connection', (socket) => {
     socket.on('map:list', () => {
         const maps = mapService.listMaps();
         socket.emit('map:listUpdate', maps);
+    });
+
+    socket.on('room:listMaps', () => {
+        const maps = mapService.listReadyMaps();
+        socket.emit('room:mapsUpdate', maps);
+    });
+
+    socket.on('lobby:setMap', (mapName) => {
+        const room = lobbyManager.getOrCreateRoom('default');
+        // Authority check: Only player 1 (slot 0) can set the map
+        const slot1 = room.slots[0];
+        if (slot1 && slot1.socketId === socket.id) {
+            console.log(`[Lobby] Map set to ${mapName} by ${socket.id}`);
+            room.setMap(mapName);
+            io.emit('lobby:update', room.getUpdate());
+        } else {
+            console.warn(`[Lobby] Unauthorized map selection attempt by ${socket.id}`);
+        }
     });
 
     socket.on('disconnect', () => {

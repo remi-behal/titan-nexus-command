@@ -1,7 +1,7 @@
 import React from 'react';
 import './LobbyOverlay.css';
 
-export const LobbyOverlay = ({ lobbyUpdate, onClaimSeat, onReadyToggle, onOpenDesigner, socketId }) => {
+export const LobbyOverlay = ({ lobbyUpdate, availableMaps, onClaimSeat, onReadyToggle, onSetMap, onOpenDesigner, socketId }) => {
     if (!lobbyUpdate) return null;
 
     const mySeat = lobbyUpdate.slots.find(s => s && s.socketId === socketId);
@@ -31,6 +31,26 @@ export const LobbyOverlay = ({ lobbyUpdate, onClaimSeat, onReadyToggle, onOpenDe
                             )}
                         </button>
                     ))}
+                </div>
+
+                <div className="map-selection">
+                    <label>Battlefield:</label>
+                    <select
+                        value={lobbyUpdate.selectedMapName || ''}
+                        onChange={(e) => onSetMap(e.target.value || null)}
+                        disabled={mySeatIndex !== 0}
+                        className="map-select"
+                    >
+                        <option value="">Default Sector</option>
+                        {availableMaps && availableMaps.map((map) => (
+                            <option key={map} value={map}>
+                                {map.replace(/_/g, ' ')}
+                            </option>
+                        ))}
+                    </select>
+                    {mySeatIndex !== 0 && (
+                        <p className="host-only-hint">Only Player 1 can select maps</p>
+                    )}
                 </div>
 
                 {mySeatIndex !== -1 && (

@@ -33,6 +33,7 @@ function App() {
     const [myPlayerId, setMyPlayerId] = useState(null);
     const [syncStatus, setSyncStatus] = useState({ lockedIn: { player1: false, player2: false } });
     const [lastError, setLastError] = useState(null);
+    const [availableMaps, setAvailableMaps] = useState([]);
     const [selectedHubId, setSelectedHubId] = useState(null);
     const [selectedItemType, setSelectedItemType] = useState('HUB');
     const [launchMode, setLaunchMode] = useState(false);
@@ -143,6 +144,10 @@ function App() {
         socket.emit('lobby:ready', isReady);
     };
 
+    const handleSetMap = (mapName) => {
+        socket.emit('lobby:setMap', mapName);
+    };
+
     const handleMapSave = (mapData) => {
         const name = prompt('Enter a name for your map:');
         if (name) {
@@ -216,6 +221,10 @@ function App() {
             socket.emit('requestState');
         };
 
+        const onMapsUpdate = (maps) => {
+            setAvailableMaps(maps);
+        };
+
         // CRASH REPORTER: Catch any runtime errors and show them on screen
         const handleGlobalError = (event) => {
             setLastError(`CRASH: ${event.message} at ${event.filename}:${event.lineno}`);
@@ -254,6 +263,7 @@ function App() {
         socket.on('matchRestarted', onMatchRestarted);
         socket.on('lobby:update', onLobbyUpdate);
         socket.on('matchStarted', onMatchStarted);
+        socket.on('room:mapsUpdate', onMapsUpdate);
         socket.on('connect_error', onError);
 
         // Initial check in case it connected before the effect ran
@@ -271,9 +281,16 @@ function App() {
             socket.off('matchRestarted', onMatchRestarted);
             socket.off('lobby:update', onLobbyUpdate);
             socket.off('matchStarted', onMatchStarted);
+            socket.off('room:mapsUpdate', onMapsUpdate);
             socket.off('connect_error', onError);
         };
     }, []);
+
+    useEffect(() => {
+        if (!matchStarted && currentView === 'LOBBY') {
+            socket.emit('room:listMaps');
+        }
+    }, [matchStarted, currentView]);
 
     useEffect(() => {
         if (!isLocked && !isResolvingUI && committedActions.length >= 0) {
@@ -457,8 +474,10 @@ function App() {
             <div className="App">
                 <LobbyOverlay
                     lobbyUpdate={lobbyStatus}
+                    availableMaps={availableMaps}
                     onClaimSeat={handleClaimSeat}
                     onReadyToggle={handleReadyToggle}
+                    onSetMap={handleSetMap}
                     onOpenDesigner={() => setCurrentView('DESIGNER')}
                     socketId={socket.id}
                 />

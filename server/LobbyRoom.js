@@ -5,6 +5,7 @@ export class LobbyRoom {
         this.slots = new Array(maxPlayers).fill(null);
         this.spectators = [];
         this.status = 'LOBBY'; // LOBBY, IN_GAME
+        this.selectedMapName = null;
     }
 
     claimSeat(slotIndex, token, socketId) {
@@ -32,6 +33,10 @@ export class LobbyRoom {
         return false;
     }
 
+    setMap(mapName) {
+        this.selectedMapName = mapName;
+    }
+
     handleDisconnect(socketId) {
         const slotIndex = this.slots.findIndex(s => s && s.socketId === socketId);
         if (slotIndex !== -1) {
@@ -45,7 +50,8 @@ export class LobbyRoom {
             id: this.id,
             slots: this.slots,
             maxPlayers: this.maxPlayers,
-            status: this.status
+            status: this.status,
+            selectedMapName: this.selectedMapName
         };
     }
 }

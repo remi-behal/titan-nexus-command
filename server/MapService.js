@@ -6,11 +6,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const MAP_DIR = path.join(__dirname, '../shared/maps');
+const READY_MAP_DIR = path.join(__dirname, '../shared/ready_maps');
 
 class MapService {
     constructor() {
         if (!fs.existsSync(MAP_DIR)) {
             fs.mkdirSync(MAP_DIR, { recursive: true });
+        }
+        if (!fs.existsSync(READY_MAP_DIR)) {
+            fs.mkdirSync(READY_MAP_DIR, { recursive: true });
         }
     }
 
@@ -28,8 +32,21 @@ class MapService {
             .map(f => f.replace('.json', ''));
     }
 
+    listReadyMaps() {
+        if (!fs.existsSync(READY_MAP_DIR)) return [];
+        return fs.readdirSync(READY_MAP_DIR)
+            .filter(f => f.endsWith('.json'))
+            .map(f => f.replace('.json', ''));
+    }
+
     loadMap(name) {
         const filePath = path.join(MAP_DIR, `${name}.json`);
+        if (!fs.existsSync(filePath)) return null;
+        return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    }
+
+    loadReadyMap(name) {
+        const filePath = path.join(READY_MAP_DIR, `${name}.json`);
         if (!fs.existsSync(filePath)) return null;
         return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     }

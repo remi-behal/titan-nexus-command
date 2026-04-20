@@ -103,3 +103,52 @@
 .status-badge.ready {
     background: #0ba360;
 }
+
+.map-selection {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: left;
+}
+
+.map-selection label {
+    display: block;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.5rem;
+    opacity: 0.8;
+}
+
+.map-select {
+    width: 100%;
+    padding: 0.8rem;
+    background: #1a1a1a;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+.map-select:hover:not(:disabled) {
+    border-color: #4facfe;
+}
+
+.map-select:disabled {
+    cursor: not-allowed;
+    opacity: 0.8;
+    background: #0f0f0f;
+}
+
+.host-only-hint {
+    font-size: 0.75rem;
+    color: #f39c12;
+    margin-top: 0.5rem;
+    font-style: italic;
+    opacity: 0.8;
+}
