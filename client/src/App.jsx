@@ -337,10 +337,23 @@ function App() {
         }
     }, [isResolvingUI, isLocked]);
 
-    const pBase =
-        playerState?.players && playerState.players[myPlayerId]
-            ? playerState.players[myPlayerId]
-            : { energy: 0, color: '#fff', alive: true };
+    const pBase = (() => {
+        // 1. If match is active, use the game state
+        if (matchStarted && playerState?.players?.[myPlayerId]) {
+            return playerState.players[myPlayerId];
+        }
+        // 2. If in lobby, find our slot color
+        if (lobbyStatus?.slots && myPlayerId) {
+            const slot = lobbyStatus.slots.find(s => s.playerId === myPlayerId);
+            if (slot) {
+                // Match the colors used in GameState.js
+                const colors = ['hsl(0, 70%, 50%)', 'hsl(60, 70%, 50%)'];
+                return { color: colors[slot.index] };
+            }
+        }
+        // 3. Absolute fallback (Spectator or unassigned)
+        return { color: '#00ff44' };
+    })();
 
     const pendingCost = committedActions.reduce(
         (sum, act) => {
@@ -461,29 +474,35 @@ function App() {
     );
 
     const playerColor = pBase?.color || '#00ff44';
-    // Helper to convert hex to rgba
-    const getRGBA = (hex, alpha) => {
-        try {
-            let h = (hex || '#00ff44').trim();
-            if (!h.startsWith('#')) h = '#00ff44';
+    // Strict color helper for CRT phosphor (requires rgba format)
+    const getCRTColor = (color, alpha) => {
+        if (!color) return `rgba(0, 255, 68, ${alpha})`;
 
-            // Handle shorthand hex like #f00
-            if (h.length === 4) {
-                h = '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3];
+        // 1. Convert Titan HSL to RGB
+        if (color.startsWith('hsl')) {
+            const matches = color.match(/\d+/g);
+            if (matches && matches.length >= 3) {
+                const h = parseInt(matches[0]);
+                const s = parseInt(matches[1]) / 100;
+                const l = parseInt(matches[2]) / 100;
+
+                const k = n => (n + h / 30) % 12;
+                const a = s * Math.min(l, 1 - l);
+                const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+
+                const r = Math.round(255 * f(0));
+                const g = Math.round(255 * f(8));
+                const b = Math.round(255 * f(4));
+
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
             }
-
-            const r = parseInt(h.slice(1, 3), 16) || 0;
-            const g = parseInt(h.slice(3, 5), 16) || 0;
-            const b = parseInt(h.slice(5, 7), 16) || 0;
-
-            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        } catch (e) {
-            return `rgba(0, 255, 68, ${alpha})`;
         }
+
+        // 2. Fallback for hex or other formats
+        return `rgba(0, 255, 68, ${alpha})`;
     };
 
-    const scanlineColor = getRGBA(playerColor, 0.3);
-    const glowColor = getRGBA(playerColor, 0.5);
+    const crtColor = getCRTColor(playerColor, 0.4);
 
     const renderContent = () => {
         if (currentView === 'DESIGNER') {
@@ -638,14 +657,16 @@ function App() {
     return (
         <div className="App">
             <CRTEffect
+                key={playerColor}
                 theme="custom"
-                scanlineColor={scanlineColor}
-                edgeGlowColor={glowColor}
+                scanlineColor={crtColor}
+                edgeGlowColor={crtColor}
                 enableEdgeGlow={true}
+                enableScanlines={true}
+                enableSweep={false}
                 scanlineOpacity={0.4}
                 scanlineThickness={1}
                 scanlineGap={2}
-                enableScanlines={true}
             >
                 {renderContent()}
             </CRTEffect>
