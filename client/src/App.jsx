@@ -319,10 +319,10 @@ function App() {
             const nx = pos.x - rect.left;
             const ny = pos.y - rect.top;
 
-
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setHubScreenPos({ x: nx, y: ny });
         } else {
-
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setHubScreenPos(pos);
         }
     }, [selectedHubId, cameraOffset, playerState]);
@@ -332,7 +332,7 @@ function App() {
         if (isResolvingUI || isLocked) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setSelectedHubId(null);
-
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setLaunchMode(false);
         }
     }, [isResolvingUI, isLocked]);
