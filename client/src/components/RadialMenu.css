@@ -10,41 +10,41 @@
 }
 
 .menu-segment path {
-    fill: rgba(30, 30, 40, 0.85);
-    stroke: rgba(255, 255, 255, 0.2);
-    stroke-width: 1;
+    fill: rgba(0, 0, 0, 0.95);
+    stroke: #444;
+    stroke-width: 2;
     transition: all 0.2s ease;
     cursor: pointer;
     pointer-events: auto;
 }
 
 .menu-segment:hover path {
-    fill: rgba(60, 60, 80, 0.95);
-    stroke: rgba(255, 255, 255, 0.6);
+    fill: #00ff44;
+    stroke: #fff;
 }
 
 .menu-segment.disabled path {
-    fill: rgba(20, 20, 20, 0.9);
-    cursor: not-allowed;
+    opacity: 0.3 !important;
 }
 
 .menu-segment text {
     fill: #fff;
-    font-size: 10px;
+    font-size: 9px;
+    font-family: 'Courier New', Courier, monospace;
     font-weight: bold;
     pointer-events: none;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
 }
 
 .menu-segment.disabled text {
-    fill: #555;
+    fill: #666;
 }
 
 .menu-center {
-    fill: rgba(40, 40, 50, 0.9);
-    stroke: rgba(255, 255, 255, 0.3);
-    stroke-width: 2;
+    fill: #000;
+    stroke: #00ff44;
+    stroke-width: 3;
     cursor: pointer;
     transition: all 0.2s ease;
     pointer-events: auto;

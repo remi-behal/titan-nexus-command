@@ -7,6 +7,8 @@ import RadialMenu from './components/RadialMenu';
 import { LobbyOverlay } from './components/LobbyOverlay';
 import MapDesigner from './components/MapDesigner';
 import { io } from 'socket.io-client';
+import CRTEffect from 'vault66-crt-effect';
+import "vault66-crt-effect/dist/vault66-crt-effect.css";
 
 const socket = io('/', {
     transports: ['polling', 'websocket'],
@@ -317,10 +319,10 @@ function App() {
             const nx = pos.x - rect.left;
             const ny = pos.y - rect.top;
 
-            // eslint-disable-next-line react-hooks/set-state-in-effect
+
             setHubScreenPos({ x: nx, y: ny });
         } else {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
+
             setHubScreenPos(pos);
         }
     }, [selectedHubId, cameraOffset, playerState]);
@@ -330,7 +332,7 @@ function App() {
         if (isResolvingUI || isLocked) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setSelectedHubId(null);
-            // eslint-disable-next-line react-hooks/set-state-in-effect
+
             setLaunchMode(false);
         }
     }, [isResolvingUI, isLocked]);
@@ -458,20 +460,43 @@ function App() {
         </header >
     );
 
-    if (currentView === 'DESIGNER') {
-        return (
-            <div className="App">
+    const playerColor = pBase?.color || '#00ff44';
+    // Helper to convert hex to rgba
+    const getRGBA = (hex, alpha) => {
+        try {
+            let h = (hex || '#00ff44').trim();
+            if (!h.startsWith('#')) h = '#00ff44';
+
+            // Handle shorthand hex like #f00
+            if (h.length === 4) {
+                h = '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3];
+            }
+
+            const r = parseInt(h.slice(1, 3), 16) || 0;
+            const g = parseInt(h.slice(3, 5), 16) || 0;
+            const b = parseInt(h.slice(5, 7), 16) || 0;
+
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        } catch (e) {
+            return `rgba(0, 255, 68, ${alpha})`;
+        }
+    };
+
+    const scanlineColor = getRGBA(playerColor, 0.3);
+    const glowColor = getRGBA(playerColor, 0.5);
+
+    const renderContent = () => {
+        if (currentView === 'DESIGNER') {
+            return (
                 <MapDesigner
                     onSave={handleMapSave}
                     onBack={() => setCurrentView('LOBBY')}
                 />
-            </div>
-        );
-    }
+            );
+        }
 
-    if (!matchStarted) {
-        return (
-            <div className="App">
+        if (!matchStarted) {
+            return (
                 <LobbyOverlay
                     lobbyUpdate={lobbyStatus}
                     availableMaps={availableMaps}
@@ -481,135 +506,149 @@ function App() {
                     onOpenDesigner={() => setCurrentView('DESIGNER')}
                     socketId={socket.id}
                 />
-            </div>
-        );
-    }
+            );
+        }
 
-    if (!playerState || !myPlayerId) {
-        return (
-            <div className="App">
-                {header}
-                <div className="loading-screen" style={{ minHeight: '300px' }}>
-                    <p>{!playerState ? 'Downloading Sector Data...' : 'Authenticating Pilot...'}</p>
-                    <div className="status-indicator">
-                        Socket: {isConnected ? 'Online' : 'Offline'} | ID: {myPlayerId || 'Pending'}
-                    </div>
-                    {lastError && (
-                        <div
-                            className="error-display"
-                            style={{ color: '#ff6464', marginTop: '10px' }}
-                        >
-                            Error: {lastError}
+        if (!playerState || !myPlayerId) {
+            return (
+                <>
+                    {header}
+                    <div className="loading-screen" style={{ minHeight: '300px' }}>
+                        <p>{!playerState ? 'Downloading Sector Data...' : 'Authenticating Pilot...'}</p>
+                        <div className="status-indicator">
+                            Socket: {isConnected ? 'Online' : 'Offline'} | ID: {myPlayerId || 'Pending'}
                         </div>
+                        {lastError && (
+                            <div
+                                className="error-display"
+                                style={{ color: '#ff6464', marginTop: '10px' }}
+                            >
+                                Error: {lastError}
+                            </div>
+                        )}
+                        {!isConnected && (
+                            <button
+                                onClick={() => {
+                                    setLastError(null);
+                                    socket.connect();
+                                }}
+                                style={{ marginTop: '10px' }}
+                            >
+                                Reconnect
+                            </button>
+                        )}
+                    </div>
+                </>
+            );
+        }
+
+        return (
+            <>
+                {header}
+
+                <main className={`game-world ${isResolvingUI ? 'locked-out' : ''}`}>
+                    {!isResolvingUI && !committedActions.length && selectedHubId && launchMode && (
+                        <div className="hint-overlay">Drag from your selected Hub to launch</div>
                     )}
-                    {!isConnected && (
-                        <button
-                            onClick={() => {
-                                setLastError(null);
-                                socket.connect();
+
+                    <GameBoard
+                        ref={gameBoardRef}
+                        gameState={playerState}
+                        myPlayerId={myPlayerId}
+                        selectedHubId={selectedHubId}
+                        selectedItemType={selectedItemType}
+                        launchMode={launchMode}
+                        isAiming={isAiming}
+                        committedActions={committedActions}
+                        showDebugPreview={showDebugPreview}
+                        maxPullDistance={MAX_PULL_DISTANCE}
+                        isResolving={isResolvingUI}
+                        cameraOffset={cameraOffset}
+                        setCameraOffset={setCameraOffset}
+                        onSelectHub={(id) => {
+                            setSelectedHubId(id);
+                        }}
+                        onAimStart={handleAimStart}
+                        onAimUpdate={() => { }}
+                        onAimEnd={handleAimEnd}
+                    />
+
+                    {selectedHubId && !launchMode && !interactionBlocked && playerState && (() => {
+                        const hub = playerState.entities.find(e => e.id === selectedHubId);
+                        if (!hub) {
+                            console.log('RadialMenu check: Hub not found for ID', selectedHubId);
+                            return null;
+                        }
+
+                        return (
+                            <RadialMenu
+                                x={hubScreenPos?.x || 0}
+                                y={hubScreenPos?.y || 0}
+                                playerEnergy={pCurrent.energy}
+                                hubFuel={hub.fuel !== undefined ? hub.fuel - committedActions.filter(a => a.sourceId === selectedHubId).length : 99}
+                                onSelect={(type) => {
+                                    setSelectedItemType(type);
+                                    setLaunchMode(true);
+                                }}
+                                onCancel={() => setSelectedHubId(null)}
+                            />
+                        );
+                    })()}
+
+                    {launchMode && !isResolvingUI && (
+                        <div className="hint-overlay">Pull back from the Hub to Aim & Launch!</div>
+                    )}
+                </main>
+
+                <footer className="debug-info">
+                    <p>
+                        {isSpectator
+                            ? "You are observing this match."
+                            : selectedHubId
+                                ? `Hub ${selectedHubId} Selected. ${launchMode ? 'Action: Pull back to sling!' : 'Click "Launch" to aim.'}`
+                                : 'Click your Hub to select it.'}
+                    </p>
+                </footer>
+
+                {playerState.winner && (
+                    <div className="winner-overlay">
+                        <div
+                            className="winner-card"
+                            style={{
+                                borderColor: playerState.players[playerState.winner]?.color || '#fff'
                             }}
-                            style={{ marginTop: '10px' }}
                         >
-                            Reconnect
-                        </button>
-                    )}
-                </div>
-            </div>
+                            <h2>{playerState.winner === 'DRAW' ? "It's a Draw!" : 'Victory!'}</h2>
+                            <p>
+                                {playerState.winner === 'DRAW'
+                                    ? 'Mutual destruction on Titan.'
+                                    : `Player ${playerState.winner} has conquered the sector.`}
+                            </p>
+                            <button className="restart-btn" onClick={handleRestart}>
+                                Initialize New Mission
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </>
         );
-    }
+    };
+
 
     return (
         <div className="App">
-            {header}
-
-            <main className={`game-world ${isResolvingUI ? 'locked-out' : ''}`}>
-                {!isResolvingUI && !committedActions.length && selectedHubId && launchMode && (
-                    <div className="hint-overlay">Drag from your selected Hub to launch</div>
-                )}
-
-                <GameBoard
-                    ref={gameBoardRef}
-                    gameState={playerState}
-                    myPlayerId={myPlayerId}
-                    selectedHubId={selectedHubId}
-                    selectedItemType={selectedItemType}
-                    launchMode={launchMode}
-                    isAiming={isAiming}
-                    committedActions={committedActions}
-                    showDebugPreview={showDebugPreview}
-                    maxPullDistance={MAX_PULL_DISTANCE}
-                    isResolving={isResolvingUI}
-                    cameraOffset={cameraOffset}
-                    setCameraOffset={setCameraOffset}
-                    onSelectHub={(id) => {
-                        setSelectedHubId(id);
-                    }}
-                    onAimStart={handleAimStart}
-                    onAimUpdate={() => { }}
-                    onAimEnd={handleAimEnd}
-                />
-
-                {selectedHubId && !launchMode && !interactionBlocked && playerState && (() => {
-                    const hub = playerState.entities.find(e => e.id === selectedHubId);
-                    if (!hub) {
-                        console.log('RadialMenu check: Hub not found for ID', selectedHubId);
-                        return null;
-                    }
-
-                    // We need to calculate where the hub is on screen
-                    // GameBoard already has the math, but we'll approximate/sync here
-                    // or ideally get it from the gameBoardRef if we added a method.
-                    // For now, let's assume GameBoard exposes it or we calculate it.
-                    return (
-                        <RadialMenu
-                            x={hubScreenPos?.x || 0}
-                            y={hubScreenPos?.y || 0}
-                            playerEnergy={pCurrent.energy}
-                            hubFuel={hub.fuel !== undefined ? hub.fuel - committedActions.filter(a => a.sourceId === selectedHubId).length : 99}
-                            onSelect={(type) => {
-                                setSelectedItemType(type);
-                                setLaunchMode(true);
-                            }}
-                            onCancel={() => setSelectedHubId(null)}
-                        />
-                    );
-                })()}
-
-                {launchMode && !isResolvingUI && (
-                    <div className="hint-overlay">Pull back from the Hub to Aim & Launch!</div>
-                )}
-            </main>
-
-            <footer className="debug-info">
-                <p>
-                    {isSpectator
-                        ? "You are observing this match."
-                        : selectedHubId
-                            ? `Hub ${selectedHubId} Selected. ${launchMode ? 'Action: Pull back to sling!' : 'Click "Launch" to aim.'}`
-                            : 'Click your Hub to select it.'}
-                </p>
-            </footer>
-
-            {playerState.winner && (
-                <div className="winner-overlay">
-                    <div
-                        className="winner-card"
-                        style={{
-                            borderColor: playerState.players[playerState.winner]?.color || '#fff'
-                        }}
-                    >
-                        <h2>{playerState.winner === 'DRAW' ? "It's a Draw!" : 'Victory!'}</h2>
-                        <p>
-                            {playerState.winner === 'DRAW'
-                                ? 'Mutual destruction on Titan.'
-                                : `Player ${playerState.winner} has conquered the sector.`}
-                        </p>
-                        <button className="restart-btn" onClick={handleRestart}>
-                            Initialize New Mission
-                        </button>
-                    </div>
-                </div>
-            )}
+            <CRTEffect
+                theme="custom"
+                scanlineColor={scanlineColor}
+                edgeGlowColor={glowColor}
+                enableEdgeGlow={true}
+                scanlineOpacity={0.4}
+                scanlineThickness={1}
+                scanlineGap={2}
+                enableScanlines={true}
+            >
+                {renderContent()}
+            </CRTEffect>
         </div>
     );
 }

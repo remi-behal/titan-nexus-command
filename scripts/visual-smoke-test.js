@@ -19,7 +19,7 @@ async function runVisualSmokeTest(browser) {
     // Since we can't easily read pixels from a canvas in a subagent evaluation without complex logic,
     // we'll check if the fog canvas exists and has contents.
     const fogCanvasValid = await browser.evaluate_javascript(() => {
-        const fov = document.querySelector("#fog-canvas");
+        const fov = document.querySelector('#fog-canvas');
         return fov && fov.width > 0 && fov.height > 0;
     });
     if (!fogCanvasValid) throw new Error('Fog of War canvas is invalid or missing');

@@ -285,7 +285,7 @@ io.on('connection', (socket) => {
         // Find first available slot
         let slotIndex = room.slots.findIndex(s => s === null);
         if (slotIndex === -1) {
-            console.warn(`[Lobby] Auto-join failed: Room full`);
+            console.warn('[Lobby] Auto-join failed: Room full');
             return;
         }
 
@@ -300,7 +300,7 @@ io.on('connection', (socket) => {
             // Auto-start if 2 players are ready
             const filledSlots = room.slots.filter(s => s !== null);
             if (filledSlots.length === 2 && filledSlots.every(s => s.ready)) {
-                console.log(`[Lobby] Auto-starting match from autoJoin`);
+                console.log('[Lobby] Auto-starting match from autoJoin');
                 startMatch();
             }
         }

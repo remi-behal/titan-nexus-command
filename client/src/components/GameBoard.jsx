@@ -146,6 +146,49 @@ const GameBoard = forwardRef(({
         return `rgb(${r}, ${g}, ${b})`;
     };
 
+    const getIdentityColor = (playerColor) => {
+        // Force high-intensity neon version of the color
+        return playerColor; // For now assuming passed color is already neon-ready
+    };
+
+    const drawVectorStructure = (ctx, x, y, radius, color, isGhost) => {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'square';
+        ctx.globalAlpha = isGhost ? 0.3 : 1.0;
+
+        // Intense Bloom/Glow
+        ctx.shadowBlur = isGhost ? 0 : 15;
+        ctx.shadowColor = color;
+
+        // The Structure - Multilayered wireframe polyhedrons
+        const layers = isGhost ? 1 : 2;
+        for (let layer = 1; layer <= layers; layer++) {
+            const r = radius * (layer / layers);
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * 2 * Math.PI) / 6;
+                ctx.lineTo(r * Math.cos(angle), r * Math.sin(angle));
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        // Internal Cross-bracing
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i < 3; i++) {
+            const angle = (i * 2 * Math.PI) / 6;
+            ctx.moveTo(radius * Math.cos(angle), radius * Math.sin(angle));
+            ctx.lineTo(radius * Math.cos(angle + Math.PI), radius * Math.sin(angle + Math.PI));
+        }
+        ctx.stroke();
+
+        ctx.restore();
+    };
+
     // --- Main Animation & Draw Loop ---
     useEffect(() => {
         let animationFrameId;
@@ -368,6 +411,11 @@ const GameBoard = forwardRef(({
                         ctx.save();
                         ctx.translate(offsetOffsetX, offsetOffsetY);
 
+                        // 2. BACKGROUND
+                        // 2. BACKGROUND (Very Dark Grey)
+                        ctx.fillStyle = '#000000ec';
+                        ctx.fillRect(0, 0, mapW, mapH);
+
                         // 2a. DRAW LAKES
                         if (currentGameState.map.lakes) {
                             currentGameState.map.lakes.forEach((lake) => {
@@ -435,22 +483,6 @@ const GameBoard = forwardRef(({
                             });
                         }
 
-                        // 2b. DRAW GRID (Inside tiling for toroidal continuity)
-                        ctx.strokeStyle = '#222';
-                        ctx.lineWidth = 1;
-                        const gridSize = 100;
-                        for (let x = 0; x < mapW; x += gridSize) {
-                            ctx.beginPath();
-                            ctx.moveTo(x, 0);
-                            ctx.lineTo(x, mapH);
-                            ctx.stroke();
-                        }
-                        for (let y = 0; y < mapH; y += gridSize) {
-                            ctx.beginPath();
-                            ctx.moveTo(0, y);
-                            ctx.lineTo(mapW, y);
-                            ctx.stroke();
-                        }
 
                         // 3. DRAW LINKS (Segmented for partial Fog of War)
                         Object.values(visualLinks.current).forEach((link) => {
@@ -503,14 +535,31 @@ const GameBoard = forwardRef(({
 
                                 ctx.save();
                                 ctx.strokeStyle = isSegmentGhost ? ghostColor : baseColor;
-                                ctx.lineWidth = isSegmentGhost ? 1 : GLOBAL_STATS.LINK_WIDTH || 2;
-                                ctx.globalAlpha = isSegmentGhost ? 0.2 : 0.6;
+                                ctx.lineWidth = isSegmentGhost ? 1 : 2;
+                                ctx.globalAlpha = isSegmentGhost ? 0.2 : 1.0;
                                 if (isSegmentGhost) ctx.setLineDash([4, 4]);
 
+                                // Intensive Glow for Links
+                                if (!isSegmentGhost) {
+                                    ctx.shadowBlur = 10;
+                                    ctx.shadowColor = baseColor;
+                                }
+
+                                // Base Cable
                                 ctx.beginPath();
                                 ctx.moveTo(x1, y1);
                                 ctx.lineTo(x2, y2);
                                 ctx.stroke();
+
+                                // Simple Pulse Dash
+                                if (!isSegmentGhost) {
+                                    const pulse = (Date.now() / 150) % 20;
+                                    ctx.strokeStyle = '#fff';
+                                    ctx.lineWidth = 1;
+                                    ctx.setLineDash([5, 15]);
+                                    ctx.lineDashOffset = -pulse;
+                                    ctx.stroke();
+                                }
 
                                 // Draw directional arrow pointing back (only once per link at the overall midpoint)
                                 // We check if this segment contains the midpoint (ratio 0.5)
@@ -539,36 +588,35 @@ const GameBoard = forwardRef(({
                         // 4. DRAW RESOURCES
                         currentGameState.map.resources.forEach((res) => {
                             const isSuper = res.isSuper === true;
+                            const color = isSuper ? '#a020f0' : '#ffa500'; // Purple for super, Orange for normal
 
-                            // Large Pulse Aura for Super Nodes
-                            if (isSuper) {
-                                const {
-                                    AURA_PULSE_SPEED,
-                                    AURA_PULSE_MAGNITUDE,
-                                    AURA_RADIUS_SCALE,
-                                    AURA_COLOR,
-                                    AURA_DEFAULT_RADIUS
-                                } = VISUAL_STATS.SUPER_NODE;
-                                const pulse =
-                                    Math.sin(Date.now() / AURA_PULSE_SPEED) * AURA_PULSE_MAGNITUDE;
-                                ctx.save();
-                                ctx.beginPath();
-                                ctx.arc(
-                                    res.x,
-                                    res.y,
-                                    (res.radius * AURA_RADIUS_SCALE || AURA_DEFAULT_RADIUS) + pulse,
-                                    0,
-                                    Math.PI * 2
-                                );
-                                ctx.fillStyle = AURA_COLOR;
-                                ctx.fill();
-                                ctx.restore();
-                            }
+                            // Circular Vent Base
+                            ctx.save();
+                            ctx.translate(res.x, res.y);
+                            const r = res.radius || 8;
 
-                            ctx.fillStyle = res.color || '#00ffcc';
+                            ctx.strokeStyle = color;
+                            ctx.lineWidth = 2;
+                            ctx.shadowBlur = 10;
+                            ctx.shadowColor = color;
+
                             ctx.beginPath();
-                            ctx.arc(res.x, res.y, res.radius || 8, 0, Math.PI * 2);
-                            ctx.fill();
+                            ctx.arc(0, 0, r, 0, Math.PI * 2);
+                            ctx.stroke();
+
+                            // Active Plume (Static flickering lines)
+                            const time = Date.now();
+                            ctx.beginPath();
+                            for (let i = 0; i < 3; i++) {
+                                const offset = (Math.sin(time / 100 + i) * 5);
+                                const h = r * (1.5 + i * 0.5);
+                                ctx.moveTo(-r + (i * r), 0);
+                                ctx.lineTo(-r + (i * r) + offset, -h);
+                            }
+                            ctx.globalAlpha = 0.6;
+                            ctx.stroke();
+
+                            ctx.restore();
                         });
 
                         ctx.restore();
@@ -755,28 +803,24 @@ const GameBoard = forwardRef(({
                                     ctx.restore();
                                 }
 
-                                // 2. Draw Engine Flare (back of missile)
-                                if (entity.searchMode || entity.lockFound) {
+                                // 2. Draw Dithered Pixel-Smoke Trail
+                                if (true) { // Always draw trail for projectiles
                                     ctx.save();
                                     const rad = ((entity.currentAngle || 0) * Math.PI) / 180;
-                                    const flareLen = entity.lockFound ? 25 : 15;
-                                    const flareColor = entity.lockFound ? '#ff4500' : '#ffa500'; // Red-orange if locked, orange if just searching
+                                    const trailLen = 30;
+                                    const time = Date.now();
 
-                                    ctx.shadowBlur = 15;
-                                    ctx.shadowColor = flareColor;
-                                    ctx.beginPath();
-                                    ctx.moveTo(
-                                        entity.x - Math.cos(rad) * radius,
-                                        entity.y - Math.sin(rad) * radius
-                                    );
-                                    ctx.lineTo(
-                                        entity.x - Math.cos(rad) * (radius + flareLen),
-                                        entity.y - Math.sin(rad) * (radius + flareLen)
-                                    );
-                                    ctx.strokeStyle = flareColor;
-                                    ctx.lineWidth = radius * 0.8;
-                                    ctx.lineCap = 'round';
-                                    ctx.stroke();
+                                    ctx.fillStyle = color;
+                                    ctx.globalAlpha = 0.6;
+
+                                    for (let i = 0; i < 10; i++) {
+                                        const dist = (i / 10) * trailLen;
+                                        const jitter = Math.sin(time / 50 + i) * 3;
+                                        const px = entity.x - Math.cos(rad) * dist + Math.cos(rad + Math.PI / 2) * jitter;
+                                        const py = entity.y - Math.sin(rad) * dist + Math.sin(rad + Math.PI / 2) * jitter;
+                                        const pSize = 2 + (i % 3);
+                                        ctx.fillRect(px - pSize / 2, py - pSize / 2, pSize, pSize);
+                                    }
                                     ctx.restore();
                                 }
 
@@ -1078,255 +1122,43 @@ const GameBoard = forwardRef(({
                                         ctx.restore();
                                         ctx.restore();
                                     }
-                                } else if (entity.type === 'HUB') {
-                                    // Draw Hub as a solid Hexagon with a core
-                                    ctx.save();
-                                    ctx.translate(entity.x, entity.y);
-                                    ctx.beginPath();
-                                    for (let i = 0; i < 6; i++) {
-                                        const a = (i * 2 * Math.PI) / 6;
-                                        ctx.lineTo(radius * Math.cos(a), radius * Math.sin(a));
-                                    }
-                                    ctx.closePath();
-                                    ctx.fill();
+                                } else if (entity.type === 'HUB' || entity.type === 'EXTRACTOR' || entity.type === 'SHIELD' || entity.type === 'CLOAKING_FIELD' || entity.type === 'TURRET' || entity.type === 'RELAY' || entity.type === 'BARRIER') {
+                                    drawVectorStructure(ctx, entity.x, entity.y, radius, color, displayAsGhost);
 
-                                    // Bright White Core
-                                    ctx.beginPath();
-                                    ctx.arc(0, 0, radius * 0.45, 0, Math.PI * 2);
-                                    ctx.fillStyle = '#fff';
-                                    ctx.shadowBlur = 15;
-                                    ctx.shadowColor = '#fff';
-                                    ctx.fill();
-
-                                    // Subtle inner ring for detail
-                                    ctx.beginPath();
-                                    ctx.arc(0, 0, radius * 0.25, 0, Math.PI * 2);
-                                    ctx.fillStyle = color;
-                                    ctx.globalAlpha = 0.6;
-                                    ctx.fill();
-                                    ctx.restore();
-                                } else if (entity.type === 'EXTRACTOR') {
-                                    // Draw Extractor as a triangle
-                                    const isInactive = entity.deployed !== false && entity.isCapturing === false;
-
-                                    if (isInactive) {
-                                        ctx.fillStyle = VISUAL_STATS.EXTRACTOR.inactiveColor;
-                                    }
-
-                                    ctx.beginPath();
-                                    ctx.moveTo(entity.x, entity.y - radius);
-                                    ctx.lineTo(entity.x + radius, entity.y + radius / 2);
-                                    ctx.lineTo(entity.x - radius, entity.y + radius / 2);
-                                    ctx.closePath();
-                                    ctx.fill();
-
-                                    // Draw tether if capturing
-                                    if (entity.isCapturing && entity.capturedNodeId) {
-                                        const node = currentGameState.map.resources.find(r => r.id === entity.capturedNodeId);
-                                        if (node) {
-                                            ctx.save();
-                                            ctx.strokeStyle = VISUAL_STATS.EXTRACTOR.tetherColor;
-                                            ctx.lineWidth = 2;
-                                            ctx.setLineDash([5, 5]);
-                                            // Draw toroidal-aware tether
-                                            const { dx, dy } = getToroidalDistVector(entity.x, entity.y, node.x, node.y, mapW, mapH);
-                                            ctx.beginPath();
-                                            ctx.moveTo(entity.x, entity.y);
-                                            ctx.lineTo(entity.x + dx, entity.y + dy);
-                                            ctx.stroke();
-                                            ctx.restore();
-                                        }
-                                    }
-                                } else if (entity.type === 'SHIELD') {
-                                    // 1. Render Central Structure
-                                    ctx.save();
-                                    ctx.translate(entity.x, entity.y);
-                                    ctx.beginPath();
-                                    // Base square
-                                    ctx.rect(
-                                        -radius,
-                                        -radius,
-                                        radius * 2,
-                                        radius * 2
-                                    );
-                                    ctx.fillStyle = color;
-                                    ctx.shadowBlur = 10;
-                                    ctx.shadowColor = color;
-                                    ctx.fill();
-
-                                    // Glowing core
-                                    ctx.beginPath();
-                                    ctx.arc(0, 0, radius * 0.6, 0, Math.PI * 2);
-                                    ctx.fillStyle = '#fff';
-                                    ctx.fill();
-                                    ctx.restore();
-
-                                    // 2. Render Barrier Bubble (if active and NOT disabled)
-                                    if (entity.barrierHp > 0 && !isDisabled) {
+                                    // Shield Bubble (Vectorized)
+                                    if (entity.type === 'SHIELD' && entity.barrierHp > 0 && !isDisabled) {
                                         ctx.save();
                                         ctx.translate(entity.x, entity.y);
-
-                                        const bStats = ENTITY_STATS.SHIELD;
-                                        const bRadius = bStats.range;
-                                        const time = Date.now() / 1000;
-
-                                        // Pulse and HP feedback
-                                        const hpFactor = entity.barrierHp / bStats.barrierHpMax;
-                                        const pulse = 1.0; // Static (No breathing)
-                                        const currentRadius = bRadius * pulse;
-
-                                        if (entity.barrierHp < 2 && Math.sin(time * 20) > 0.5) {
-                                            ctx.globalAlpha *= 0.3;
-                                        }
-
-                                        // A. Base Circular Bubble
+                                        ctx.strokeStyle = '#00ffff';
+                                        ctx.lineWidth = 1;
+                                        ctx.shadowBlur = 10;
+                                        ctx.shadowColor = '#00ffff';
                                         ctx.beginPath();
-                                        ctx.arc(0, 0, currentRadius, 0, Math.PI * 2);
-
-                                        // Gradient Fill
-                                        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, currentRadius);
-                                        grad.addColorStop(0, `rgba(0, 255, 255, ${0.1 * hpFactor + 0.1})`);
-                                        grad.addColorStop(0.9, `rgba(0, 255, 255, ${0.05 * hpFactor})`);
-                                        grad.addColorStop(1, 'rgba(0, 255, 255, 0)');
-                                        ctx.fillStyle = grad;
-                                        ctx.fill();
-
-                                        // B. Circular Boundary Stroke
-                                        ctx.strokeStyle = VISUAL_STATS.SHIELD.color;
-                                        ctx.lineWidth = 3; // Thicker border
-                                        ctx.globalAlpha = 0.6 * hpFactor + 0.3; // Higher contrast
+                                        ctx.arc(0, 0, ENTITY_STATS.SHIELD.range, 0, Math.PI * 2);
                                         ctx.stroke();
 
-                                        // C. Hexagonal Overly (Honeycomb)
-                                        ctx.save();
-                                        ctx.beginPath();
-                                        ctx.arc(0, 0, currentRadius, 0, Math.PI * 2);
-                                        ctx.clip();
-
-                                        const hexSize = 18;
-                                        const hDist = hexSize * 1.5;
-                                        const vDist = hexSize * Math.sqrt(3);
-
-                                        ctx.strokeStyle = "#fff";
-                                        ctx.lineWidth = 0.8;
-
-                                        const cols = Math.ceil(currentRadius / hDist) + 1;
-                                        const rows = Math.ceil(currentRadius / vDist) + 1;
-
-                                        for (let q = -cols; q <= cols; q++) {
-                                            for (let r = -rows; r <= rows; r++) {
-                                                const x = q * hDist;
-                                                const posY = r * vDist + (Math.abs(q) % 2 === 1 ? vDist / 2 : 0);
-
-                                                const dist = Math.sqrt(x * x + posY * posY);
-                                                if (dist < currentRadius + hexSize) {
-                                                    // Hexagon distance-based alpha (fade out near edges)
-                                                    // Ensure alpha is clamped [0, 0.2] and symmetric
-                                                    const alpha = Math.max(0, 0.2 * (1 - dist / currentRadius)) * hpFactor;
-                                                    ctx.globalAlpha = alpha;
-
-                                                    ctx.beginPath();
-                                                    for (let i = 0; i < 6; i++) {
-                                                        const angle = (i * Math.PI) / 3;
-                                                        const vx = x + hexSize * Math.cos(angle);
-                                                        const vy = posY + hexSize * Math.sin(angle);
-                                                        if (i === 0) ctx.moveTo(vx, vy);
-                                                        else ctx.lineTo(vx, vy);
-                                                    }
-                                                    ctx.closePath();
-                                                    ctx.stroke();
-                                                }
-                                            }
-                                        }
-                                        ctx.restore();
-
-                                        ctx.restore();
-                                    }
-                                } else if (entity.type === 'CLOAKING_FIELD') {
-                                    // 1. Render Central Structure (The Emitter)
-                                    ctx.save();
-                                    const time = Date.now();
-                                    const isOwner = entity.owner === myPlayerId;
-
-                                    let drawX = entity.x;
-                                    let drawY = entity.y;
-
-                                    if (!isOwner && !isDisabled) {
-                                        // Obfuscate center with slight jitter to prevent easy sniping
-                                        drawX += Math.sin(time / 50) * 2;
-                                        drawY += Math.cos(time / 70) * 2;
-                                        ctx.globalAlpha *= 0.6;
-                                    }
-
-                                    ctx.translate(drawX, drawY);
-
-                                    // Base Diamond/Rhombus shape
-                                    ctx.beginPath();
-                                    ctx.moveTo(0, -radius);
-                                    ctx.lineTo(radius, 0);
-                                    ctx.lineTo(0, radius);
-                                    ctx.lineTo(-radius, 0);
-                                    ctx.closePath();
-                                    ctx.fillStyle = color;
-                                    ctx.fill();
-
-                                    // Inner rotating/pulsing core
-                                    const rotation = time / 600;
-                                    ctx.rotate(rotation);
-                                    ctx.strokeStyle = '#fff';
-                                    ctx.lineWidth = 2;
-                                    ctx.strokeRect(-radius * 0.4, -radius * 0.4, radius * 0.8, radius * 0.8);
-
-                                    ctx.restore();
-
-                                    // 2. Render Cloaking Radius (Static for owner, Intermittent for enemy)
-                                    const cloakRange = ENTITY_STATS.CLOAKING_FIELD.cloakRange || 300;
-
-                                    if (isOwner) {
-                                        // Owner sees a permanent faint range circle
-                                        ctx.save();
-                                        ctx.beginPath();
-                                        ctx.arc(entity.x, entity.y, cloakRange, 0, Math.PI * 2);
-                                        ctx.strokeStyle = color;
-                                        ctx.lineWidth = 2;
-                                        ctx.globalAlpha = 0.2;
-                                        ctx.stroke();
-
-                                        // Light fill
-                                        ctx.fillStyle = color;
-                                        ctx.globalAlpha = 0.05;
-                                        ctx.fill();
-                                        ctx.restore();
-                                    } else if (!isDisabled) {
-                                        // Enemy sees an intermittent shimmer (every 5 seconds)
-                                        const shimmerCycle = 5000;
-                                        const shimmerDuration = 1000;
-                                        const seed = entity.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-                                        const offset = seed % shimmerCycle;
-                                        const elapsed = (time + offset) % shimmerCycle;
-
-                                        if (elapsed < shimmerDuration) {
-                                            const progress = elapsed / shimmerDuration;
-                                            const shimmerAlpha = Math.sin(progress * Math.PI) * 0.3;
-
-                                            ctx.save();
-                                            // Wavy effect: Draw the circle with a slight distortion
+                                        // Inner vector arcs for shield
+                                        const time = Date.now() / 500;
+                                        for (let i = 0; i < 3; i++) {
                                             ctx.beginPath();
-                                            const segments = 64;
-                                            for (let i = 0; i <= segments; i++) {
-                                                const ang = (i / segments) * Math.PI * 2;
-                                                const distortion = Math.sin(ang * 12 + time / 150) * 8 * progress;
-                                                const r = cloakRange + distortion;
-                                                const px = entity.x + Math.cos(ang) * r;
-                                                const py = entity.y + Math.sin(ang) * r;
-                                                if (i === 0) ctx.moveTo(px, py);
-                                                else ctx.lineTo(px, py);
-                                            }
-                                            ctx.strokeStyle = "rgba(200, 200, 255, " + shimmerAlpha + ")";
-                                            ctx.lineWidth = 4;
+                                            const startA = time + i * (Math.PI / 1.5);
+                                            ctx.arc(0, 0, ENTITY_STATS.SHIELD.range - 5, startA, startA + 0.5);
                                             ctx.stroke();
-                                            ctx.restore();
                                         }
+                                        ctx.restore();
+                                    }
+
+                                    // Cloak Field (Vectorized)
+                                    if (entity.type === 'CLOAKING_FIELD') {
+                                        ctx.save();
+                                        ctx.translate(entity.x, entity.y);
+                                        ctx.strokeStyle = color;
+                                        ctx.setLineDash([5, 10]);
+                                        ctx.globalAlpha = 0.3;
+                                        ctx.beginPath();
+                                        ctx.arc(0, 0, ENTITY_STATS.CLOAKING_FIELD.cloakRange || 300, 0, Math.PI * 2);
+                                        ctx.stroke();
+                                        ctx.restore();
                                     }
                                 } else if (entity.type === 'NUKE') {
                                     // Enhanced Nuke Icon (Landed)
@@ -1433,20 +1265,28 @@ const GameBoard = forwardRef(({
                                 } else {
                                     if (entity.itemType === 'RECLAIMER') {
                                         ctx.save();
-                                        ctx.fillStyle = '#00ffff';
-                                        ctx.shadowBlur = 10;
+                                        ctx.translate(entity.x, entity.y);
+                                        ctx.strokeStyle = '#00ffff';
+                                        ctx.shadowBlur = 15;
                                         ctx.shadowColor = '#00ffff';
+                                        ctx.lineWidth = 2;
+                                        ctx.strokeRect(-radius / 2, -radius / 2, radius, radius);
+                                        // Cross-hair for reclaimer
+                                        ctx.lineWidth = 1;
                                         ctx.beginPath();
-                                        ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
-                                        ctx.fill();
+                                        ctx.moveTo(-radius / 2, 0); ctx.lineTo(radius / 2, 0);
+                                        ctx.moveTo(0, -radius / 2); ctx.lineTo(0, radius / 2);
+                                        ctx.stroke();
                                         ctx.restore();
                                     } else {
-                                        ctx.beginPath();
-                                        ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
-                                        ctx.fill();
+                                        drawVectorStructure(ctx, entity.x, entity.y, radius, color, displayAsGhost);
                                     }
                                 }
                                 if (isUndeployed) {
+                                    ctx.strokeStyle = '#fff';
+                                    ctx.setLineDash([2, 4]);
+                                    ctx.beginPath();
+                                    ctx.arc(entity.x, entity.y, radius * 1.5, 0, Math.PI * 2);
                                     ctx.stroke();
                                 }
                             }
@@ -2126,10 +1966,11 @@ const GameBoard = forwardRef(({
         <div
             className="game-container"
             style={{
-                background: '#111',
-                border: '1px solid #333',
-                borderRadius: '8px',
-                overflow: 'hidden'
+                background: '#0a0a0a',
+                border: '2px solid #444',
+                borderRadius: '0',
+                overflow: 'hidden',
+                boxShadow: '0 0 20px rgba(0, 0, 0, 0.5)'
             }}
         >
             <canvas
