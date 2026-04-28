@@ -565,59 +565,98 @@ function App() {
             <>
                 {header}
 
-                <main className={`game-world ${isResolvingUI ? 'locked-out' : ''}`}>
-                    {!isResolvingUI && !committedActions.length && selectedHubId && launchMode && (
-                        <div className="hint-overlay">Drag from your selected Hub to launch</div>
-                    )}
+                <div className="viewport-crt-container">
+                    <CRTEffect
+                        key={playerColor}
+                        theme="custom"
+                        scanlineColor={crtColor}
+                        edgeGlowColor={crtColor}
+                        enableEdgeGlow={true}
+                        enableScanlines={true}
+                        enableGlow={true}
+                        enableSweep={false}
+                        scanlineOpacity={0.1}
+                        scanlineThickness={1}
+                        scanlineGap={4}
+                        enableVignette={true}
+                        vignetteIntensity={0.2}
+                    >
+                        <main className={`game-world ${isResolvingUI ? 'locked-out' : ''}`}>
+                            {!isResolvingUI && !committedActions.length && selectedHubId && launchMode && (
+                                <div className="hint-overlay">Drag from your selected Hub to launch</div>
+                            )}
 
-                    <GameBoard
-                        ref={gameBoardRef}
-                        gameState={playerState}
-                        myPlayerId={myPlayerId}
-                        selectedHubId={selectedHubId}
-                        selectedItemType={selectedItemType}
-                        launchMode={launchMode}
-                        isAiming={isAiming}
-                        committedActions={committedActions}
-                        showDebugPreview={showDebugPreview}
-                        maxPullDistance={MAX_PULL_DISTANCE}
-                        isResolving={isResolvingUI}
-                        cameraOffset={cameraOffset}
-                        setCameraOffset={setCameraOffset}
-                        onSelectHub={(id) => {
-                            setSelectedHubId(id);
-                        }}
-                        onAimStart={handleAimStart}
-                        onAimUpdate={() => { }}
-                        onAimEnd={handleAimEnd}
-                    />
-
-                    {selectedHubId && !launchMode && !interactionBlocked && playerState && (() => {
-                        const hub = playerState.entities.find(e => e.id === selectedHubId);
-                        if (!hub) {
-                            console.log('RadialMenu check: Hub not found for ID', selectedHubId);
-                            return null;
-                        }
-
-                        return (
-                            <RadialMenu
-                                x={hubScreenPos?.x || 0}
-                                y={hubScreenPos?.y || 0}
-                                playerEnergy={pCurrent.energy}
-                                hubFuel={hub.fuel !== undefined ? hub.fuel - committedActions.filter(a => a.sourceId === selectedHubId).length : 99}
-                                onSelect={(type) => {
-                                    setSelectedItemType(type);
-                                    setLaunchMode(true);
+                            <GameBoard
+                                ref={gameBoardRef}
+                                gameState={playerState}
+                                myPlayerId={myPlayerId}
+                                selectedHubId={selectedHubId}
+                                selectedItemType={selectedItemType}
+                                launchMode={launchMode}
+                                isAiming={isAiming}
+                                committedActions={committedActions}
+                                showDebugPreview={showDebugPreview}
+                                maxPullDistance={MAX_PULL_DISTANCE}
+                                isResolving={isResolvingUI}
+                                cameraOffset={cameraOffset}
+                                setCameraOffset={setCameraOffset}
+                                onSelectHub={(id) => {
+                                    setSelectedHubId(id);
                                 }}
-                                onCancel={() => setSelectedHubId(null)}
+                                onAimStart={handleAimStart}
+                                onAimUpdate={() => { }}
+                                onAimEnd={handleAimEnd}
                             />
-                        );
-                    })()}
 
-                    {launchMode && !isResolvingUI && (
-                        <div className="hint-overlay">Pull back from the Hub to Aim & Launch!</div>
-                    )}
-                </main>
+                            {selectedHubId && !launchMode && !interactionBlocked && playerState && (() => {
+                                const hub = playerState.entities.find(e => e.id === selectedHubId);
+                                if (!hub) {
+                                    console.log('RadialMenu check: Hub not found for ID', selectedHubId);
+                                    return null;
+                                }
+
+                                return (
+                                    <RadialMenu
+                                        x={hubScreenPos?.x || 0}
+                                        y={hubScreenPos?.y || 0}
+                                        playerEnergy={pCurrent.energy}
+                                        hubFuel={hub.fuel !== undefined ? hub.fuel - committedActions.filter(a => a.sourceId === selectedHubId).length : 99}
+                                        onSelect={(type) => {
+                                            setSelectedItemType(type);
+                                            setLaunchMode(true);
+                                        }}
+                                        onCancel={() => setSelectedHubId(null)}
+                                    />
+                                );
+                            })()}
+
+                            {launchMode && !isResolvingUI && (
+                                <div className="hint-overlay">Pull back from the Hub to Aim & Launch!</div>
+                            )}
+                        </main>
+
+                        {playerState.winner && (
+                            <div className="winner-overlay">
+                                <div
+                                    className="winner-card"
+                                    style={{
+                                        borderColor: playerState.players[playerState.winner]?.color || '#fff'
+                                    }}
+                                >
+                                    <h2>{playerState.winner === 'DRAW' ? "It's a Draw!" : 'Victory!'}</h2>
+                                    <p>
+                                        {playerState.winner === 'DRAW'
+                                            ? 'Mutual destruction on Titan.'
+                                            : `Player ${playerState.winner} has conquered the sector.`}
+                                    </p>
+                                    <button className="restart-btn" onClick={handleRestart}>
+                                        Initialize New Mission
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </CRTEffect>
+                </div>
 
                 <footer className="debug-info">
                     <p>
@@ -628,27 +667,6 @@ function App() {
                                 : 'Click your Hub to select it.'}
                     </p>
                 </footer>
-
-                {playerState.winner && (
-                    <div className="winner-overlay">
-                        <div
-                            className="winner-card"
-                            style={{
-                                borderColor: playerState.players[playerState.winner]?.color || '#fff'
-                            }}
-                        >
-                            <h2>{playerState.winner === 'DRAW' ? "It's a Draw!" : 'Victory!'}</h2>
-                            <p>
-                                {playerState.winner === 'DRAW'
-                                    ? 'Mutual destruction on Titan.'
-                                    : `Player ${playerState.winner} has conquered the sector.`}
-                            </p>
-                            <button className="restart-btn" onClick={handleRestart}>
-                                Initialize New Mission
-                            </button>
-                        </div>
-                    </div>
-                )}
             </>
         );
     };
@@ -656,23 +674,7 @@ function App() {
 
     return (
         <div className="App">
-            <CRTEffect
-                key={playerColor}
-                theme="custom"
-                scanlineColor={crtColor}
-                edgeGlowColor={crtColor}
-                enableEdgeGlow={true}
-                enableScanlines={true}
-                enableGlow={true}
-                enableSweep={false}
-                scanlineOpacity={0.1}
-                scanlineThickness={1}
-                scanlineGap={4}
-                enableVignette={true}
-                vignetteIntensity={0.2}
-            >
-                {renderContent()}
-            </CRTEffect>
+            {renderContent()}
         </div>
     );
 }

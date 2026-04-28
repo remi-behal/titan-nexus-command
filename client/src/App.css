@@ -21,11 +21,23 @@ body,
 }
 
 /* Ensure CRT effect doesn't collapse with fixed children */
+/* Update CRT wrapper to be absolute and bound to its container */
 .crt-effect-wrapper {
-    position: fixed !important;
+    position: absolute !important;
     inset: 0 !important;
-    z-index: 9999 !important;
+    z-index: 10 !important;
+    /* Lower than header but enough to cover game-world */
     pointer-events: none !important;
+}
+
+/* New container to hold the CRT effect and the game viewport */
+.viewport-crt-container {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Ensure internal CRT content allows clicks through to interactive elements */
