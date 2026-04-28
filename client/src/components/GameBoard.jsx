@@ -1982,8 +1982,8 @@ const GameBoard = forwardRef(({
                     display: 'block',
                     cursor: isAiming ? 'crosshair' : isPanning ? 'grabbing' : 'grab',
                     width: '100%',
-                    maxHeight: '80vh',
-                    objectFit: 'contain'
+                    maxHeight: '100%',
+                    objectFit: 'fill'
                 }}
             />
         </div>
