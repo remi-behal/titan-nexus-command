@@ -344,7 +344,7 @@ function App() {
         }
         // 2. If in lobby, find our slot color
         if (lobbyStatus?.slots && myPlayerId) {
-            const slot = lobbyStatus.slots.find(s => s.playerId === myPlayerId);
+            const slot = lobbyStatus.slots.find(s => s?.playerId === myPlayerId);
             if (slot) {
                 // Match the colors used in GameState.js
                 const colors = ['hsl(0, 70%, 50%)', 'hsl(60, 70%, 50%)'];
