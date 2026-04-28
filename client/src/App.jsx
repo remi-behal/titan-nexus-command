@@ -663,10 +663,13 @@ function App() {
                 edgeGlowColor={crtColor}
                 enableEdgeGlow={true}
                 enableScanlines={true}
+                enableGlow={true}
                 enableSweep={false}
-                scanlineOpacity={0.4}
+                scanlineOpacity={0.1}
                 scanlineThickness={1}
-                scanlineGap={2}
+                scanlineGap={4}
+                enableVignette={true}
+                vignetteIntensity={0.2}
             >
                 {renderContent()}
             </CRTEffect>
