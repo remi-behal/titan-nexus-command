@@ -193,8 +193,8 @@ function App() {
             // AUTO-START LOGIC
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('autoStart') === '1' && !assignedId) {
-                console.log('[AutoStart] Attempting auto-join...');
-                socket.emit('lobby:autoJoin');
+                console.log('[AutoStart] Attempting auto-join (Solo Mode)...');
+                socket.emit('lobby:autoJoin', { force: true });
             }
         };
 

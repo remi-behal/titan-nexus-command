@@ -278,9 +278,9 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('lobby:autoJoin', () => {
+    socket.on('lobby:autoJoin', (options = {}) => {
         const room = lobbyManager.getOrCreateRoom('default');
-        console.log(`[Lobby] Auto-join requested by ${socket.id}`);
+        console.log(`[Lobby] Auto-join requested by ${socket.id} (Force: ${!!options.force})`);
 
         // Find first available slot
         let slotIndex = room.slots.findIndex(s => s === null);
@@ -297,10 +297,11 @@ io.on('connection', (socket) => {
             room.toggleReady(socket.id, true);
             io.emit('lobby:update', room.getUpdate());
 
-            // Auto-start if 2 players are ready
+            // Auto-start if 2 players are ready OR if force flag is set
             const filledSlots = room.slots.filter(s => s !== null);
-            if (filledSlots.length === 2 && filledSlots.every(s => s.ready)) {
-                console.log('[Lobby] Auto-starting match from autoJoin');
+            const allReady = filledSlots.every(s => s.ready);
+            if (allReady && (filledSlots.length === 2 || options.force)) {
+                console.log(`[Lobby] Auto-starting match (Reason: ${options.force ? 'Force/Solo' : 'Lobby Full'})`);
                 startMatch();
             }
         }

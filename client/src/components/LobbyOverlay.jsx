@@ -65,7 +65,7 @@ export const LobbyOverlay = ({ lobbyUpdate, availableMaps, onClaimSeat, onReadyT
                 {new URLSearchParams(window.location.search).get('debug') === '1' && (
                     <button
                         className="quick-start-button"
-                        onClick={() => socket.emit('lobby:autoJoin')}
+                        onClick={() => socket.emit('lobby:autoJoin', { force: true })}
                         style={{
                             marginTop: '1rem',
                             padding: '0.5rem 1rem',
