@@ -725,3 +725,63 @@ describe('GameState - Map Hazards (Phase 6)', () => {
         expect(entity.hp).toBe(0);
     });
 });
+
+describe('GameState - Slingshot Safety', () => {
+    let game;
+
+    beforeEach(() => {
+        game = new GameState();
+        game.initializeGame(['player1']);
+        game.map.width = 1000;
+        game.map.height = 1000;
+    });
+
+    it('should detect when a new link crosses an existing link connected to the same hub', () => {
+        const hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        hub.x = 500;
+        hub.y = 500;
+
+        // Existing chain: Hub(500,500) -> B(400,600) -> C(600,600)
+        const entB = game.addEntity({ id: 'entB', type: 'HUB', owner: 'player1', x: 400, y: 600 });
+        const entC = game.addEntity({ id: 'entC', type: 'HUB', owner: 'player1', x: 600, y: 600 });
+        game.addLink(hub.id, entB.id, 'player1');
+        game.addLink(entB.id, entC.id, 'player1');
+
+        // New link from Hub(500,500) to (500, 700) that crosses B->C(400,600 to 600,600)
+        const targetX = 500;
+        const targetY = 700;
+
+        const intersection = GameState.checkLinkIntersection(hub, targetX, targetY, game.entities, game.links, [], game.map);
+        expect(intersection).not.toBeNull();
+    });
+
+    it('should detect when a new link crosses a staged action from the same hub', () => {
+        const hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        hub.x = 500;
+        hub.y = 500;
+
+        // Staged actions that form a cross
+        // Action 1: Hub -> (400, 600) [Not crossing yet]
+        // Action 2: Hub -> (600, 600) [Wait, if both start at Hub they don't cross]
+        
+        // Let's use a staged action that is horizontal across the vertical launch path
+        // We'll simulate a node 'B' that is ALREADY part of the network
+        const entB = game.addEntity({ id: 'entB', type: 'HUB', owner: 'player1', x: 400, y: 600 });
+        game.addLink(hub.id, entB.id, 'player1');
+
+        const stagedActions = [{
+            sourceId: 'entB',
+            sourceX: 400,
+            sourceY: 600,
+            angle: 0, // Horizontal Right
+            distance: 200 // To (600, 600)
+        }];
+
+        // New link from Hub(500,500) to (500, 700) - Crosses staged action B->(600,600)
+        const targetX = 500;
+        const targetY = 700;
+
+        const intersection = GameState.checkLinkIntersection(hub, targetX, targetY, game.entities, game.links, stagedActions, game.map);
+        expect(intersection).not.toBeNull();
+    });
+});

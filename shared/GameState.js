@@ -2426,6 +2426,110 @@ export class GameState {
     }
 
     /**
+     * Checks if a new link from a hub to (targetX, targetY) crosses any existing or staged links
+     * that belong to the same connected structure network.
+     */
+    static checkLinkIntersection(sourceHub, targetX, targetY, entities, links, stagedActions, map) {
+        const width = map.width;
+        const height = map.height;
+
+        // 1. Find all entities/nodes in the same network as the source hub
+        const connectedNodes = new Set([sourceHub.id]);
+        let changed = true;
+        while (changed) {
+            changed = false;
+            links.forEach((link) => {
+                if (connectedNodes.has(link.from) && !connectedNodes.has(link.to)) {
+                    connectedNodes.add(link.to);
+                    changed = true;
+                }
+                if (connectedNodes.has(link.to) && !connectedNodes.has(link.from)) {
+                    connectedNodes.add(link.from);
+                    changed = true;
+                }
+            });
+        }
+
+        const newSegments = GameState.getLinkSegments(
+            { x: sourceHub.x, y: sourceHub.y },
+            { x: targetX, y: targetY },
+            width,
+            height
+        );
+
+        const HUB_RADIUS = ENTITY_STATS.HUB.size;
+
+        // 2. Check against existing links in the same network
+        for (const link of links) {
+            if (!connectedNodes.has(link.from) && !connectedNodes.has(link.to)) continue;
+
+            const s1 = entities.find((e) => e.id === link.from);
+            const s2 = entities.find((e) => e.id === link.to);
+            if (!s1 || !s2) continue;
+
+            const existingSegments = GameState.getLinkSegments(
+                { x: s1.x, y: s1.y },
+                { x: s2.x, y: s2.y },
+                width,
+                height
+            );
+
+            for (const nSeg of newSegments) {
+                for (const eSeg of existingSegments) {
+                    const intersect = GameState.doSegmentsIntersect(nSeg, eSeg);
+                    if (intersect) {
+                        // Guard: Ignore if intersection is within source hub radius
+                        const dx = intersect.x - sourceHub.x;
+                        const dy = intersect.y - sourceHub.y;
+                        const distFromSource = Math.sqrt(dx * dx + dy * dy);
+                        if (distFromSource > HUB_RADIUS + 5) {
+                            return intersect;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Check against staged actions from the same network
+        for (const action of stagedActions) {
+            if (!connectedNodes.has(action.sourceId)) continue;
+
+            const pullDist = action.distance || 0;
+            const launchDistance = GameState.calculateLaunchDistance(pullDist);
+            const rad = (action.angle * Math.PI) / 180;
+            
+            const sX = action.sourceX !== undefined ? action.sourceX : sourceHub.x;
+            const sY = action.sourceY !== undefined ? action.sourceY : sourceHub.y;
+
+            const tX = (sX + Math.cos(rad) * launchDistance + width) % width;
+            const tY = (sY + Math.sin(rad) * launchDistance + height) % height;
+
+            const actionSegments = GameState.getLinkSegments(
+                { x: sX, y: sY },
+                { x: tX, y: tY },
+                width,
+                height
+            );
+
+            for (const nSeg of newSegments) {
+                for (const aSeg of actionSegments) {
+                    const intersect = GameState.doSegmentsIntersect(nSeg, aSeg);
+                    if (intersect) {
+                        const dx = intersect.x - sourceHub.x;
+                        const dy = intersect.y - sourceHub.y;
+                        const distFromSource = Math.sqrt(dx * dx + dy * dy);
+                        if (distFromSource > HUB_RADIUS + 5) {
+                            return intersect;
+                        }
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Point-to-Segment Distance Math (Toroidal Aware)
      * Returns the shortest physical distance from point (px, py) to line segment (x1, y1)-(x2, y2)
      */
