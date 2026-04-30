@@ -344,11 +344,10 @@ function App() {
         }
         // 2. If in lobby, find our slot color
         if (lobbyStatus?.slots && myPlayerId) {
-            const slot = lobbyStatus.slots.find(s => s?.playerId === myPlayerId);
-            if (slot) {
-                // Match the colors used in GameState.js
-                const colors = ['hsl(0, 70%, 50%)', 'hsl(60, 70%, 50%)'];
-                return { color: colors[slot.index] };
+            const slotIndex = lobbyStatus.slots.findIndex((s, idx) => `player${idx + 1}` === myPlayerId);
+            if (slotIndex !== -1 && lobbyStatus.slots[slotIndex]) {
+                // Match the colors used in GameState.js: hsl(index * 60, 70%, 50%)
+                return { color: `hsl(${slotIndex * 60}, 70%, 50%)` };
             }
         }
         // 3. Absolute fallback (Spectator or unassigned)
@@ -476,7 +475,7 @@ function App() {
     const playerColor = pBase?.color || '#00ff44';
     // Strict color helper for CRT phosphor (requires rgba format)
     const getCRTColor = (color, alpha) => {
-        if (!color) return `rgba(0, 255, 68, ${alpha})`;
+        if (!color || color === '#00ff44') return `rgba(0, 255, 68, ${alpha})`;
 
         // 1. Convert Titan HSL to RGB
         if (color.startsWith('hsl')) {
@@ -503,6 +502,12 @@ function App() {
     };
 
     const crtColor = getCRTColor(playerColor, 0.4);
+
+    // Update global CSS variables for UI elements
+    useEffect(() => {
+        document.documentElement.style.setProperty('--player-accent-color', playerColor);
+        document.documentElement.style.setProperty('--player-accent-glow', crtColor);
+    }, [playerColor, crtColor]);
 
     const renderContent = () => {
         if (currentView === 'DESIGNER') {
@@ -571,11 +576,12 @@ function App() {
                         theme="custom"
                         scanlineColor={crtColor}
                         edgeGlowColor={crtColor}
+                        glowColor={crtColor}
                         enableEdgeGlow={true}
                         enableScanlines={true}
                         enableGlow={true}
                         enableSweep={false}
-                        scanlineOpacity={0.1}
+                        scanlineOpacity={0.2}
                         scanlineThickness={1}
                         scanlineGap={4}
                         enableVignette={true}

@@ -1966,11 +1966,7 @@ const GameBoard = forwardRef(({
         <div
             className="game-container"
             style={{
-                background: '#0a0a0a',
-                border: '2px solid #444',
-                borderRadius: '0',
-                overflow: 'hidden',
-                boxShadow: '0 0 20px rgba(0, 0, 0, 0.5)'
+                overflow: 'hidden'
             }}
         >
             <canvas
