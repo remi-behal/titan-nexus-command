@@ -115,6 +115,7 @@ function App() {
 
         setCommittedActions((prev) => [...prev, action]);
         setLaunchMode(false);
+        setSelectedHubId(null);
     };
 
     const handleExecuteTurn = () => {
