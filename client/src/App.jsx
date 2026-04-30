@@ -44,6 +44,7 @@ function App() {
     const [showDebugPreview, setShowDebugPreview] = useState(false);
     const [timeRemaining, setTimeRemaining] = useState(30);
     const [isResolving, setIsResolving] = useState(false);
+    const [glitchActive, setGlitchActive] = useState(false);
     const [currentView, setCurrentView] = useState('LOBBY'); // 'LOBBY', 'GAME', 'DESIGNER'
 
     // Lobby State
@@ -101,6 +102,32 @@ function App() {
         }
 
         const angle = GameState.calculateLaunchAngle(dx, dy);
+
+        // Slingshot Safety: Check for link intersections from the same hub network
+        const launchDistance = GameState.calculateLaunchDistance(distance);
+        const rad = (angle * Math.PI) / 180;
+        const targetX = (hub.x + Math.cos(rad) * launchDistance + playerState.map.width) % playerState.map.width;
+        const targetY = (hub.y + Math.sin(rad) * launchDistance + playerState.map.height) % playerState.map.height;
+
+        const collision = GameState.checkLinkIntersection(
+            hub,
+            targetX,
+            targetY,
+            playerState.entities,
+            playerState.links,
+            committedActions,
+            playerState.map
+        );
+
+        if (collision) {
+            // Trigger rejection glitch
+            setGlitchActive(true);
+            setTimeout(() => setGlitchActive(false), 400);
+            
+            setLaunchMode(false);
+            setSelectedHubId(null);
+            return;
+        }
 
         const action = {
             playerId: myPlayerId,
@@ -588,7 +615,7 @@ function App() {
                         enableVignette={true}
                         vignetteIntensity={0.2}
                     >
-                        <main className={`game-world ${isResolvingUI ? 'locked-out' : ''}`}>
+                        <main className={`game-world ${isResolvingUI ? 'locked-out' : ''} ${glitchActive ? 'glitch-rejection' : ''}`}>
                             {!isResolvingUI && !committedActions.length && selectedHubId && launchMode && (
                                 <div className="hint-overlay">Drag from your selected Hub to launch</div>
                             )}
