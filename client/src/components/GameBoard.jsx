@@ -1500,44 +1500,36 @@ const GameBoard = forwardRef(({
                                     );
                                     ctx.setLineDash([]);
 
-                                    // Slingshot Safety: Check for link intersections from the same hub
-                                    const collision = GameState.checkLinkIntersection(
-                                        hub,
+                                    // Slingshot Safety: Check for link angle separation from the same hub
+                                    const isInvalidAngle = GameState.checkLinkAngleSeparation(
+                                        selectedHubId,
                                         targetX,
                                         targetY,
-                                        Object.values(visualEntities.current),
                                         gameState.links,
                                         committedActions,
-                                        { width: mapW, height: mapH }
+                                        Object.values(visualEntities.current),
+                                        gameState.map
                                     );
 
-                                    if (collision) {
+                                    if (isInvalidAngle) {
                                         ctx.save();
                                         ctx.fillStyle = '#ff3333';
-                                        ctx.shadowBlur = 10;
-                                        ctx.shadowColor = '#ff0000';
-                                        ctx.font = 'bold 16px Courier New, monospace';
+                                        ctx.font = 'bold 12px "Courier New"';
+                                        ctx.textAlign = 'left';
                                         
-                                        // Position beside the hub
-                                        const labelX = hub.x + HUB_RADIUS + 15;
-                                        const labelY = hub.y + 5;
-                                        
-                                        // Simple glitch effect: offset text randomly
+                                        // Random jitter/glitch for the text
                                         const glitchX = (Math.random() - 0.5) * 2;
                                         const glitchY = (Math.random() - 0.5) * 2;
                                         
-                                        ctx.fillText('LINK CROSSING', labelX + glitchX, labelY + glitchY);
+                                        const labelX = hub.x + ENTITY_STATS.HUB.size + 15;
+                                        const labelY = hub.y + 5;
                                         
-                                        // Optional: Draw a small indicator at the intersection point
-                                        ctx.strokeStyle = '#ff3333';
-                                        ctx.lineWidth = 2;
+                                        ctx.fillText('INVALID ANGLE', labelX + glitchX, labelY + glitchY);
+                                        
+                                        // Indicator dot at hub
                                         ctx.beginPath();
-                                        ctx.moveTo(collision.x - 5, collision.y - 5);
-                                        ctx.lineTo(collision.x + 5, collision.y + 5);
-                                        ctx.moveTo(collision.x + 5, collision.y - 5);
-                                        ctx.lineTo(collision.x - 5, collision.y + 5);
-                                        ctx.stroke();
-                                        
+                                        ctx.arc(hub.x, hub.y, 5, 0, Math.PI * 2);
+                                        ctx.fill();
                                         ctx.restore();
                                     }
 

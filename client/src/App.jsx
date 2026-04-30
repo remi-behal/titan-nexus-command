@@ -103,23 +103,22 @@ function App() {
 
         const angle = GameState.calculateLaunchAngle(dx, dy);
 
-        // Slingshot Safety: Check for link intersections from the same hub network
         const launchDistance = GameState.calculateLaunchDistance(distance);
         const rad = (angle * Math.PI) / 180;
         const targetX = (hub.x + Math.cos(rad) * launchDistance + playerState.map.width) % playerState.map.width;
         const targetY = (hub.y + Math.sin(rad) * launchDistance + playerState.map.height) % playerState.map.height;
 
-        const collision = GameState.checkLinkIntersection(
-            hub,
+        const isInvalid = GameState.checkLinkAngleSeparation(
+            selectedHubId,
             targetX,
             targetY,
-            playerState.entities,
             playerState.links,
             committedActions,
+            playerState.entities,
             playerState.map
         );
 
-        if (collision) {
+        if (isInvalid) {
             // Trigger rejection glitch
             setGlitchActive(true);
             setTimeout(() => setGlitchActive(false), 400);

@@ -2429,104 +2429,56 @@ export class GameState {
      * Checks if a new link from a hub to (targetX, targetY) crosses any existing or staged links
      * that belong to the same connected structure network.
      */
-    static checkLinkIntersection(sourceHub, targetX, targetY, entities, links, stagedActions, map) {
+    /**
+     * Slingshot Safety: Check if a proposed launch is too close in angle to existing connections.
+     * Returns true if any connection (incoming or outgoing) is within 30 degrees.
+     */
+    static checkLinkAngleSeparation(sourceHubId, targetX, targetY, links, stagedActions, entities, map) {
+        const hub = entities.find(e => e.id === sourceHubId);
+        if (!hub) return false;
+
         const width = map.width;
         const height = map.height;
 
-        // 1. Find all entities/nodes in the same network as the source hub
-        const connectedNodes = new Set([sourceHub.id]);
-        let changed = true;
-        while (changed) {
-            changed = false;
-            links.forEach((link) => {
-                if (connectedNodes.has(link.from) && !connectedNodes.has(link.to)) {
-                    connectedNodes.add(link.to);
-                    changed = true;
-                }
-                if (connectedNodes.has(link.to) && !connectedNodes.has(link.from)) {
-                    connectedNodes.add(link.from);
-                    changed = true;
-                }
-            });
-        }
+        // 1. Calculate new launch angle (pointing AWAY from hub)
+        const newVec = GameState.getToroidalVector(hub.x, hub.y, targetX, targetY, width, height);
+        const newAngle = Math.atan2(newVec.dy, newVec.dx) * (180 / Math.PI);
 
-        const newSegments = GameState.getLinkSegments(
-            { x: sourceHub.x, y: sourceHub.y },
-            { x: targetX, y: targetY },
-            width,
-            height
-        );
+        const isAngleTooTight = (otherX, otherY) => {
+            const vec = GameState.getToroidalVector(hub.x, hub.y, otherX, otherY, width, height);
+            const angle = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+            let diff = Math.abs(newAngle - angle) % 360;
+            if (diff > 180) diff = 360 - diff;
+            return diff < 30;
+        };
 
-        const HUB_RADIUS = ENTITY_STATS.HUB.size;
-
-        // 2. Check against existing links in the same network
+        // 2. Check existing links
         for (const link of links) {
-            if (!connectedNodes.has(link.from) && !connectedNodes.has(link.to)) continue;
-
-            const s1 = entities.find((e) => e.id === link.from);
-            const s2 = entities.find((e) => e.id === link.to);
-            if (!s1 || !s2) continue;
-
-            const existingSegments = GameState.getLinkSegments(
-                { x: s1.x, y: s1.y },
-                { x: s2.x, y: s2.y },
-                width,
-                height
-            );
-
-            for (const nSeg of newSegments) {
-                for (const eSeg of existingSegments) {
-                    const intersect = GameState.doSegmentsIntersect(nSeg, eSeg);
-                    if (intersect) {
-                        // Guard: Ignore if intersection is within source hub radius
-                        const dx = intersect.x - sourceHub.x;
-                        const dy = intersect.y - sourceHub.y;
-                        const distFromSource = Math.sqrt(dx * dx + dy * dy);
-                        if (distFromSource > HUB_RADIUS + 5) {
-                            return intersect;
-                        }
-                    }
-                }
-            }
-        }
-
-        // 3. Check against staged actions from the same network
-        for (const action of stagedActions) {
-            if (!connectedNodes.has(action.sourceId)) continue;
-
-            const pullDist = action.distance || 0;
-            const launchDistance = GameState.calculateLaunchDistance(pullDist);
-            const rad = (action.angle * Math.PI) / 180;
+            let otherId = null;
+            if (link.from === sourceHubId) otherId = link.to;
+            else if (link.to === sourceHubId) otherId = link.from;
             
-            const sX = action.sourceX !== undefined ? action.sourceX : sourceHub.x;
-            const sY = action.sourceY !== undefined ? action.sourceY : sourceHub.y;
-
-            const tX = (sX + Math.cos(rad) * launchDistance + width) % width;
-            const tY = (sY + Math.sin(rad) * launchDistance + height) % height;
-
-            const actionSegments = GameState.getLinkSegments(
-                { x: sX, y: sY },
-                { x: tX, y: tY },
-                width,
-                height
-            );
-
-            for (const nSeg of newSegments) {
-                for (const aSeg of actionSegments) {
-                    const intersect = GameState.doSegmentsIntersect(nSeg, aSeg);
-                    if (intersect) {
-                        const dx = intersect.x - sourceHub.x;
-                        const dy = intersect.y - sourceHub.y;
-                        const distFromSource = Math.sqrt(dx * dx + dy * dy);
-                        if (distFromSource > HUB_RADIUS + 5) {
-                            return intersect;
-                        }
-                    }
-                }
+            if (otherId) {
+                const other = entities.find(e => e.id === otherId);
+                if (other && isAngleTooTight(other.x, other.y)) return true;
             }
         }
 
-        return null;
+        // 3. Check staged actions
+        for (const action of stagedActions) {
+            if (action.sourceId === sourceHubId) {
+                // Outgoing staged
+                const pullDist = action.distance || 0;
+                const launchDist = GameState.calculateLaunchDistance(pullDist);
+                const rad = (action.angle * Math.PI) / 180;
+                const tX = (hub.x + Math.cos(rad) * launchDist + width) % width;
+                const tY = (hub.y + Math.sin(rad) * launchDist + height) % height;
+                if (isAngleTooTight(tX, tY)) return true;
+            }
+            // Note: Incoming staged is not possible in current UI flow
+        }
+
+        return false;
     }
 
     /**
