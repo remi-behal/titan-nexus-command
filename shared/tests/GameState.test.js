@@ -736,52 +736,71 @@ describe('GameState - Slingshot Safety', () => {
         game.map.height = 1000;
     });
 
-    it('should detect when a new link crosses an existing link connected to the same hub', () => {
-        const hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
-        hub.x = 500;
-        hub.y = 500;
+    describe('Slingshot Safety - Angular Separation', () => {
+        it('should detect connections within 30 degrees', () => {
+            const hub = { id: 'hub1', x: 500, y: 500 };
+            const entities = [
+                hub,
+                { id: 'targetA', x: 600, y: 500 } // 0 degrees from hub1
+            ];
+            const links = [{ from: 'hub1', to: 'targetA' }];
+            const stagedActions = [];
+            const map = { width: 1000, height: 1000 };
 
-        // Existing chain: Hub(500,500) -> B(400,600) -> C(600,600)
-        const entB = game.addEntity({ id: 'entB', type: 'HUB', owner: 'player1', x: 400, y: 600 });
-        const entC = game.addEntity({ id: 'entC', type: 'HUB', owner: 'player1', x: 600, y: 600 });
-        game.addLink(hub.id, entB.id, 'player1');
-        game.addLink(entB.id, entC.id, 'player1');
+            // Launching at 15 degrees (Too tight)
+            const rad15 = 15 * Math.PI / 180;
+            const tx15 = 500 + Math.cos(rad15) * 100;
+            const ty15 = 500 + Math.sin(rad15) * 100;
 
-        // New link from Hub(500,500) to (500, 700) that crosses B->C(400,600 to 600,600)
-        const targetX = 500;
-        const targetY = 700;
+            const isInvalid = GameState.checkLinkAngleSeparation('hub1', tx15, ty15, links, stagedActions, entities, map);
+            expect(isInvalid).toBe(true);
 
-        const intersection = GameState.checkLinkIntersection(hub, targetX, targetY, game.entities, game.links, [], game.map);
-        expect(intersection).not.toBeNull();
-    });
+            // Launching at 45 degrees (Allowed)
+            const rad45 = 45 * Math.PI / 180;
+            const tx45 = 500 + Math.cos(rad45) * 100;
+            const ty45 = 500 + Math.sin(rad45) * 100;
 
-    it('should detect when a new link crosses a staged action from the same hub', () => {
-        const hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
-        hub.x = 500;
-        hub.y = 500;
+            const isValid = GameState.checkLinkAngleSeparation('hub1', tx45, ty45, links, stagedActions, entities, map);
+            expect(isValid).toBe(false);
+        });
 
-        // Staged actions that form a cross
-        // Action 1: Hub -> (400, 600) [Not crossing yet]
-        // Action 2: Hub -> (600, 600) [Wait, if both start at Hub they don't cross]
-        
-        // Let's use a staged action that is horizontal across the vertical launch path
-        // We'll simulate a node 'B' that is ALREADY part of the network
-        const entB = game.addEntity({ id: 'entB', type: 'HUB', owner: 'player1', x: 400, y: 600 });
-        game.addLink(hub.id, entB.id, 'player1');
+        it('should detect connections across the 360/0 degree wrap', () => {
+            const hub = { id: 'hub1', x: 500, y: 500 };
+            const entities = [
+                hub,
+                { id: 'targetA', x: 600, y: 490 } // ~ -5 degrees or 355 degrees
+            ];
+            const links = [{ from: 'hub1', to: 'targetA' }];
+            const stagedActions = [];
+            const map = { width: 1000, height: 1000 };
 
-        const stagedActions = [{
-            sourceId: 'entB',
-            sourceX: 400,
-            sourceY: 600,
-            angle: 0, // Horizontal Right
-            distance: 200 // To (600, 600)
-        }];
+            // Launching at 5 degrees
+            const rad5 = 5 * Math.PI / 180;
+            const tx5 = 500 + Math.cos(rad5) * 100;
+            const ty5 = 500 + Math.sin(rad5) * 100;
 
-        // New link from Hub(500,500) to (500, 700) - Crosses staged action B->(600,600)
-        const targetX = 500;
-        const targetY = 700;
+            const isInvalid = GameState.checkLinkAngleSeparation('hub1', tx5, ty5, links, stagedActions, entities, map);
+            expect(isInvalid).toBe(true);
+        });
 
-        const intersection = GameState.checkLinkIntersection(hub, targetX, targetY, game.entities, game.links, stagedActions, game.map);
-        expect(intersection).not.toBeNull();
+        it('should detect incoming connections', () => {
+            const hub = { id: 'hub1', x: 500, y: 500 };
+            const sourceHub = { id: 'hub2', x: 500, y: 400 }; // Hub2 is ABOVE Hub1
+            const entities = [hub, sourceHub];
+            const links = [{ from: 'hub2', to: 'hub1' }]; // Incoming to Hub1
+            const stagedActions = [];
+            const map = { width: 1000, height: 1000 };
+
+            // Hub1's incoming link is from the top (pointing DOWN at 90 deg relative to Hub2)
+            // But at Hub1, the vector points UP to Hub2 (-90 deg or 270 deg)
+            
+            // Launching from Hub1 at 280 deg (-80 deg) (Too tight to the incoming link)
+            const rad280 = 280 * Math.PI / 180;
+            const tx280 = 500 + Math.cos(rad280) * 100;
+            const ty280 = 500 + Math.sin(rad280) * 100;
+
+            const isInvalid = GameState.checkLinkAngleSeparation('hub1', tx280, ty280, links, stagedActions, entities, map);
+            expect(isInvalid).toBe(true);
+        });
     });
 });
