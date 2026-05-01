@@ -2426,16 +2426,15 @@ export class GameState {
     }
 
     /**
-     * Checks if a new link from a hub to (targetX, targetY) crosses any existing or staged links
-     * that belong to the same connected structure network.
-     */
-    /**
      * Slingshot Safety: Check if a proposed launch is too close in angle to existing connections.
      * Returns true if any connection (incoming or outgoing) is within 30 degrees.
      */
     static checkLinkAngleSeparation(sourceHubId, targetX, targetY, links, stagedActions, entities, map) {
-        const hub = entities.find(e => e.id === sourceHubId);
-        if (!hub) return false;
+        const hub = entities.find(e => String(e.id) === String(sourceHubId));
+        if (!hub) {
+            console.warn(`[AngleCheck] Hub not found for ID: ${sourceHubId}`);
+            return false;
+        }
 
         const width = map.width;
         const height = map.height;
@@ -2455,27 +2454,35 @@ export class GameState {
         // 2. Check existing links
         for (const link of links) {
             let otherId = null;
-            if (link.from === sourceHubId) otherId = link.to;
-            else if (link.to === sourceHubId) otherId = link.from;
+            if (String(link.from) === String(sourceHubId)) otherId = link.to;
+            else if (String(link.to) === String(sourceHubId)) otherId = link.from;
             
             if (otherId) {
-                const other = entities.find(e => e.id === otherId);
-                if (other && isAngleTooTight(other.x, other.y)) return true;
+                const other = entities.find(e => String(e.id) === String(otherId));
+                if (other) {
+                    const tooTight = isAngleTooTight(other.x, other.y);
+                    if (tooTight) {
+                        console.log(`[AngleCheck] Denied: Angle too close to existing link to ${otherId}`);
+                        return true;
+                    }
+                }
             }
         }
 
         // 3. Check staged actions
         for (const action of stagedActions) {
-            if (action.sourceId === sourceHubId) {
+            if (String(action.sourceId) === String(sourceHubId)) {
                 // Outgoing staged
                 const pullDist = action.distance || 0;
                 const launchDist = GameState.calculateLaunchDistance(pullDist);
                 const rad = (action.angle * Math.PI) / 180;
                 const tX = (hub.x + Math.cos(rad) * launchDist + width) % width;
                 const tY = (hub.y + Math.sin(rad) * launchDist + height) % height;
-                if (isAngleTooTight(tX, tY)) return true;
+                if (isAngleTooTight(tX, tY)) {
+                    console.log(`[AngleCheck] Denied: Angle too close to staged action from ${action.sourceId}`);
+                    return true;
+                }
             }
-            // Note: Incoming staged is not possible in current UI flow
         }
 
         return false;

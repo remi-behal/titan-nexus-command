@@ -1474,17 +1474,52 @@ const GameBoard = forwardRef(({
                                 ctx.fill();
                                 ctx.restore();
 
+                                // Calculate projected target for all previews (Safety, Debug, Weapon Range)
+                                let launchDistance = GameState.calculateLaunchDistance(distance);
+                                const stats = ENTITY_STATS[selectedItemType];
+                                if (stats?.minRange) {
+                                    launchDistance = Math.max(stats.minRange, launchDistance);
+                                }
+                                const ldx = Math.cos(launchAngle) * launchDistance;
+                                const ldy = Math.sin(launchAngle) * launchDistance;
+                                const targetX = (hub.x + (ldx % mapW) + mapW) % mapW;
+                                const targetY = (hub.y + (ldy % mapH) + mapH) % mapH;
+                                
+                                
+                                // Slingshot Safety: Check for link angle separation from the same hub
+                                const isInvalidAngle = GameState.checkLinkAngleSeparation(
+                                    selectedHubId,
+                                    targetX,
+                                    targetY,
+                                    gameState.links,
+                                    committedActions,
+                                    Object.values(visualEntities.current),
+                                    gameState.map
+                                );
+                                
+                                if (isInvalidAngle) {
+                                    ctx.save();
+                                    ctx.fillStyle = '#ff3333';
+                                    ctx.font = 'bold 12px "Courier New"';
+                                    ctx.textAlign = 'left';
+                                    
+                                    // Random jitter/glitch for the text
+                                    const glitchX = (Math.random() - 0.5) * 2;
+                                    const glitchY = (Math.random() - 0.5) * 2;
+                                    
+                                    const labelX = hub.x + ENTITY_STATS.HUB.size + 15;
+                                    const labelY = hub.y + 5;
+                                    
+                                    ctx.fillText('INVALID ANGLE', labelX + glitchX, labelY + glitchY);
+                                    
+                                    // Indicator dot at hub
+                                    ctx.beginPath();
+                                    ctx.arc(hub.x, hub.y, 5, 0, Math.PI * 2);
+                                    ctx.fill();
+                                    ctx.restore();
+                                }
+                                
                                 if (showDebugPreview) {
-                                    let launchDistance = GameState.calculateLaunchDistance(distance);
-                                    const stats = ENTITY_STATS[selectedItemType];
-                                    if (stats?.minRange) {
-                                        launchDistance = Math.max(stats.minRange, launchDistance);
-                                    }
-                                    const ldx = Math.cos(launchAngle) * launchDistance;
-                                    const ldy = Math.sin(launchAngle) * launchDistance;
-                                    const targetX = (hub.x + (ldx % mapW) + mapW) % mapW;
-                                    const targetY = (hub.y + (ldy % mapH) + mapH) % mapH;
-
                                     ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
                                     ctx.setLineDash([2, 5]);
                                     drawToroidalLine(
@@ -1499,40 +1534,7 @@ const GameBoard = forwardRef(({
                                         ldy
                                     );
                                     ctx.setLineDash([]);
-
-                                    // Slingshot Safety: Check for link angle separation from the same hub
-                                    const isInvalidAngle = GameState.checkLinkAngleSeparation(
-                                        selectedHubId,
-                                        targetX,
-                                        targetY,
-                                        gameState.links,
-                                        committedActions,
-                                        Object.values(visualEntities.current),
-                                        gameState.map
-                                    );
-
-                                    if (isInvalidAngle) {
-                                        ctx.save();
-                                        ctx.fillStyle = '#ff3333';
-                                        ctx.font = 'bold 12px "Courier New"';
-                                        ctx.textAlign = 'left';
-                                        
-                                        // Random jitter/glitch for the text
-                                        const glitchX = (Math.random() - 0.5) * 2;
-                                        const glitchY = (Math.random() - 0.5) * 2;
-                                        
-                                        const labelX = hub.x + ENTITY_STATS.HUB.size + 15;
-                                        const labelY = hub.y + 5;
-                                        
-                                        ctx.fillText('INVALID ANGLE', labelX + glitchX, labelY + glitchY);
-                                        
-                                        // Indicator dot at hub
-                                        ctx.beginPath();
-                                        ctx.arc(hub.x, hub.y, 5, 0, Math.PI * 2);
-                                        ctx.fill();
-                                        ctx.restore();
-                                    }
-
+                                
                                     const previewSize = stats?.size || 12;
 
                                     if (selectedItemType === 'CLUSTER_BOMB') {
