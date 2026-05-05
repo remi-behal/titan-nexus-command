@@ -39,7 +39,7 @@
 - [x] **Link Collision**: Destroy structures if their link crosses an existing link. <!-- id: 54 -->
 - [ ] **Resolution Polish**: <!-- id: 58 -->
     - [ ] Improve Resolution Overlay visibility/intrusiveness. <!-- id: 82 -->
-    - [ ] Add offensive roles for Defense structures (TBD). <!-- id: 65 -->
+    - [x] Add offensive roles for Defense structures (TBD). <!-- id: 65 -->
 
 #### Phase 7: Artwork, UI/UX, Music
 
@@ -90,8 +90,8 @@
             - [x] Should be able to see player colour for ghosts <!-- id: 93 -->
         - [x] Cluster bomb preview should show where all projectiles land <!-- id: 94 -->
         - [x] Bug - echo artillery ignores EMP effect <!-- id: 95 -->
-        - [] Visuals - shields should recharge just before planning phase so that opponents know it will have 1 hp. Same idea with flak, it stays active during planning phase. <!-- id: 96 -->
-        - [ ] Slingshot should warn launch and deny launch if you can see your new link will cross an existing link from that same hub. Maybe expand to warn if it crosses any links of your future launches also. <!-- id: 97 -->
+        - [x] Visuals - shields should recharge just before planning phase so that opponents know it will have 1 hp. Same idea with flak, it stays active during planning phase. <!-- id: 96 -->
+        - [x] Slingshot should warn launch and deny launch if you can see your new link will within 30 degrees of another link at the source hub. <!-- id: 97 -->
         - [ ]
     - [ ] Expand test coverage to `server/` and `client/` (Specifically for sockets and React components). <!-- id: 83 -->
 
