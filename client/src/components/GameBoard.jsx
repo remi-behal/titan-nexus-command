@@ -4,6 +4,7 @@ import { ENTITY_STATS, GLOBAL_STATS } from '../../../shared/constants/EntityStat
 import { VISUAL_STATS } from '../constants/VisualStats.js';
 import { shouldHighlightRing } from '../utils/uiLogic.js';
 import { getGhostColor } from '../utils/RenderingHelpers.js';
+import { drawShape, drawField } from '../utils/ShapeRenderer.js';
 
 /**
  * GameBoard Component
@@ -151,43 +152,6 @@ const GameBoard = forwardRef(({
         return playerColor; // For now assuming passed color is already neon-ready
     };
 
-    const drawVectorStructure = (ctx, x, y, radius, color, isGhost) => {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'square';
-        ctx.globalAlpha = isGhost ? 0.3 : 1.0;
-
-        // Intense Bloom/Glow
-        ctx.shadowBlur = isGhost ? 0 : 15;
-        ctx.shadowColor = color;
-
-        // The Structure - Multilayered wireframe polyhedrons
-        const layers = isGhost ? 1 : 2;
-        for (let layer = 1; layer <= layers; layer++) {
-            const r = radius * (layer / layers);
-            ctx.beginPath();
-            for (let i = 0; i < 6; i++) {
-                const angle = (i * 2 * Math.PI) / 6;
-                ctx.lineTo(r * Math.cos(angle), r * Math.sin(angle));
-            }
-            ctx.closePath();
-            ctx.stroke();
-        }
-
-        // Internal Cross-bracing
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        for (let i = 0; i < 3; i++) {
-            const angle = (i * 2 * Math.PI) / 6;
-            ctx.moveTo(radius * Math.cos(angle), radius * Math.sin(angle));
-            ctx.lineTo(radius * Math.cos(angle + Math.PI), radius * Math.sin(angle + Math.PI));
-        }
-        ctx.stroke();
-
-        ctx.restore();
-    };
 
     // --- Main Animation & Draw Loop ---
     useEffect(() => {
@@ -783,24 +747,18 @@ const GameBoard = forwardRef(({
 
                                 // 1. Draw Search Beam (faint cone)
                                 if (entity.searchMode) {
-                                    ctx.save();
-                                    ctx.globalAlpha = 0.15;
-                                    ctx.fillStyle = color;
-                                    const rad = ((entity.currentAngle || 0) * Math.PI) / 180;
-                                    const beamRange = stats?.homingRange || 400;
-                                    const halfCone = ((stats?.searchCone || 60) * (Math.PI / 180)) / 2;
-
-                                    ctx.beginPath();
-                                    ctx.moveTo(entity.x, entity.y);
-                                    ctx.arc(
-                                        entity.x,
-                                        entity.y,
-                                        beamRange,
-                                        rad - halfCone,
-                                        rad + halfCone
+                                    drawField(
+                                        ctx, 
+                                        entity.x, 
+                                        entity.y, 
+                                        'VISION_CONE', 
+                                        stats?.homingRange || 400, 
+                                        color, 
+                                        displayAsGhost,
+                                        Date.now(),
+                                        stats?.searchCone || 60,
+                                        entity.currentAngle || 0
                                     );
-                                    ctx.fill();
-                                    ctx.restore();
                                 }
 
                                 // 2. Draw Dithered Pixel-Smoke Trail
@@ -825,50 +783,39 @@ const GameBoard = forwardRef(({
                                 }
 
                                 // 3. Draw Projectile Body
-                                ctx.shadowBlur = 10;
-                                ctx.shadowColor = color;
-                                ctx.fillStyle = color;
-
                                 if (entity.itemType === 'HOMING_MISSILE') {
-                                    // Render as a bullet
-                                    const rad = ((entity.currentAngle || 0) * Math.PI) / 180;
-                                    ctx.translate(entity.x, entity.y);
-                                    ctx.rotate(rad);
-                                    ctx.beginPath();
-                                    // Ellipse/Bullet shape
-                                    ctx.ellipse(0, 0, radius * 1.5, radius * 0.8, 0, 0, Math.PI * 2);
-                                    ctx.fill();
-                                    // Nose tip highlight
-                                    ctx.fillStyle = '#fff';
-                                    ctx.globalAlpha = 0.5;
-                                    ctx.beginPath();
-                                    ctx.arc(radius * 0.5, 0, radius * 0.3, 0, Math.PI * 2);
-                                    ctx.fill();
+                                    drawShape(
+                                        ctx, 
+                                        entity.x, 
+                                        entity.y, 
+                                        'MISSILE', 
+                                        radius, 
+                                        color, 
+                                        (entity.currentAngle * Math.PI) / 180, 
+                                        displayAsGhost
+                                    );
                                 } else if (entity.type === 'NUKE') {
-                                    // Flying Nuke Icon (matching structure phase)
-                                    ctx.save();
-                                    ctx.translate(entity.x, entity.y);
-                                    const pulse = 1 + Math.sin(Date.now() / 200) * 0.08;
-                                    ctx.scale(pulse, pulse);
-                                    ctx.beginPath();
-                                    for (let i = 0; i < 6; i++) {
-                                        const a = (i * 2 * Math.PI) / 6;
-                                        ctx.lineTo(radius * Math.cos(a), radius * Math.sin(a));
-                                    }
-                                    ctx.closePath();
-                                    ctx.fillStyle = '#f39c12';
-                                    ctx.fill();
-                                    // Simplified radiation symbol for small projectile
-                                    ctx.fillStyle = '#000';
-                                    ctx.globalAlpha = 0.6;
-                                    ctx.beginPath();
-                                    ctx.arc(0, 0, radius * 0.2, 0, Math.PI * 2);
-                                    ctx.fill();
-                                    ctx.restore();
+                                    drawShape(
+                                        ctx, 
+                                        entity.x, 
+                                        entity.y, 
+                                        'NUKE_FLYING', 
+                                        radius, 
+                                        color, 
+                                        0, 
+                                        displayAsGhost
+                                    );
                                 } else {
-                                    ctx.beginPath();
-                                    ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
-                                    ctx.fill();
+                                    drawShape(
+                                        ctx, 
+                                        entity.x, 
+                                        entity.y, 
+                                        'PROJECTILE_SMALL', 
+                                        radius, 
+                                        color, 
+                                        (entity.currentAngle * Math.PI) / 180, 
+                                        displayAsGhost
+                                    );
                                 }
                                 ctx.restore();
                             } else if (entity.type === 'LASER_BEAM') {
@@ -889,89 +836,17 @@ const GameBoard = forwardRef(({
                                 ctx.stroke();
                                 ctx.restore();
                             } else if (entity.type === 'SPARK') {
-                                ctx.save();
-                                const sparkSize = 6 + Math.random() * 8; // Increased size
-                                ctx.beginPath();
-                                ctx.arc(entity.x, entity.y, sparkSize, 0, Math.PI * 2);
-                                ctx.fillStyle = '#fff';
-                                ctx.shadowBlur = 15;
-                                ctx.shadowColor = '#ffff00';
-                                ctx.fill();
-                                ctx.restore();
+                                drawShape(ctx, entity.x, entity.y, 'SPARK', 10, '#fff', 0, displayAsGhost);
                             } else if (entity.type === 'RECLAIM') {
-                                ctx.save();
                                 const radius = entity.radius || 75;
-                                // Implosion effect: pulsing/shrinking concentric rings
-                                const time = Date.now() / 200;
-                                const shrink = 1 - (time % 1);
-
-                                ctx.strokeStyle = '#00ffff';
-                                ctx.lineWidth = 3;
-                                ctx.setLineDash([10, 5]);
-                                ctx.beginPath();
-                                ctx.arc(entity.x, entity.y, radius * shrink, 0, Math.PI * 2);
-                                ctx.stroke();
-
-                                ctx.setLineDash([]);
-                                ctx.globalAlpha = 0.3;
-                                ctx.fillStyle = '#00cccc';
-                                ctx.shadowBlur = 20;
-                                ctx.shadowColor = '#00ffff';
-                                ctx.beginPath();
-                                ctx.arc(entity.x, entity.y, radius * (1 - shrink), 0, Math.PI * 2);
-                                ctx.fill();
-                                ctx.restore();
+                                drawField(ctx, entity.x, entity.y, 'SHIELD_DOME', radius, '#00ffff', displayAsGhost);
                             } else if (entity.type === 'EXPLOSION') {
-                                ctx.save();
                                 const explosionRadius = entity.radius || 40;
                                 const vStats = VISUAL_STATS[entity.itemType];
-                                ctx.strokeStyle = vStats?.color || '#ff9900';
-                                ctx.lineWidth = 6;
-                                ctx.beginPath();
-                                ctx.arc(entity.x, entity.y, explosionRadius * 1.2, 0, Math.PI * 2);
-                                ctx.stroke();
-                                ctx.beginPath();
-                                ctx.arc(entity.x, entity.y, explosionRadius, 0, Math.PI * 2);
-                                ctx.fillStyle = vStats?.secondaryColor || '#ff6600';
-                                ctx.shadowBlur = 20;
-                                ctx.shadowColor = vStats?.color || '#ff3300';
-                                ctx.fill();
-                                ctx.restore();
+                                drawShape(ctx, entity.x, entity.y, 'EXPLOSION', explosionRadius, vStats?.color || '#ff9900', 0, displayAsGhost);
                             } else if (entity.type === 'EXPLOSION_HAZARD') {
-                                ctx.save();
                                 const radius = entity.radius || 200;
-                                const time = Date.now() / 1000;
-                                const pulse = 1 + Math.sin(time * 5) * 0.05;
-                                const grad = ctx.createRadialGradient(
-                                    entity.x,
-                                    entity.y,
-                                    0,
-                                    entity.x,
-                                    entity.y,
-                                    radius * pulse
-                                );
-                                grad.addColorStop(0, 'rgba(255, 69, 0, 0.6)');
-                                grad.addColorStop(0.5, 'rgba(255, 140, 0, 0.3)');
-                                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-                                ctx.fillStyle = grad;
-                                ctx.beginPath();
-                                ctx.arc(entity.x, entity.y, radius * pulse, 0, Math.PI * 2);
-                                ctx.fill();
-                                ctx.fillStyle = 'rgba(255, 255, 0, 0.1)';
-                                for (let i = 0; i < 6; i++) {
-                                    const angle = time + (i * Math.PI * 2) / 6;
-                                    const r = radius * 0.5;
-                                    ctx.beginPath();
-                                    ctx.arc(
-                                        entity.x + Math.cos(angle) * r,
-                                        entity.y + Math.sin(angle) * r,
-                                        radius * 0.4,
-                                        0,
-                                        Math.PI * 2
-                                    );
-                                    ctx.fill();
-                                }
-                                ctx.restore();
+                                drawField(ctx, entity.x, entity.y, 'SHIELD_DOME', radius, '#ff4500', displayAsGhost);
                             } else if (entity.type === 'NAPALM_FIRE') {
                                 ctx.save();
                                 const stats = ENTITY_STATS.NAPALM_FIRE;
@@ -1022,26 +897,7 @@ const GameBoard = forwardRef(({
                                 }
                                 ctx.restore();
                             } else if (entity.type === 'LINK_COLLISION') {
-                                ctx.save();
-                                ctx.beginPath();
-                                ctx.arc(entity.x, entity.y, 15, 0, Math.PI * 2);
-                                ctx.fillStyle = '#fff';
-                                ctx.shadowBlur = 15;
-                                ctx.shadowColor = '#00ffff';
-                                ctx.fill();
-                                // Static spark lines
-                                ctx.strokeStyle = '#00ffff';
-                                ctx.lineWidth = 2;
-                                for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
-                                    ctx.beginPath();
-                                    ctx.moveTo(entity.x, entity.y);
-                                    ctx.lineTo(
-                                        entity.x + Math.cos(a) * 25,
-                                        entity.y + Math.sin(a) * 25
-                                    );
-                                    ctx.stroke();
-                                }
-                                ctx.restore();
+                                drawShape(ctx, entity.x, entity.y, 'SPARK', 25, '#00ffff', 0, displayAsGhost);
                             } else {
                                 // Non-Projectile Entities (Structures, Hazards, etc.)
                                 if (
@@ -1123,42 +979,17 @@ const GameBoard = forwardRef(({
                                         ctx.restore();
                                     }
                                 } else if (entity.type === 'HUB' || entity.type === 'EXTRACTOR' || entity.type === 'SHIELD' || entity.type === 'CLOAKING_FIELD' || entity.type === 'TURRET' || entity.type === 'RELAY' || entity.type === 'BARRIER') {
-                                    drawVectorStructure(ctx, entity.x, entity.y, radius, color, displayAsGhost);
+                                    const shapeKey = entity.type === 'SHIELD' ? 'HUB' : entity.type; // Shields use Hub shape for base
+                                    drawShape(ctx, entity.x, entity.y, shapeKey, radius, color, 0, displayAsGhost);
 
-                                    // Shield Bubble (Vectorized)
+                                    // Shield Bubble (Standardized Field)
                                     if (entity.type === 'SHIELD' && entity.barrierHp > 0 && !isDisabled) {
-                                        ctx.save();
-                                        ctx.translate(entity.x, entity.y);
-                                        ctx.strokeStyle = '#00ffff';
-                                        ctx.lineWidth = 1;
-                                        ctx.shadowBlur = 10;
-                                        ctx.shadowColor = '#00ffff';
-                                        ctx.beginPath();
-                                        ctx.arc(0, 0, ENTITY_STATS.SHIELD.range, 0, Math.PI * 2);
-                                        ctx.stroke();
-
-                                        // Inner vector arcs for shield
-                                        const time = Date.now() / 500;
-                                        for (let i = 0; i < 3; i++) {
-                                            ctx.beginPath();
-                                            const startA = time + i * (Math.PI / 1.5);
-                                            ctx.arc(0, 0, ENTITY_STATS.SHIELD.range - 5, startA, startA + 0.5);
-                                            ctx.stroke();
-                                        }
-                                        ctx.restore();
+                                        drawField(ctx, entity.x, entity.y, 'SHIELD_DOME', ENTITY_STATS.SHIELD.range, '#00ffff', displayAsGhost);
                                     }
 
-                                    // Cloak Field (Vectorized)
+                                    // Cloak Field (Standardized Field)
                                     if (entity.type === 'CLOAKING_FIELD') {
-                                        ctx.save();
-                                        ctx.translate(entity.x, entity.y);
-                                        ctx.strokeStyle = color;
-                                        ctx.setLineDash([5, 10]);
-                                        ctx.globalAlpha = 0.3;
-                                        ctx.beginPath();
-                                        ctx.arc(0, 0, ENTITY_STATS.CLOAKING_FIELD.cloakRange || 300, 0, Math.PI * 2);
-                                        ctx.stroke();
-                                        ctx.restore();
+                                        drawField(ctx, entity.x, entity.y, 'CLOAK_FIELD', ENTITY_STATS.CLOAKING_FIELD.cloakRange || 300, color, displayAsGhost);
                                     }
                                 } else if (entity.type === 'NUKE') {
                                     // Enhanced Nuke Icon (Landed)
@@ -1177,61 +1008,13 @@ const GameBoard = forwardRef(({
                                     const pulseScale = 1 + pulseFactor * (isDetonating ? 0.25 : 0.1);
 
                                     // 1. Pulsing Outer Aura (Glow)
+                                    drawField(ctx, 0, 0, 'SHIELD_DOME', radius * 2.2 * pulseScale, isDetonating ? '#ff0000' : '#f1c40f', displayAsGhost);
+
+                                    // 2. Main Body & Symbol
+                                    drawShape(ctx, 0, 0, 'NUKE_FLYING', radius * pulseScale, isDetonating ? '#ff0000' : '#f39c12', 0, displayAsGhost);
+
+                                    // 3. Integrated Countdown / Label
                                     ctx.save();
-                                    const auraAlpha = isDetonating
-                                        ? 0.4 + (pulseFactor + 1) * 0.2
-                                        : 0.15 + (pulseFactor + 1) * 0.15;
-                                    ctx.globalAlpha = auraAlpha;
-                                    ctx.fillStyle = isDetonating
-                                        ? '#ff0000'
-                                        : isCritical
-                                            ? '#ff3300'
-                                            : '#f1c40f';
-                                    ctx.beginPath();
-                                    ctx.arc(0, 0, radius * 2.2 * pulseScale, 0, Math.PI * 2);
-                                    ctx.fill();
-                                    ctx.restore();
-
-                                    // 2. Main Hexagon Body
-                                    ctx.beginPath();
-                                    for (let i = 0; i < 6; i++) {
-                                        const a = (i * 2 * Math.PI) / 6;
-                                        ctx.lineTo(
-                                            radius * Math.cos(a) * pulseScale,
-                                            radius * Math.sin(a) * pulseScale
-                                        );
-                                    }
-                                    ctx.closePath();
-                                    ctx.fillStyle = isDetonating
-                                        ? '#8b0000'
-                                        : isCritical
-                                            ? '#e74c3c'
-                                            : '#f39c12';
-                                    ctx.fill();
-                                    ctx.strokeStyle = '#fff';
-                                    ctx.lineWidth = isDetonating ? 4 : 2;
-                                    ctx.stroke();
-
-                                    // 3. Radiation Symbol (Trefoil)
-                                    ctx.save();
-                                    ctx.scale(pulseScale, pulseScale);
-                                    ctx.fillStyle = isDetonating ? '#ff0000' : '#000';
-                                    ctx.globalAlpha = isDetonating ? 1.0 : 0.6;
-                                    ctx.beginPath();
-                                    ctx.arc(0, 0, radius * 0.2, 0, Math.PI * 2);
-                                    ctx.fill();
-                                    for (let i = 0; i < 3; i++) {
-                                        ctx.beginPath();
-                                        ctx.moveTo(0, 0);
-                                        const startA = (i * 120 - 30) * (Math.PI / 180);
-                                        const endA = (i * 120 + 30) * (Math.PI / 180);
-                                        ctx.arc(0, 0, radius * 0.8, startA, endA);
-                                        ctx.closePath();
-                                        ctx.fill();
-                                    }
-                                    ctx.restore();
-
-                                    // 4. Integrated Countdown / Label
                                     ctx.fillStyle = '#fff';
                                     ctx.font = `bold ${radius * (isDetonating ? 0.6 : 0.9)}px Orbitron, Arial`;
                                     ctx.textAlign = 'center';
@@ -1245,49 +1028,20 @@ const GameBoard = forwardRef(({
                                     }
                                     ctx.restore();
 
-                                    // 5. Detonation Radius Preview (Subtle Circle)
+                                    // 4. Detonation Radius Preview (Standardized Field)
                                     if (entity.owner === myPlayerId) {
-                                        ctx.save();
-                                        ctx.setLineDash([5, 10]);
-                                        ctx.strokeStyle = 'rgba(255, 50, 50, 0.4)';
-                                        ctx.lineWidth = 2;
-                                        ctx.beginPath();
-                                        ctx.arc(
-                                            entity.x,
-                                            entity.y,
-                                            ENTITY_STATS.NUKE.radiusFull,
-                                            0,
-                                            Math.PI * 2
-                                        );
-                                        ctx.stroke();
-                                        ctx.restore();
+                                        drawField(ctx, entity.x - entity.x, entity.y - entity.y, 'SHIELD_DOME', ENTITY_STATS.NUKE.radiusFull, 'rgba(255, 50, 50, 0.4)', displayAsGhost);
                                     }
+                                    ctx.restore();
                                 } else {
                                     if (entity.itemType === 'RECLAIMER') {
-                                        ctx.save();
-                                        ctx.translate(entity.x, entity.y);
-                                        ctx.strokeStyle = '#00ffff';
-                                        ctx.shadowBlur = 15;
-                                        ctx.shadowColor = '#00ffff';
-                                        ctx.lineWidth = 2;
-                                        ctx.strokeRect(-radius / 2, -radius / 2, radius, radius);
-                                        // Cross-hair for reclaimer
-                                        ctx.lineWidth = 1;
-                                        ctx.beginPath();
-                                        ctx.moveTo(-radius / 2, 0); ctx.lineTo(radius / 2, 0);
-                                        ctx.moveTo(0, -radius / 2); ctx.lineTo(0, radius / 2);
-                                        ctx.stroke();
-                                        ctx.restore();
+                                        drawShape(ctx, entity.x, entity.y, 'RECLAIMER', radius, color, 0, displayAsGhost);
                                     } else {
-                                        drawVectorStructure(ctx, entity.x, entity.y, radius, color, displayAsGhost);
+                                        drawShape(ctx, entity.x, entity.y, entity.type, radius, color, 0, displayAsGhost);
                                     }
                                 }
                                 if (isUndeployed) {
-                                    ctx.strokeStyle = '#fff';
-                                    ctx.setLineDash([2, 4]);
-                                    ctx.beginPath();
-                                    ctx.arc(entity.x, entity.y, radius * 1.5, 0, Math.PI * 2);
-                                    ctx.stroke();
+                                    drawField(ctx, entity.x, entity.y, 'CLOAK_FIELD', radius * 1.5, '#fff', displayAsGhost);
                                 }
                             }
 

@@ -9,6 +9,7 @@ import MapDesigner from './components/MapDesigner';
 import { io } from 'socket.io-client';
 import CRTEffect from 'vault66-crt-effect';
 import "vault66-crt-effect/dist/vault66-crt-effect.css";
+import AssetGallery from './components/AssetGallery';
 
 const socket = io('/', {
     transports: ['polling', 'websocket'],
@@ -705,9 +706,11 @@ function App() {
     };
 
 
+    const isGalleryMode = new URLSearchParams(window.location.search).get('gallery') === 'true';
+
     return (
         <div className="App">
-            {renderContent()}
+            {isGalleryMode ? <AssetGallery /> : renderContent()}
         </div>
     );
 }
