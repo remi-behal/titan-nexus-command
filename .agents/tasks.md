@@ -95,11 +95,11 @@
     - [ ] Expand test coverage to `server/` and `client/` (Specifically for sockets and React components). <!-- id: 83 -->
     - [ ] **Refinements & Bugfixes**:
         - [ ] Nuke hazard needs refinement. <!-- id: 98 -->
-        - [ ] Nuke structure should not expand/contract, just flash maybe. <!-- id: 99 -->
+        - [x] Nuke structure should not expand/contract, just flash maybe. <!-- id: 99 -->
         - [ ] Shield needs a hit effect (spark is for projectile, shield needs some visual feedback too). <!-- id: 100 -->
         - [ ] Shield dome needs to have low health visual flickering instead of shield structure. <!-- id: 101 -->
         - [x] **Bug**: Slingshot deny on angle should only affect launched structures. It currently affects launched projectiles too. <!-- id: 102 -->
-        - [ ] Allow moving the map during execution phase. <!-- id: 103 -->
+        - [x] Allow moving the map during execution phase. <!-- id: 103 -->
         - [ ] Fix CRT effect overlapping toroidal boundary line. <!-- id: 104 -->
 
 ---
