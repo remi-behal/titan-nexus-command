@@ -35,7 +35,7 @@ describe('GameState - Cluster Bomb', () => {
         // Find sub-bombs in snapshots
         const subBombsCountInSnapshots = snapshots.map((s) => {
             if (s.type === 'ROUND_SUB') {
-                return s.state.entities.filter((e) => e.itemType === 'CLUSTER_BOMB').length;
+                return s.state.entities.filter((e) => e.itemType === 'CLUSTER_BOMB' || e.itemType === 'CLUSTER_FRAGMENT').length;
             }
             return 0;
         });
@@ -46,7 +46,7 @@ describe('GameState - Cluster Bomb', () => {
         // Verify that initially there is only 1 projectile
         const firstRoundSub = snapshots.find((s) => s.type === 'ROUND_SUB');
         const initialProjCount = firstRoundSub.state.entities.filter(
-            (e) => e.itemType === 'CLUSTER_BOMB'
+            (e) => e.itemType === 'CLUSTER_BOMB' || e.itemType === 'CLUSTER_FRAGMENT'
         ).length;
         expect(initialProjCount).toBe(1);
     });
