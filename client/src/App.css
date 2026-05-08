@@ -236,7 +236,6 @@ body,
 
 
 .game-world.locked-out {
-    pointer-events: none;
 }
 
 .game-container {
