@@ -35,8 +35,9 @@ export const SHAPES = {
     },
     BARRIER: {
         type: SHAPE_TYPES.PATH,
-        points: [[-1,-0.3], [1,-0.3], [1,0.3], [-1,0.3]], // Flat slab
+        points: [[-1,-0.2], [-0.8,-0.4], [0.8,-0.4], [1,-0.2], [1,0.2], [0.8,0.4], [-0.8,0.4], [-1,0.2]], // Chamfered slab
         layers: 2,
+        bracing: true,
         closed: true
     },
     RECLAIMER: {
@@ -46,10 +47,55 @@ export const SHAPES = {
         bracing: true,
         closed: true
     },
+    CRATER: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0, -1], [0.3, -0.8], [0.5, -0.9], [0.8, -0.5], [1, 0], [0.7, 0.6], [0.3, 0.9], [-0.2, 0.8], [-0.6, 0.7], [-0.9, 0.3], [-1, -0.2], [-0.6, -0.7]],
+        layers: 1,
+        closed: true
+    },
+    MOUNTAIN: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0,-1], [0.8,-0.5], [0.8,0.5], [0,1], [-0.8,0.5], [-0.8,-0.5]], // Jagged Hex base
+        layers: 2,
+        bracing: true,
+        closed: true
+    },
+    EXPLOSION: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0, -1], [0.2, -0.2], [1, 0], [0.2, 0.2], [0, 1], [-0.2, 0.2], [-1, 0], [-0.2, -0.2]], // 4-Point Star
+        layers: 2,
+        closed: true
+    },
+    SHIELD_HIT: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0,-0.5], [0.2,-1], [0.4,-0.5], [1,0], [0.4,0.5], [0.2,1], [0,0.5], [-0.2,1], [-0.4,0.5], [-1,0], [-0.4,-0.5], [-0.2,-1]], // Spiky burst
+        layers: 1,
+        closed: true
+    },
+    NUKE_EXPLOSION: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0,-1], [0.3,-0.7], [1,0], [0.3,0.7], [0,1], [-0.3,0.7], [-1,0], [-0.3,-0.7]], // Octagonal shockwave
+        layers: 3,
+        bracing: true,
+        closed: true
+    },
+    NAPALM_LICK: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0,-1], [0.2,-0.5], [0.4,0], [0.2,0.8], [0,1], [-0.2,0.8], [-0.4,0], [-0.2,-0.5]], // Flame lick
+        layers: 1,
+        closed: true
+    },
+    LAKE: {
+        type: SHAPE_TYPES.PATH,
+        points: [[-0.4, -1], [0.4, -1], [1, -0.4], [1, 0.4], [0.4, 1], [-0.4, 1], [-1, 0.4], [-1, -0.4]], // Octagon
+        layers: 2,
+        closed: true
+    },
     RELAY: {
         type: SHAPE_TYPES.PATH,
-        points: [[0,-1], [0.5,1], [-0.5,1]], // Triangle beacon
+        points: [[0,-1], [0.2,-0.4], [0.8,-0.2], [0.2,0], [0.5,1], [-0.5,1], [-0.2,0], [-0.8,-0.2], [-0.2,-0.4]], // Comms array
         layers: 2,
+        bracing: true,
         closed: true
     },
     SHIELD: {
@@ -76,6 +122,20 @@ export const SHAPES = {
         type: SHAPE_TYPES.PATH,
         points: [[-0.6,1], [0.6,1], [0.6,-0.4], [0.3,-0.4], [0.3,-1], [-0.3,-1], [-0.3,-0.4], [-0.6,-0.4]], // T-Shape turret
         layers: 2,
+        closed: true
+    },
+    LIGHT_SAM_DEFENSE: {
+        type: SHAPE_TYPES.PATH,
+        points: [[-0.5,1], [0.5,1], [0.5,-1], [-0.5,-1]], // Vertical rectangular pod
+        layers: 2,
+        bracing: true,
+        closed: true
+    },
+    SMART_SAM_DEFENSE: {
+        type: SHAPE_TYPES.PATH,
+        points: [[-0.7,1], [0.7,1], [0.7,0], [0.4,0], [0.4,-1], [-0.4,-1], [-0.4,0], [-0.7,0]], // Tiered launcher
+        layers: 2,
+        bracing: true,
         closed: true
     },
     RESOURCE_NODE: {
@@ -110,6 +170,18 @@ export const SHAPES = {
         points: [[0, -1.2], [0.4, 0], [0.6, 0.8], [0, 0.4], [-0.6, 0.8], [-0.4, 0]], 
         layers: 1,
         closed: true
+    },
+    CLUSTER_BOMB: {
+        type: SHAPE_TYPES.PATH,
+        points: [[-0.3,-1], [0.3,-1], [0.5,0], [0.3,1], [-0.3,1], [-0.5,0]], // Segmented capsule
+        layers: 2,
+        closed: true
+    },
+    CLUSTER_FRAGMENT: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0,-0.8], [0,0.8], [0,0], [-0.8,0], [0.8,0]], // Simple cross (X)
+        layers: 1,
+        closed: false
     },
     PROJECTILE_SMALL: {
         type: SHAPE_TYPES.PATH,

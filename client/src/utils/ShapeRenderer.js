@@ -6,7 +6,7 @@
 
 import { SHAPE_TYPES, SHAPES } from '../constants/ShapeDefinitions.js';
 
-export const drawShape = (ctx, x, y, shapeKey, radius, color, rotation = 0, isGhost = false) => {
+export const drawShape = (ctx, x, y, shapeKey, radius, color, rotation = 0, isGhost = false, isWarning = false) => {
     const shape = SHAPES[shapeKey];
     if (!shape) return;
 
@@ -14,7 +14,14 @@ export const drawShape = (ctx, x, y, shapeKey, radius, color, rotation = 0, isGh
     ctx.translate(x, y);
     ctx.rotate(rotation);
     ctx.strokeStyle = color;
-    ctx.globalAlpha = isGhost ? 0.3 : 1.0;
+    
+    let alpha = isGhost ? 0.3 : 1.0;
+    if (isWarning && !isGhost) {
+        // High-frequency flicker for critical status
+        const flicker = Math.sin(Date.now() / 40) > 0 ? 1.0 : 0.4;
+        alpha *= flicker;
+    }
+    ctx.globalAlpha = alpha;
     
     // Phosphor Glow
     if (!isGhost) {

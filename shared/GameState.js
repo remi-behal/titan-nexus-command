@@ -1639,6 +1639,7 @@ export class GameState {
                                         tempProjectiles.push({
                                             ...proj,
                                             id: `${proj.id}-sub-${i}`,
+                                            type: 'CLUSTER_FRAGMENT', // Use fragment visual for sub-munitions
                                             startX: subStartX,
                                             startY: subStartY,
                                             intendedDx: subIntendedDx,

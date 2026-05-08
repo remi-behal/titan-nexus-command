@@ -82,6 +82,18 @@ export const ENTITY_STATS = {
         spreadDistance: 200, // Total width of the perpendicular line
         category: 'OFFENSE'
     },
+    CLUSTER_FRAGMENT: {
+        hp: 1,
+        cost: 0,
+        damageFull: 1,
+        radiusFull: 15,
+        damageHalf: 1,
+        radiusHalf: 15,
+        vision: 50,
+        size: 5,
+        speed: SPEED_TIERS.NORMAL,
+        deathEffect: 'DETONATE'
+    },
     /** @see [weapons.md#homing-missile](../../.agents/weapons.md#homing-missile) */
     HOMING_MISSILE: {
         hp: 2,

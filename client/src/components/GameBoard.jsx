@@ -5,6 +5,7 @@ import { VISUAL_STATS } from '../constants/VisualStats.js';
 import { shouldHighlightRing } from '../utils/uiLogic.js';
 import { getGhostColor } from '../utils/RenderingHelpers.js';
 import { drawShape, drawField } from '../utils/ShapeRenderer.js';
+import { SHAPES } from '../constants/ShapeDefinitions.js';
 
 /**
  * GameBoard Component
@@ -381,45 +382,38 @@ const GameBoard = forwardRef(({
                         ctx.fillStyle = '#000000ec';
                         ctx.fillRect(0, 0, mapW, mapH);
 
-                        // 2a. DRAW LAKES
                         if (currentGameState.map.lakes) {
                             currentGameState.map.lakes.forEach((lake) => {
-                                ctx.save();
-                                ctx.fillStyle = '#1a3a5a'; // Deep water blue
-                                ctx.globalAlpha = 0.6;
-                                ctx.beginPath();
-                                ctx.arc(lake.x, lake.y, lake.radius, 0, Math.PI * 2);
-                                ctx.fill();
-                                // Subtle border
-                                ctx.strokeStyle = '#2a5a8a';
-                                ctx.lineWidth = 2;
-                                ctx.stroke();
-                                ctx.restore();
+                                // Stable rotation based on position
+                                const rotation = ((lake.x * 12.98 + lake.y * 78.23) % 360) * Math.PI / 180;
+                                drawShape(
+                                    ctx, 
+                                    lake.x, 
+                                    lake.y, 
+                                    'LAKE', 
+                                    lake.radius, 
+                                    '#1a3a5a', // Deep water blue
+                                    rotation, 
+                                    false
+                                );
                             });
                         }
 
                         // 2a-2. DRAW MOUNTAINS
                         if (currentGameState.map.mountains) {
                             currentGameState.map.mountains.forEach((mtn) => {
-                                ctx.save();
-                                // Base stone circle
-                                ctx.fillStyle = '#3d3434'; // Dark stone
-                                ctx.globalAlpha = 0.8;
-                                ctx.beginPath();
-                                ctx.arc(mtn.x, mtn.y, mtn.radius, 0, Math.PI * 2);
-                                ctx.fill();
-
-                                // Peak (inner circle for height suggestion)
-                                ctx.fillStyle = '#5c5252'; // Lighter stone
-                                ctx.beginPath();
-                                ctx.arc(mtn.x, mtn.y, mtn.radius * 0.6, 0, Math.PI * 2);
-                                ctx.fill();
-
-                                // Subtle rocky border
-                                ctx.strokeStyle = '#2d2525';
-                                ctx.lineWidth = 3;
-                                ctx.stroke();
-                                ctx.restore();
+                                // Stable rotation based on position
+                                const rotation = ((mtn.x * 43.21 + mtn.y * 13.57) % 360) * Math.PI / 180;
+                                drawShape(
+                                    ctx, 
+                                    mtn.x, 
+                                    mtn.y, 
+                                    'MOUNTAIN', 
+                                    mtn.radius, 
+                                    '#3d3434', // Dark stone
+                                    rotation, 
+                                    false
+                                );
                             });
                         }
 
@@ -737,23 +731,27 @@ const GameBoard = forwardRef(({
                                     );
                                 }
 
-                                // 2. Draw Dithered Pixel-Smoke Trail
-                                if (true) { // Always draw trail for projectiles
+                                // 2. Draw Vectorized Projectile Trail (Missiles only)
+                                const typeForTrail = entity.itemType || entity.type;
+                                const hasTrail = typeForTrail === 'HOMING_MISSILE' || typeForTrail === 'SAM_MISSILE' || typeForTrail === 'SMART_SAM_MISSILE';
+                                
+                                if (!displayAsGhost && hasTrail) {
                                     ctx.save();
-                                    const rad = ((entity.currentAngle || 0) * Math.PI) / 180;
-                                    const trailLen = 30;
-                                    const time = Date.now();
-
-                                    ctx.fillStyle = color;
-                                    ctx.globalAlpha = 0.6;
-
-                                    for (let i = 0; i < 10; i++) {
-                                        const dist = (i / 10) * trailLen;
-                                        const jitter = Math.sin(time / 50 + i) * 3;
-                                        const px = entity.x - Math.cos(rad) * dist + Math.cos(rad + Math.PI / 2) * jitter;
-                                        const py = entity.y - Math.sin(rad) * dist + Math.sin(rad + Math.PI / 2) * jitter;
-                                        const pSize = 2 + (i % 3);
-                                        ctx.fillRect(px - pSize / 2, py - pSize / 2, pSize, pSize);
+                                    const rad = ((entity.angle !== undefined ? entity.angle : entity.currentAngle || 0) * Math.PI) / 180 + Math.PI / 2;
+                                    ctx.translate(entity.x, entity.y);
+                                    ctx.rotate(rad);
+                                    
+                                    ctx.strokeStyle = color;
+                                    ctx.lineWidth = 1;
+                                    
+                                    // Draw 3 fading trail segments
+                                    for (let i = 1; i <= 3; i++) {
+                                        ctx.globalAlpha = 0.8 / i;
+                                        const offset = i * 12;
+                                        ctx.beginPath();
+                                        ctx.moveTo(0, offset);
+                                        ctx.lineTo(0, offset + 8);
+                                        ctx.stroke();
                                     }
                                     ctx.restore();
                                 }
@@ -786,11 +784,12 @@ const GameBoard = forwardRef(({
                                     );
                                 } else {
                                     const rotation = ((entity.angle !== undefined ? entity.angle : entity.currentAngle || 0) * Math.PI) / 180 + Math.PI / 2;
+                                    const shapeKey = SHAPES[entity.type] ? entity.type : 'PROJECTILE_SMALL';
                                     drawShape(
                                         ctx, 
                                         entity.x, 
                                         entity.y, 
-                                        'PROJECTILE_SMALL', 
+                                        shapeKey, 
                                         radius, 
                                         color, 
                                         rotation, 
@@ -822,8 +821,11 @@ const GameBoard = forwardRef(({
                                 drawField(ctx, entity.x, entity.y, 'SHIELD_DOME', radius, '#00ffff', displayAsGhost);
                             } else if (entity.type === 'EXPLOSION') {
                                 const explosionRadius = entity.radius || 40;
-                                const vStats = VISUAL_STATS[entity.itemType];
-                                drawShape(ctx, entity.x, entity.y, 'EXPLOSION', explosionRadius, vStats?.color || '#ff9900', 0, displayAsGhost);
+                                const vStats = VISUAL_STATS[entity.itemType] || {};
+                                const shapeKey = entity.itemType === 'NUKE' ? 'NUKE_EXPLOSION' : 'EXPLOSION';
+                                drawShape(ctx, entity.x, entity.y, shapeKey, explosionRadius, vStats.color || '#ff9900', 0, displayAsGhost);
+                            } else if (entity.type === 'SHIELD_HIT') {
+                                drawShape(ctx, entity.x, entity.y, 'SHIELD_HIT', entity.radius || 15, '#00ffff', 0, displayAsGhost);
                             } else if (entity.type === 'EXPLOSION_HAZARD') {
                                 const radius = entity.radius || 200;
                                 drawField(ctx, entity.x, entity.y, 'SHIELD_DOME', radius, '#ff4500', displayAsGhost);
@@ -850,30 +852,24 @@ const GameBoard = forwardRef(({
                                 ctx.translate(entity.startX, entity.startY);
                                 ctx.rotate(angle);
 
-                                // Draw the stadium (Capsule)
-                                ctx.beginPath();
-                                ctx.arc(0, 0, radius, Math.PI / 2, (3 * Math.PI) / 2);
-                                ctx.lineTo(length, -radius);
-                                ctx.arc(length, 0, radius, (3 * Math.PI) / 2, Math.PI / 2);
-                                ctx.closePath();
-
-                                const grad = ctx.createLinearGradient(0, 0, length, 0);
-                                grad.addColorStop(0, 'rgba(255, 69, 0, 0.7)'); // Intense red-orange at tip
-                                grad.addColorStop(1, 'rgba(255, 140, 0, 0.4)'); // Fades toward tail
-                                ctx.fillStyle = grad;
-                                ctx.shadowBlur = 15;
-                                ctx.shadowColor = '#ff4500';
-                                ctx.fill();
-
-                                // Fire particles/licks inside
-                                ctx.globalAlpha = 0.3;
-                                ctx.fillStyle = '#ffaa00';
-                                for (let i = 0; i < 5; i++) {
-                                    const px = (Math.sin(time * 5 + i * 0.7) * 0.4 + 0.5) * length;
-                                    const py = Math.cos(time * 3 + i * 1.1) * 0.2 * radius;
-                                    ctx.beginPath();
-                                    ctx.arc(px, py, radius * 0.4, 0, Math.PI * 2);
-                                    ctx.fill();
+                                // Vectorized Napalm: Draw repeating 'licks' along the hazard length
+                                const lickCount = Math.max(3, Math.floor(length / 20));
+                                const spacing = length / (lickCount - 1);
+                                
+                                ctx.fillStyle = '#ff4500';
+                                for (let i = 0; i < lickCount; i++) {
+                                    const progress = i / (lickCount - 1);
+                                    const flicker = 0.8 + Math.sin(time * 10 + i) * 0.2;
+                                    drawShape(
+                                        ctx, 
+                                        i * spacing, 
+                                        0, 
+                                        'NAPALM_LICK', 
+                                        radius * flicker, 
+                                        `rgba(255, ${69 + progress * 71}, 0, ${0.8 - progress * 0.4})`, 
+                                        Math.PI / 2, // Rotate lick to point perpendicular
+                                        displayAsGhost
+                                    );
                                 }
                                 ctx.restore();
                             } else if (entity.type === 'LINK_COLLISION') {
@@ -960,7 +956,18 @@ const GameBoard = forwardRef(({
                                     }
                                 } else if (entity.type === 'HUB' || entity.type === 'EXTRACTOR' || entity.type === 'SHIELD' || entity.type === 'CLOAKING_FIELD' || entity.type === 'TURRET' || entity.type === 'RELAY' || entity.type === 'BARRIER') {
                                     const shapeKey = entity.type; // Use the entity type directly as the shape key
-                                    drawShape(ctx, entity.x, entity.y, shapeKey, radius, color, 0, displayAsGhost);
+                                    
+                                    // Determine if the entity is in a critical state
+                                    let isWarning = false;
+                                    if (entity.type === 'SHIELD') {
+                                        // Shield is warning if barrier is almost gone or base HP is 1
+                                        isWarning = (entity.barrierHp !== undefined && entity.barrierHp <= 1) || entity.hp <= 1;
+                                    } else {
+                                        // Other structures warning if HP is 1
+                                        isWarning = entity.hp <= 1;
+                                    }
+
+                                    drawShape(ctx, entity.x, entity.y, shapeKey, radius, color, 0, displayAsGhost, isWarning);
 
                                     // Shield Bubble (Standardized Field)
                                     if (entity.type === 'SHIELD' && entity.barrierHp > 0 && !isDisabled) {
