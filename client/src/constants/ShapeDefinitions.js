@@ -52,10 +52,18 @@ export const SHAPES = {
         layers: 2,
         closed: true
     },
+    SHIELD: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0,-1], [0.86,-0.5], [0.86,0.5], [0,1], [-0.86,0.5], [-0.86,-0.5]],
+        layers: 2,
+        symbol: 'CORE', // Specialized generator core
+        closed: true
+    },
     CLOAKING_FIELD: {
         type: SHAPE_TYPES.PATH,
-        points: [[0,-1], [1,0], [0,1], [-1,0]], // Diamond (matching extractor style for now)
+        points: [[0, 1], [0.86, -0.5], [-0.86, -0.5]], // Inverted Triangle
         layers: 2,
+        bracing: true,
         closed: true
     },
     LASER_POINT_DEFENSE: {
@@ -70,17 +78,46 @@ export const SHAPES = {
         layers: 2,
         closed: true
     },
+    RESOURCE_NODE: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0,-1], [0.6,0], [0,1], [-0.6,0]], // Crystal diamond
+        layers: 2,
+        closed: true
+    },
+    SUPER_RESOURCE_NODE: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0,-1], [0.5,-0.5], [1,0], [0.5,0.5], [0,1], [-0.5,0.5], [-1,0], [-0.5,-0.5]], // Large Octagon/Crystal
+        layers: 3,
+        bracing: true,
+        closed: true
+    },
+    CRATER: {
+        type: SHAPE_TYPES.PATH,
+        points: [
+            [1, 0], [0.92, 0.38], [0.71, 0.71], [0.38, 0.92],
+            [0, 1], [-0.38, 0.92], [-0.71, 0.71], [-0.92, 0.38],
+            [-1, 0], [-0.92, -0.38], [-0.71, -0.71], [-0.38, -0.92],
+            [0, -1], [0.38, -0.92], [0.71, -0.71], [0.92, -0.38]
+        ],
+        layers: 1,
+        closed: true
+    },
 
     // --- PROJECTILES (PATH) ---
     MISSILE: {
         type: SHAPE_TYPES.PATH,
-        points: [[0, -1.2], [0.5, 0.8], [0, 0.4], [-0.5, 0.8]], // Sharp arrowhead
+        // Finned Chevron
+        points: [[0, -1.2], [0.4, 0], [0.6, 0.8], [0, 0.4], [-0.6, 0.8], [-0.4, 0]], 
         layers: 1,
         closed: true
     },
     PROJECTILE_SMALL: {
         type: SHAPE_TYPES.PATH,
-        points: [[0,-1], [0.5,0], [0,1], [-0.5,0]], // Narrow diamond
+        // Octagon
+        points: [
+            [0.38, -0.92], [0.92, -0.38], [0.92, 0.38], [0.38, 0.92],
+            [-0.38, 0.92], [-0.92, 0.38], [-0.92, -0.38], [-0.38, -0.92]
+        ],
         layers: 1,
         closed: true
     },

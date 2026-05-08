@@ -269,6 +269,7 @@ const GameBoard = forwardRef(({
                         viz.deployed = serverEnt.deployed;
                         viz.itemType = serverEnt.itemType;
                         viz.currentAngle = serverEnt.currentAngle;
+                        viz.angle = serverEnt.angle;
                         viz.searchMode = serverEnt.searchMode;
                         viz.lockFound = serverEnt.lockFound;
                         viz.flakActive = serverEnt.flakActive;
@@ -425,25 +426,16 @@ const GameBoard = forwardRef(({
                         // 2-c. Craters (Permanent scars)
                         if (currentGameState.map.craters) {
                             currentGameState.map.craters.forEach((crater) => {
-                                ctx.save();
-                                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                                ctx.beginPath();
-                                ctx.arc(crater.x, crater.y, crater.radius, 0, Math.PI * 2);
-                                ctx.fill();
-                                ctx.strokeStyle = '#222';
-                                ctx.lineWidth = 4;
-                                ctx.beginPath();
-                                for (let i = 0; i < 16; i++) {
-                                    const ang = (i / 16) * Math.PI * 2;
-                                    const r = crater.radius * (0.85 + Math.sin(i * 1.3) * 0.1);
-                                    ctx.lineTo(
-                                        crater.x + Math.cos(ang) * r,
-                                        crater.y + Math.sin(ang) * r
-                                    );
-                                }
-                                ctx.closePath();
-                                ctx.stroke();
-                                ctx.restore();
+                                drawShape(
+                                    ctx, 
+                                    crater.x, 
+                                    crater.y, 
+                                    'CRATER', 
+                                    crater.radius, 
+                                    '#222', 
+                                    0, 
+                                    false
+                                );
                             });
                         }
 
@@ -552,35 +544,19 @@ const GameBoard = forwardRef(({
                         // 4. DRAW RESOURCES
                         currentGameState.map.resources.forEach((res) => {
                             const isSuper = res.isSuper === true;
-                            const color = isSuper ? '#a020f0' : '#ffa500'; // Purple for super, Orange for normal
+                            const shapeKey = isSuper ? 'SUPER_RESOURCE_NODE' : 'RESOURCE_NODE';
+                            const color = isSuper ? '#a020f0' : '#ffa500';
 
-                            // Circular Vent Base
-                            ctx.save();
-                            ctx.translate(res.x, res.y);
-                            const r = res.radius || 8;
-
-                            ctx.strokeStyle = color;
-                            ctx.lineWidth = 2;
-                            ctx.shadowBlur = 10;
-                            ctx.shadowColor = color;
-
-                            ctx.beginPath();
-                            ctx.arc(0, 0, r, 0, Math.PI * 2);
-                            ctx.stroke();
-
-                            // Active Plume (Static flickering lines)
-                            const time = Date.now();
-                            ctx.beginPath();
-                            for (let i = 0; i < 3; i++) {
-                                const offset = (Math.sin(time / 100 + i) * 5);
-                                const h = r * (1.5 + i * 0.5);
-                                ctx.moveTo(-r + (i * r), 0);
-                                ctx.lineTo(-r + (i * r) + offset, -h);
-                            }
-                            ctx.globalAlpha = 0.6;
-                            ctx.stroke();
-
-                            ctx.restore();
+                            drawShape(
+                                ctx,
+                                res.x,
+                                res.y,
+                                shapeKey,
+                                res.radius || 8,
+                                color,
+                                0,
+                                false
+                            );
                         });
 
                         ctx.restore();
@@ -784,6 +760,9 @@ const GameBoard = forwardRef(({
 
                                 // 3. Draw Projectile Body
                                 if (entity.itemType === 'HOMING_MISSILE') {
+                                    // Offset by PI/2 because the shape is defined pointing UP [0, -1], 
+                                    // but 0 degrees in rotation is RIGHT [1, 0].
+                                    const rotation = ((entity.angle !== undefined ? entity.angle : entity.currentAngle || 0) * Math.PI) / 180 + Math.PI / 2;
                                     drawShape(
                                         ctx, 
                                         entity.x, 
@@ -791,7 +770,7 @@ const GameBoard = forwardRef(({
                                         'MISSILE', 
                                         radius, 
                                         color, 
-                                        (entity.currentAngle * Math.PI) / 180, 
+                                        rotation, 
                                         displayAsGhost
                                     );
                                 } else if (entity.type === 'NUKE') {
@@ -806,6 +785,7 @@ const GameBoard = forwardRef(({
                                         displayAsGhost
                                     );
                                 } else {
+                                    const rotation = ((entity.angle !== undefined ? entity.angle : entity.currentAngle || 0) * Math.PI) / 180 + Math.PI / 2;
                                     drawShape(
                                         ctx, 
                                         entity.x, 
@@ -813,7 +793,7 @@ const GameBoard = forwardRef(({
                                         'PROJECTILE_SMALL', 
                                         radius, 
                                         color, 
-                                        (entity.currentAngle * Math.PI) / 180, 
+                                        rotation, 
                                         displayAsGhost
                                     );
                                 }
@@ -979,7 +959,7 @@ const GameBoard = forwardRef(({
                                         ctx.restore();
                                     }
                                 } else if (entity.type === 'HUB' || entity.type === 'EXTRACTOR' || entity.type === 'SHIELD' || entity.type === 'CLOAKING_FIELD' || entity.type === 'TURRET' || entity.type === 'RELAY' || entity.type === 'BARRIER') {
-                                    const shapeKey = entity.type === 'SHIELD' ? 'HUB' : entity.type; // Shields use Hub shape for base
+                                    const shapeKey = entity.type; // Use the entity type directly as the shape key
                                     drawShape(ctx, entity.x, entity.y, shapeKey, radius, color, 0, displayAsGhost);
 
                                     // Shield Bubble (Standardized Field)

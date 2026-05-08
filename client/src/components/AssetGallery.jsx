@@ -45,9 +45,9 @@ const AssetGallery = () => {
             </div>
             
             <footer style={{ marginTop: '60px', padding: '20px', borderTop: '1px solid #222', fontSize: '12px', opacity: 0.7 }}>
-                <p>> SYSTEM: RENDERING CORE 2.0 ACTIVE</p>
-                <p>> SOURCE: ShapeDefinitions.js & ShapeRenderer.js</p>
-                <p>> ALL ASSETS ARE VECTOR-BASED NO EXTERNAL FILES LOADED</p>
+                <p>&gt; SYSTEM: RENDERING CORE 2.0 ACTIVE</p>
+                <p>&gt; SOURCE: ShapeDefinitions.js & ShapeRenderer.js</p>
+                <p>&gt; ALL ASSETS ARE VECTOR-BASED NO EXTERNAL FILES LOADED</p>
             </footer>
         </div>
     );

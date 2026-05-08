@@ -52,9 +52,13 @@ export const drawShape = (ctx, x, y, shapeKey, radius, color, rotation = 0, isGh
             ctx.stroke();
         }
 
-        // Symbols (e.g. Nuke icon)
-        if (shape.symbol === 'RADIATION' && !isGhost) {
-            drawRadiationSymbol(ctx, radius * 0.6);
+        // Symbols (e.g. Nuke icon or Generator Core)
+        if (!isGhost) {
+            if (shape.symbol === 'RADIATION') {
+                drawRadiationSymbol(ctx, radius * 0.6);
+            } else if (shape.symbol === 'CORE') {
+                drawCoreSymbol(ctx, radius * 0.6);
+            }
         }
     }
 
@@ -155,5 +159,19 @@ function drawRadiationSymbol(ctx, r) {
         ctx.closePath();
         ctx.fill();
     }
+    ctx.restore();
+}
+
+/**
+ * Draws a specialized generator core (circle with inner glow)
+ */
+function drawCoreSymbol(ctx, r) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.3, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.fill();
     ctx.restore();
 }
