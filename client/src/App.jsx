@@ -110,6 +110,7 @@ function App() {
         const targetY = (hub.y + Math.sin(rad) * launchDistance + playerState.map.height) % playerState.map.height;
 
         const isInvalid = GameState.checkLinkAngleSeparation(
+            selectedItemType,
             selectedHubId,
             targetX,
             targetY,

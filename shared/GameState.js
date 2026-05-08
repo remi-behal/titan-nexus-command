@@ -2430,7 +2430,14 @@ export class GameState {
      * Slingshot Safety: Check if a proposed launch is too close in angle to existing connections.
      * Returns true if any connection (incoming or outgoing) is within 30 degrees.
      */
-    static checkLinkAngleSeparation(sourceHubId, targetX, targetY, links, stagedActions, entities, map) {
+    static checkLinkAngleSeparation(itemType, sourceHubId, targetX, targetY, links, stagedActions, entities, map) {
+        // 0. Determine if this item type even creates a link.
+        // Projectiles (Weapons, Bombs) do not create links and should not be denied by angle.
+        const stats = ENTITY_STATS[itemType];
+        const createsLink = ((stats?.damageFull === undefined && itemType !== 'RECLAIMER') || stats?.landAsStructure) && stats?.landAsStructure !== false;
+        
+        if (!createsLink) return false;
+
         const hub = entities.find(e => String(e.id) === String(sourceHubId));
         if (!hub) {
             console.warn(`[AngleCheck] Hub not found for ID: ${sourceHubId}`);

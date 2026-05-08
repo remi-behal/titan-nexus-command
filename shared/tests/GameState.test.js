@@ -752,7 +752,7 @@ describe('GameState - Slingshot Safety', () => {
             const tx15 = 500 + Math.cos(rad15) * 100;
             const ty15 = 500 + Math.sin(rad15) * 100;
 
-            const isInvalid = GameState.checkLinkAngleSeparation('hub1', tx15, ty15, links, stagedActions, entities, map);
+            const isInvalid = GameState.checkLinkAngleSeparation('HUB', 'hub1', tx15, ty15, links, stagedActions, entities, map);
             expect(isInvalid).toBe(true);
 
             // Launching at 45 degrees (Allowed)
@@ -760,7 +760,7 @@ describe('GameState - Slingshot Safety', () => {
             const tx45 = 500 + Math.cos(rad45) * 100;
             const ty45 = 500 + Math.sin(rad45) * 100;
 
-            const isValid = GameState.checkLinkAngleSeparation('hub1', tx45, ty45, links, stagedActions, entities, map);
+            const isValid = GameState.checkLinkAngleSeparation('HUB', 'hub1', tx45, ty45, links, stagedActions, entities, map);
             expect(isValid).toBe(false);
         });
 
@@ -779,7 +779,7 @@ describe('GameState - Slingshot Safety', () => {
             const tx5 = 500 + Math.cos(rad5) * 100;
             const ty5 = 500 + Math.sin(rad5) * 100;
 
-            const isInvalid = GameState.checkLinkAngleSeparation('hub1', tx5, ty5, links, stagedActions, entities, map);
+            const isInvalid = GameState.checkLinkAngleSeparation('HUB', 'hub1', tx5, ty5, links, stagedActions, entities, map);
             expect(isInvalid).toBe(true);
         });
 
@@ -799,7 +799,7 @@ describe('GameState - Slingshot Safety', () => {
             const tx280 = 500 + Math.cos(rad280) * 100;
             const ty280 = 500 + Math.sin(rad280) * 100;
 
-            const isInvalid = GameState.checkLinkAngleSeparation('hub1', tx280, ty280, links, stagedActions, entities, map);
+            const isInvalid = GameState.checkLinkAngleSeparation('HUB', 'hub1', tx280, ty280, links, stagedActions, entities, map);
             expect(isInvalid).toBe(true);
         });
     });

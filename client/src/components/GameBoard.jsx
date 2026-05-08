@@ -989,16 +989,18 @@ const GameBoard = forwardRef(({
                                     const isDetonating = remainingTurns <= 0;
                                     const isCritical = remainingTurns <= 1;
 
-                                    // Pulse math
+                                    // Pulse math (now for flash intensity, not scale)
                                     const pulseSpeed = isDetonating ? 50 : isCritical ? 150 : 300;
-                                    const pulseFactor = Math.sin(time / pulseSpeed);
-                                    const pulseScale = 1 + pulseFactor * (isDetonating ? 0.25 : 0.1);
+                                    const pulseFactor = (Math.sin(time / pulseSpeed) + 1) / 2; // 0 to 1
 
-                                    // 1. Pulsing Outer Aura (Glow)
-                                    drawField(ctx, 0, 0, 'SHIELD_DOME', radius * 2.2 * pulseScale, isDetonating ? '#ff0000' : '#f1c40f', displayAsGhost);
+                                    // 1. Flashing Outer Aura (Glow) - Modulate opacity instead of size
+                                    ctx.save();
+                                    ctx.globalAlpha = (displayAsGhost ? 0.2 : 0.4) + pulseFactor * 0.4;
+                                    drawField(ctx, 0, 0, 'SHIELD_DOME', radius * 2.2, isDetonating ? '#ff0000' : '#f1c40f', displayAsGhost);
+                                    ctx.restore();
 
-                                    // 2. Main Body & Symbol
-                                    drawShape(ctx, 0, 0, 'NUKE_FLYING', radius * pulseScale, isDetonating ? '#ff0000' : '#f39c12', 0, displayAsGhost);
+                                    // 2. Main Body & Symbol - Fixed scale
+                                    drawShape(ctx, 0, 0, 'NUKE_FLYING', radius, isDetonating ? '#ff0000' : '#f39c12', 0, displayAsGhost, isCritical);
 
                                     // 3. Integrated Countdown / Label
                                     ctx.save();
@@ -1229,6 +1231,7 @@ const GameBoard = forwardRef(({
                                 
                                 // Slingshot Safety: Check for link angle separation from the same hub
                                 const isInvalidAngle = GameState.checkLinkAngleSeparation(
+                                    selectedItemType,
                                     selectedHubId,
                                     targetX,
                                     targetY,
