@@ -92,14 +92,21 @@ export const drawShape = (ctx, x, y, shapeKey, radius, color, rotation = 0, isGh
     ctx.restore();
 };
 
-export const drawField = (ctx, x, y, shapeKey, radius, color, isGhost = false, time = Date.now(), coneAngle = 60, currentAngle = 0) => {
+export const drawField = (ctx, x, y, shapeKey, radius, color, isGhost = false, time = Date.now(), coneAngle = 60, currentAngle = 0, isWarning = false) => {
     const shape = SHAPES[shapeKey];
     if (!shape) return;
 
     ctx.save();
     ctx.translate(x, y);
     ctx.strokeStyle = color;
-    ctx.globalAlpha = isGhost ? 0.2 : 0.6;
+
+    let alpha = isGhost ? 0.2 : 0.6;
+    if (isWarning && !isGhost) {
+        // High-frequency flicker for critical status (matching drawShape)
+        const flicker = Math.sin(Date.now() / 40) > 0 ? 1.0 : 0.4;
+        alpha *= flicker;
+    }
+    ctx.globalAlpha = alpha;
     
     if (!isGhost) {
         ctx.shadowBlur = 10;
