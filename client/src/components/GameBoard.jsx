@@ -960,23 +960,23 @@ const GameBoard = forwardRef(({
                                     // Determine if the entity is in a critical state
                                     let isWarning = false;
                                     if (entity.type === 'SHIELD') {
-                                        // Shield is warning if barrier is almost gone or base HP is 1
-                                        isWarning = (entity.barrierHp !== undefined && entity.barrierHp <= 1) || entity.hp <= 1;
+                                        const structureWarning = entity.hp <= 1;
+                                        const domeWarning = entity.barrierHp !== undefined && entity.barrierHp <= 1;
+
+                                        drawShape(ctx, entity.x, entity.y, shapeKey, radius, color, 0, displayAsGhost, structureWarning);
+
+                                        // Shield Bubble (Standardized Field)
+                                        if (entity.barrierHp > 0 && !isDisabled) {
+                                            drawField(ctx, entity.x, entity.y, 'SHIELD_DOME', ENTITY_STATS.SHIELD.range, '#00ffff', displayAsGhost, Date.now(), 60, 0, domeWarning);
+                                        }
                                     } else {
-                                        // Other structures warning if HP is 1
-                                        isWarning = entity.hp <= 1;
-                                    }
+                                        const isWarning = entity.hp <= 1;
+                                        drawShape(ctx, entity.x, entity.y, shapeKey, radius, color, 0, displayAsGhost, isWarning);
 
-                                    drawShape(ctx, entity.x, entity.y, shapeKey, radius, color, 0, displayAsGhost, isWarning);
-
-                                    // Shield Bubble (Standardized Field)
-                                    if (entity.type === 'SHIELD' && entity.barrierHp > 0 && !isDisabled) {
-                                        drawField(ctx, entity.x, entity.y, 'SHIELD_DOME', ENTITY_STATS.SHIELD.range, '#00ffff', displayAsGhost);
-                                    }
-
-                                    // Cloak Field (Standardized Field)
-                                    if (entity.type === 'CLOAKING_FIELD') {
-                                        drawField(ctx, entity.x, entity.y, 'CLOAK_FIELD', ENTITY_STATS.CLOAKING_FIELD.cloakRange || 300, color, displayAsGhost);
+                                        // Cloak Field (Standardized Field)
+                                        if (entity.type === 'CLOAKING_FIELD') {
+                                            drawField(ctx, entity.x, entity.y, 'CLOAK_FIELD', ENTITY_STATS.CLOAKING_FIELD.cloakRange || 300, color, displayAsGhost);
+                                        }
                                     }
                                 } else if (entity.type === 'NUKE') {
                                     // Enhanced Nuke Icon (Landed)
@@ -1655,7 +1655,7 @@ const GameBoard = forwardRef(({
                 const dy = Math.abs(e.clientY - mouseDownPosRef.current.y);
                 const isShortClick = dx < 5 && dy < 5;
 
-                if (isShortClick) {
+                if (isShortClick && !isResolving) {
                     const { x: gameX, y: gameY } = getGameCoords(e);
 
                     // Check for hub click
@@ -1708,7 +1708,7 @@ const GameBoard = forwardRef(({
         const { x, y } = getGameCoords(e);
 
         // 1. If launchMode is active, ONLY allow interaction with the Sling Ring
-        if (launchMode && selectedHubId) {
+        if (!isResolving && launchMode && selectedHubId) {
             const currentHub = gameState.entities.find((e) => e.id === selectedHubId);
             if (currentHub && currentHub.owner === myPlayerId) {
                 const d = getToroidalDist(
