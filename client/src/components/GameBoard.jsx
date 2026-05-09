@@ -68,6 +68,7 @@ const GameBoard = forwardRef(({
     committedActions,
     showDebugPreview,
     maxPullDistance,
+    isResolving,
     cameraOffset,
     setCameraOffset
 }, ref) => {
@@ -1698,7 +1699,8 @@ const GameBoard = forwardRef(({
         onSelectHub,
         HUB_RADIUS,
         myPlayerId,
-        setCameraOffset
+        setCameraOffset,
+        isResolving
     ]);
 
     const handleMouseDown = (e) => {
