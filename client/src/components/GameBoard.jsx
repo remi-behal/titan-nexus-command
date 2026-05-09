@@ -373,15 +373,16 @@ const GameBoard = forwardRef(({
                 ctx.scale(ZOOM_LEVEL, ZOOM_LEVEL);
                 ctx.translate(-cameraOffset.x, -cameraOffset.y);
 
+                // 2. BACKGROUND (Drawn once for the entire 3x3 area to avoid seams/overlap artifacts)
+                ctx.fillStyle = '#000000ec';
+                ctx.fillRect(-mapW, -mapH, mapW * 3, mapH * 3);
+
                 for (let offsetOffsetX = -mapW; offsetOffsetX <= mapW; offsetOffsetX += mapW) {
                     for (let offsetOffsetY = -mapH; offsetOffsetY <= mapH; offsetOffsetY += mapH) {
                         ctx.save();
                         ctx.translate(offsetOffsetX, offsetOffsetY);
 
-                        // 2. BACKGROUND
-                        // 2. BACKGROUND (Very Dark Grey)
-                        ctx.fillStyle = '#000000ec';
-                        ctx.fillRect(0, 0, mapW, mapH);
+                        // 2. BACKGROUND (Moved out of loop to avoid seams)
 
                         if (currentGameState.map.lakes) {
                             currentGameState.map.lakes.forEach((lake) => {
