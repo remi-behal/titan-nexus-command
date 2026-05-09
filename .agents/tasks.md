@@ -100,7 +100,7 @@
         - [ ] Shield dome needs to have low health visual flickering instead of shield structure. <!-- id: 101 -->
         - [x] **Bug**: Slingshot deny on angle should only affect launched structures. It currently affects launched projectiles too. <!-- id: 102 -->
         - [x] Allow moving the map during execution phase. <!-- id: 103 -->
-        - [ ] Fix CRT effect overlapping toroidal boundary line. <!-- id: 104 -->
+        - [x] Fix CRT effect overlapping toroidal boundary line. <!-- id: 104 -->
 
 ---
 
