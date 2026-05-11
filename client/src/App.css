@@ -244,6 +244,12 @@ body,
     height: 100%;
 }
 
+canvas {
+    touch-action: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
 .debug-info {
     background: #000;
     padding: 0.5rem;
