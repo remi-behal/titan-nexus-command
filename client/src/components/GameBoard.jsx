@@ -1682,12 +1682,12 @@ const GameBoard = forwardRef(({
             setIsPanning(false);
         };
 
-        window.addEventListener('mousemove', handleGlobalMouseMove);
-        window.addEventListener('mouseup', handleGlobalMouseUp);
+        window.addEventListener('pointermove', handleGlobalMouseMove);
+        window.addEventListener('pointerup', handleGlobalMouseUp);
 
         return () => {
-            window.removeEventListener('mousemove', handleGlobalMouseMove);
-            window.removeEventListener('mouseup', handleGlobalMouseUp);
+            window.removeEventListener('pointermove', handleGlobalMouseMove);
+            window.removeEventListener('pointerup', handleGlobalMouseUp);
         };
     }, [
         isAiming,
@@ -1704,7 +1704,7 @@ const GameBoard = forwardRef(({
         isResolving
     ]);
 
-    const handleMouseDown = (e) => {
+    const handlePointerDown = (e) => {
         const { x, y } = getGameCoords(e);
 
         // 1. If launchMode is active, ONLY allow interaction with the Sling Ring
@@ -1752,7 +1752,7 @@ const GameBoard = forwardRef(({
                 ref={canvasRef}
                 width={gameState.map.width}
                 height={gameState.map.height}
-                onMouseDown={handleMouseDown}
+                onPointerDown={handlePointerDown}
                 style={{
                     display: 'block',
                     cursor: isAiming ? 'crosshair' : isPanning ? 'grabbing' : 'grab',
