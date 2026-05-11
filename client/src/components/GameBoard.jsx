@@ -1498,7 +1498,7 @@ const GameBoard = forwardRef(({
 
     // Helper: Calculate game coordinates from mouse event
     const getGameCoords = useCallback(
-        (e) => {
+        (e) => { // Handles MouseEvent and PointerEvent
             const canvas = canvasRef.current;
             if (!canvas) return { x: 0, y: 0 };
 
