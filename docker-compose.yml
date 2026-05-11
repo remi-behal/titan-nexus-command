@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  titan-server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: titan-server
+    restart: always
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+      - TURN_DURATION=30
+    volumes:
+      # PERSISTENCE: Everything stays in your single config folder
+      - ./shared/maps:/app/shared/maps
+      - ./shared/ready_maps:/app/shared/ready_maps
+    networks:
+      - titan-network
+
+  titan-client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    container_name: titan-client
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - titan-server
+    networks:
+      - titan-network
+
+networks:
+  titan-network:
+    driver: bridge
