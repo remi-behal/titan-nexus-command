@@ -385,6 +385,80 @@ canvas {
     30% { transform: translate(-4px, -2px); filter: hue-rotate(135deg) contrast(1.5); }
     40% { transform: translate(4px, 2px); filter: hue-rotate(180deg) contrast(2); }
     50% { transform: translate(-2px, 2px); filter: hue-rotate(225deg) contrast(1.5); }
+}
+
+/* --- Ultra-Condensed Tactical Mode (< 500px Height) --- */
+@media (max-height: 500px) {
+    .sidebar-left, .sidebar-right {
+        padding: 0.5rem;
+    }
+
+    .player-info h1 {
+        display: none; /* Priority: Tactical data over branding */
+    }
+
+    .stats-blocks {
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+    }
+
+    .stat-group {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+        border-bottom: 1px solid #111;
+        padding-bottom: 2px;
+    }
+
+    .stat-group .label {
+        font-size: 0.55rem;
+        color: #444;
+    }
+
+    .stat-group .value {
+        font-size: 0.8rem;
+    }
+
+    .energy-group .value {
+        font-size: 0.9rem;
+    }
+
+    .timer-group .value {
+        padding: 2px 5px;
+    }
+
+    .controls-stack {
+        gap: 0.5rem;
+    }
+
+    .execute-btn {
+        padding: 1rem 0.5rem;
+        font-size: 0.75rem;
+        letter-spacing: 1px;
+    }
+
+    .clear-btn {
+        padding: 5px 10px;
+        font-size: 0.65rem;
+    }
+
+    .footer-hint {
+        padding-top: 0.5rem;
+        font-size: 0.55rem;
+        color: #333;
+    }
+
+    .player-dot {
+        width: 18px;
+        height: 18px;
+        font-size: 0.45rem;
+    }
+
+    .sync-monitor {
+        padding-bottom: 0.5rem;
+    }
+}
     60% { transform: translate(2px, -2px); filter: hue-rotate(270deg) contrast(2); }
     70% { transform: translate(-2px, -2px); filter: hue-rotate(315deg) contrast(1.5); }
     80% { transform: translate(2px, 2px); filter: hue-rotate(360deg) contrast(1.2); }
