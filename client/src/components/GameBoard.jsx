@@ -1496,6 +1496,7 @@ const GameBoard = forwardRef(({
         maxPullDistance,
         myPlayerId,
         cameraOffset,
+        zoom,
         HUB_RADIUS,
         SLING_RING_RADIUS
     ]);
@@ -1532,7 +1533,7 @@ const GameBoard = forwardRef(({
                 y: ((y % gameState.map.height) + gameState.map.height) % gameState.map.height
             };
         },
-        [cameraOffset, gameState.map.width, gameState.map.height]
+        [cameraOffset, zoom, gameState.map.width, gameState.map.height]
     );
 
     const getScreenCoords = useCallback((gameX, gameY) => {
@@ -1754,7 +1755,10 @@ const GameBoard = forwardRef(({
         HUB_RADIUS,
         myPlayerId,
         setCameraOffset,
-        isResolving
+        isResolving,
+        zoom,
+        setZoom,
+        minZoom
     ]);
 
     const handlePointerDown = (e) => {

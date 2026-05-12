@@ -320,46 +320,54 @@ function App() {
     }, []);
 
     // Calculate dynamic minZoom to prevent map tiling
+    const getRequiredMinZoom = () => {
+        if (!viewportRef.current || !playerState?.map) return 0.5;
+        const rect = viewportRef.current.getBoundingClientRect();
+        const mapW = playerState.map.width || 2000;
+        const mapH = playerState.map.height || 2000;
+        // The required zoom to fill the viewport without showing ghost copies
+        return Math.max(rect.width / mapW, rect.height / mapH);
+    };
+
     useEffect(() => {
-        const updateMinZoom = () => {
-            if (!viewportRef.current || !playerState?.map) return;
-            const rect = viewportRef.current.getBoundingClientRect();
-            const mapW = playerState.map.width || 2000;
-            const mapH = playerState.map.height || 2000;
-            
-            // Min zoom ensures map always covers the viewport
-            const requiredMinZoom = Math.max(rect.width / mapW, rect.height / mapH);
+        const updateConstraints = () => {
+            const requiredMinZoom = getRequiredMinZoom();
             setMinZoom(requiredMinZoom);
             
-            setZoom(prev => Math.max(requiredMinZoom, Math.min(3.0, prev)));
+            // Force zoom into legal range if it was outside (e.g. after window shrink)
+            setZoom(prev => {
+                const corrected = Math.max(requiredMinZoom, Math.min(3.0, prev));
+                return corrected;
+            });
         };
 
-        updateMinZoom();
-        window.addEventListener('resize', updateMinZoom);
-        return () => window.removeEventListener('resize', updateMinZoom);
+        updateConstraints();
+        const resizeObserver = new ResizeObserver(updateConstraints);
+        if (viewportRef.current) {
+            resizeObserver.observe(viewportRef.current);
+        }
+        
+        return () => resizeObserver.disconnect();
     }, [playerState?.map]);
 
     const handleWheel = (e) => {
         if (!viewportRef.current || isResolvingUI) return;
 
+        // Always use the latest viewport dimensions to calculate constraints
+        const currentMinZoom = getRequiredMinZoom();
         const zoomSpeed = 0.001;
         const delta = -e.deltaY * zoomSpeed;
-        const newZoom = Math.max(minZoom, Math.min(3.0, zoom + delta));
+        const newZoom = Math.max(currentMinZoom, Math.min(3.0, zoom + delta));
 
-        if (newZoom === zoom) return;
+        if (Math.abs(newZoom - zoom) < 0.0001) return;
 
-        // Zoom-at-cursor: adjust cameraOffset so world point under mouse stays fixed
+        // Zoom-at-cursor logic
         const rect = viewportRef.current.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
 
-        // World coord at cursor before zoom:
-        // x = (screenX / oldZoom) + offset
-        // We want: (screenX / oldZoom) + oldOffset = (screenX / newZoom) + newOffset
-        // newOffset = oldOffset + screenX * (1/oldZoom - 1/newZoom)
-
-        const mapW = playerState.map.width;
-        const mapH = playerState.map.height;
+        const mapW = playerState.map.width || 2000;
+        const mapH = playerState.map.height || 2000;
 
         setCameraOffset(prev => ({
             x: (prev.x + mouseX * (1 / zoom - 1 / newZoom) + mapW) % mapW,
