@@ -42,7 +42,7 @@ function App() {
     const [launchMode, setLaunchMode] = useState(false);
     const [isAiming, setIsAiming] = useState(false);
     const [committedActions, setCommittedActions] = useState([]);
-    const [showDebugPreview, setShowDebugPreview] = useState(false);
+    const [showDebugPreview, setShowDebugPreview] = useState(true);
     const [timeRemaining, setTimeRemaining] = useState(30);
     const [isResolving, setIsResolving] = useState(false);
     const [glitchActive, setGlitchActive] = useState(false);
@@ -445,16 +445,6 @@ function App() {
                             );
                         })()}
                     </div>
-                    <div className="stat-group">
-                        <span className="label">Turn:</span>
-                        <span className="value turn">{playerState?.turn || 1}</span>
-                    </div>
-                    <div className="stat-group timer-group">
-                        <span className="label">Time:</span>
-                        <span className={`value timer ${timeRemaining <= 10 ? 'low' : ''}`}>
-                            {timeRemaining}s
-                        </span>
-                    </div>
                 </div>
             </div>
 
@@ -486,15 +476,17 @@ function App() {
             </div>
 
             <div className="controls-stack">
-                <div className="debug-toggle">
-                    <label>
-                        <input
-                            type="checkbox"
-                            checked={showDebugPreview}
-                            onChange={(e) => setShowDebugPreview(e.target.checked)}
-                        />
-                        Preview
-                    </label>
+                <div className="stats-blocks">
+                    <div className="stat-group">
+                        <span className="label">Turn:</span>
+                        <span className="value turn">{playerState?.turn || 1}</span>
+                    </div>
+                    <div className="stat-group timer-group">
+                        <span className="label">Time:</span>
+                        <span className={`value timer ${timeRemaining <= 10 ? 'low' : ''}`}>
+                            {timeRemaining}s
+                        </span>
+                    </div>
                 </div>
 
                 {committedActions.length > 0 && !interactionBlocked && (
