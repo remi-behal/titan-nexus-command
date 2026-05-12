@@ -56,46 +56,72 @@ body,
     border-right: 2px solid #222;
 }
 
-.game-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #000;
-    padding: 0.5rem 1.5rem;
-    border-bottom: 2px solid #333;
-    min-height: 80px;
-    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8);
-    position: relative;
-    overflow: hidden;
-}
-
-
 .player-info h1 {
     margin: 0;
-    font-size: 1.2rem;
-    line-height: 1;
+    font-size: 1rem;
+    line-height: 1.2;
     text-transform: uppercase;
     letter-spacing: 2px;
     font-family: 'Courier New', Courier, monospace;
     color: #e0e0e0;
+    border-bottom: 2px solid #333;
+    padding-bottom: 10px;
 }
 
-.status-bars {
+/* Sidebar Left Styles */
+.stats-blocks {
     display: flex;
-    gap: 15px;
-    font-size: 0.8rem;
+    flex-direction: column;
+    gap: 1.2rem;
+    margin-top: 1.5rem;
+    text-align: left;
+}
+
+.stat-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stat-group .label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    color: #666;
+    letter-spacing: 1px;
+}
+
+.stat-group .value {
+    font-size: 1rem;
     font-family: 'Courier New', Courier, monospace;
-    margin-top: 5px;
-    white-space: nowrap;
+}
+
+.energy-group .value {
+    font-size: 1.4rem;
+}
+
+.timer-group .value {
+    display: inline-block;
+    padding: 4px 8px;
+    border: 1px solid #004433;
+}
+
+.footer-hint {
+    margin-top: auto;
+    font-size: 0.65rem;
+    color: #444;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-top: 1px solid #222;
+    padding-top: 1rem;
 }
 
 .badge {
     background: #1a1a1f;
-    padding: 2px 10px;
+    padding: 2px 6px;
     border: 1px solid #444;
     border-radius: 2px;
     color: #aaa;
-    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+    font-size: 0.7rem;
 }
 
 .energy {
@@ -105,16 +131,13 @@ body,
 
 .income {
     color: #4cd137;
+    font-size: 0.75rem;
+    margin-left: 5px;
 }
 
 .timer {
     background: #000;
-    padding: 2px 10px;
-    border-radius: 2px;
-    min-width: 70px;
     color: #00ffcc;
-    border: 1px solid #004433;
-    font-family: 'Courier New', Courier, monospace;
     text-shadow: 0 0 8px rgba(0, 255, 204, 0.5);
 }
 
@@ -125,48 +148,53 @@ body,
     border: 1px solid #ff0000;
 }
 
-.controls {
+/* Sidebar Right Styles */
+.sync-monitor {
     display: flex;
-    gap: 15px;
-    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #222;
+}
+
+.controls-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: 100%;
+    margin-top: 1rem;
 }
 
 .debug-toggle {
-    font-size: 0.9rem;
+    font-size: 0.7rem;
     color: #aaa;
     display: flex;
     align-items: center;
     gap: 5px;
-}
-
-.debug-toggle input {
-    cursor: pointer;
-}
-
-.launch-btn.active {
-    background: #ff6464;
-    animation: pulse 1.5s infinite;
+    text-transform: uppercase;
 }
 
 .execute-btn {
     background: #000;
     color: var(--player-accent-color, #00ff44);
-    min-width: 160px;
+    width: 100%;
+    padding: 1.5rem 0.5rem;
     border: 2px solid var(--player-accent-color, #00ff44) !important;
     border-radius: 0 !important;
     font-family: 'Courier New', Courier, monospace;
     font-weight: bold;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
+    font-size: 0.85rem;
     box-shadow: 0 0 10px var(--player-accent-glow, rgba(0, 255, 68, 0.3));
     transition: all 0.2s ease;
     cursor: pointer;
 }
 
 .execute-btn:hover:not(:disabled) {
-    background: #00ff44;
+    background: var(--player-accent-color, #00ff44);
     color: #000;
-    box-shadow: 0 0 20px #00ff44;
+    box-shadow: 0 0 20px var(--player-accent-color, #00ff44);
 }
 
 .execute-btn.waiting {
@@ -174,11 +202,6 @@ body,
     border-color: #f1c40f;
     color: #fff;
     cursor: not-allowed;
-}
-
-.sync-monitor {
-    display: flex;
-    gap: 10px;
 }
 
 .player-dot {
@@ -202,7 +225,8 @@ body,
     border-color: var(--player-accent-color, #00ffcc);
     color: var(--player-accent-color, #00ffcc);
     box-shadow: 0 0 8px var(--player-accent-glow, rgba(0, 255, 204, 0.5));
-}.hint-overlay {
+}
+.hint-overlay {
     position: absolute;
     top: 100px;
     left: 50%;
