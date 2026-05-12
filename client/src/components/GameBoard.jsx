@@ -79,6 +79,8 @@ const GameBoard = forwardRef(({
     const [isPanning, setIsPanning] = useState(false);
     const panStartRef = useRef({ x: 0, y: 0 });
     const mouseDownPosRef = useRef({ x: 0, y: 0 });
+    const activePointersRef = useRef(new Map());
+    const lastPinchDistRef = useRef(0);
 
     const HUB_RADIUS = ENTITY_STATS.HUB.size;
     const SLING_RING_RADIUS = GLOBAL_STATS.SLING_RING_RADIUS;
@@ -1616,12 +1618,56 @@ const GameBoard = forwardRef(({
     // Effect: Global Mouse Listeners for Panning & Aiming
     useEffect(() => {
         const handleGlobalMouseMove = (e) => {
+            activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button });
+
             // Always track mouse coordinates for hover effects
             const { x, y } = getGameCoords(e);
             setMousePos({ x, y });
 
             if (isAiming) {
                 onAimUpdate(x, y);
+            } else if (activePointersRef.current.size === 2) {
+                // Pinch-to-Zoom logic
+                const pointers = Array.from(activePointersRef.current.values());
+                const dist = Math.hypot(pointers[0].x - pointers[1].x, pointers[0].y - pointers[1].y);
+                
+                if (lastPinchDistRef.current > 0) {
+                    const zoomSpeed = 0.005;
+                    const delta = (dist - lastPinchDistRef.current) * zoomSpeed;
+                    
+                    // We need to update the parent zoom state
+                    // This is a bit tricky since setZoom is async, but we can use a functional update 
+                    // if setZoom were passed from App.jsx correctly.
+                    
+                    setZoom(prevZoom => {
+                        const newZoom = Math.max(0.1, Math.min(3.0, prevZoom + delta)); // minZoom will be enforced by App.jsx useEffect
+                        if (newZoom === prevZoom) return prevZoom;
+
+                        // Midpoint for anchored zoom
+                        const midX = (pointers[0].x + pointers[1].x) / 2;
+                        const midY = (pointers[0].y + pointers[1].y) / 2;
+
+                        const canvas = canvasRef.current;
+                        const rect = canvas.getBoundingClientRect();
+                        const localX = midX - rect.left;
+                        const localY = midY - rect.top;
+
+                        const mapW = gameState.map.width;
+                        const mapH = gameState.map.height;
+
+                        setCameraOffset(prevOffset => ({
+                            x: (prevOffset.x + localX * (1 / prevZoom - 1 / newZoom) + mapW) % mapW,
+                            y: (prevOffset.y + localY * (1 / prevZoom - 1 / newZoom) + mapH) % mapH
+                        }));
+
+                        return newZoom;
+                    });
+                }
+                lastPinchDistRef.current = dist;
+                
+                // Reset pan start to prevent jump after pinch ends
+                panStartRef.current = { x: (pointers[0].x + pointers[1].x) / 2, y: (pointers[0].y + pointers[1].y) / 2 };
+
             } else if (isPanning) {
                 // Determine raw movement in screen pixels
                 const dx = e.clientX - panStartRef.current.x;
@@ -1645,6 +1691,11 @@ const GameBoard = forwardRef(({
         };
 
         const handleGlobalMouseUp = (e) => {
+            activePointersRef.current.delete(e.pointerId);
+            if (activePointersRef.current.size < 2) {
+                lastPinchDistRef.current = 0;
+            }
+
             if (isAiming) {
                 const { x, y } = getGameCoords(e);
                 onAimEnd(x, y);
@@ -1739,6 +1790,13 @@ const GameBoard = forwardRef(({
             setIsPanning(true);
             panStartRef.current = { x: e.clientX, y: e.clientY };
             mouseDownPosRef.current = { x: e.clientX, y: e.clientY };
+        }
+
+        activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button });
+        if (activePointersRef.current.size === 2) {
+            const pointers = Array.from(activePointersRef.current.values());
+            lastPinchDistRef.current = Math.hypot(pointers[0].x - pointers[1].x, pointers[0].y - pointers[1].y);
+            setIsPanning(false); // Stop panning when starting pinch
         }
     };
 
