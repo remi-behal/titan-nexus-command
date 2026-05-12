@@ -53,6 +53,8 @@ function App() {
     const [matchStarted, setMatchStarted] = useState(false);
     const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(2); // Dynamic Zoom state
+    const [minZoom, setMinZoom] = useState(0.5);
+    const viewportRef = useRef(null);
 
     // Help RadialMenu track its hub
     const [hubScreenPos, setHubScreenPos] = useState(null);
@@ -316,6 +318,56 @@ function App() {
             socket.off('connect_error', onError);
         };
     }, []);
+
+    // Calculate dynamic minZoom to prevent map tiling
+    useEffect(() => {
+        const updateMinZoom = () => {
+            if (!viewportRef.current || !playerState?.map) return;
+            const rect = viewportRef.current.getBoundingClientRect();
+            const mapW = playerState.map.width || 2000;
+            const mapH = playerState.map.height || 2000;
+            
+            // Min zoom ensures map always covers the viewport
+            const requiredMinZoom = Math.max(rect.width / mapW, rect.height / mapH);
+            setMinZoom(requiredMinZoom);
+            
+            setZoom(prev => Math.max(requiredMinZoom, Math.min(3.0, prev)));
+        };
+
+        updateMinZoom();
+        window.addEventListener('resize', updateMinZoom);
+        return () => window.removeEventListener('resize', updateMinZoom);
+    }, [playerState?.map]);
+
+    const handleWheel = (e) => {
+        if (!viewportRef.current || isResolvingUI) return;
+
+        const zoomSpeed = 0.001;
+        const delta = -e.deltaY * zoomSpeed;
+        const newZoom = Math.max(minZoom, Math.min(3.0, zoom + delta));
+
+        if (newZoom === zoom) return;
+
+        // Zoom-at-cursor: adjust cameraOffset so world point under mouse stays fixed
+        const rect = viewportRef.current.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // World coord at cursor before zoom:
+        // x = (screenX / oldZoom) + offset
+        // We want: (screenX / oldZoom) + oldOffset = (screenX / newZoom) + newOffset
+        // newOffset = oldOffset + screenX * (1/oldZoom - 1/newZoom)
+
+        const mapW = playerState.map.width;
+        const mapH = playerState.map.height;
+
+        setCameraOffset(prev => ({
+            x: (prev.x + mouseX * (1 / zoom - 1 / newZoom) + mapW) % mapW,
+            y: (prev.y + mouseY * (1 / zoom - 1 / newZoom) + mapH) % mapH
+        }));
+
+        setZoom(newZoom);
+    };
 
     useEffect(() => {
         if (!matchStarted && currentView === 'LOBBY') {
@@ -619,7 +671,7 @@ function App() {
             <>
                 {sidebarLeft}
 
-                <div className="viewport-crt-container">
+                <div className="viewport-crt-container" ref={viewportRef} onWheel={handleWheel}>
                     <CRTEffect
                         key={playerColor}
                         theme="custom"
