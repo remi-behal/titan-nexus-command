@@ -72,7 +72,8 @@ const GameBoard = forwardRef(({
     cameraOffset,
     setCameraOffset,
     zoom,
-    setZoom
+    setZoom,
+    minZoom
 }, ref) => {
     const canvasRef = useRef(null);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -1640,7 +1641,7 @@ const GameBoard = forwardRef(({
                     // if setZoom were passed from App.jsx correctly.
                     
                     setZoom(prevZoom => {
-                        const newZoom = Math.max(0.1, Math.min(3.0, prevZoom + delta)); // minZoom will be enforced by App.jsx useEffect
+                        const newZoom = Math.max(minZoom, Math.min(3.0, prevZoom + delta));
                         if (newZoom === prevZoom) return prevZoom;
 
                         // Midpoint for anchored zoom

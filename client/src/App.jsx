@@ -709,6 +709,7 @@ function App() {
                                 setCameraOffset={setCameraOffset}
                                 zoom={zoom}
                                 setZoom={setZoom}
+                                minZoom={minZoom}
                                 onSelectHub={(id) => {
                                     setSelectedHubId(id);
                                 }}
