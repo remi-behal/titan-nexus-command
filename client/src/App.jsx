@@ -53,7 +53,7 @@ function App() {
     const [matchStarted, setMatchStarted] = useState(false);
     const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(2); // Dynamic Zoom state
-    const [minZoom, setMinZoom] = useState(0.5);
+    const [minZoom, setMinZoom] = useState(1.0);
     const viewportRef = useRef(null);
 
     // Help RadialMenu track its hub
@@ -319,45 +319,20 @@ function App() {
         };
     }, []);
 
-    // Calculate dynamic minZoom to prevent map tiling
-    const getRequiredMinZoom = () => {
-        if (!viewportRef.current || !playerState?.map) return 0.5;
-        const rect = viewportRef.current.getBoundingClientRect();
-        const mapW = playerState.map.width || 2000;
-        const mapH = playerState.map.height || 2000;
-        // The required zoom to fill the viewport without showing ghost copies
-        return Math.max(rect.width / mapW, rect.height / mapH);
-    };
-
+    // Minimum zoom is fixed to 1.0 because the canvas internal resolution 
+    // is set to match the map dimensions (2000x2000). 
+    // Zooming below 1.0 would show empty space on the internal canvas.
     useEffect(() => {
-        const updateConstraints = () => {
-            const requiredMinZoom = getRequiredMinZoom();
-            setMinZoom(requiredMinZoom);
-            
-            // Force zoom into legal range if it was outside (e.g. after window shrink)
-            setZoom(prev => {
-                const corrected = Math.max(requiredMinZoom, Math.min(3.0, prev));
-                return corrected;
-            });
-        };
-
-        updateConstraints();
-        const resizeObserver = new ResizeObserver(updateConstraints);
-        if (viewportRef.current) {
-            resizeObserver.observe(viewportRef.current);
-        }
-        
-        return () => resizeObserver.disconnect();
+        // Force zoom into legal range if it was outside (e.g. on load)
+        setZoom(prev => Math.max(1.0, Math.min(3.0, prev)));
     }, [playerState?.map]);
 
     const handleWheel = (e) => {
         if (!viewportRef.current || isResolvingUI) return;
 
-        // Always use the latest viewport dimensions to calculate constraints
-        const currentMinZoom = getRequiredMinZoom();
         const zoomSpeed = 0.001;
         const delta = -e.deltaY * zoomSpeed;
-        const newZoom = Math.max(currentMinZoom, Math.min(3.0, zoom + delta));
+        const newZoom = Math.max(1.0, Math.min(3.0, zoom + delta));
 
         if (Math.abs(newZoom - zoom) < 0.0001) return;
 

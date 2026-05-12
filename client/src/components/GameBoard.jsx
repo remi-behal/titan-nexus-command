@@ -1642,7 +1642,7 @@ const GameBoard = forwardRef(({
                     // if setZoom were passed from App.jsx correctly.
                     
                     setZoom(prevZoom => {
-                        const newZoom = Math.max(minZoom, Math.min(3.0, prevZoom + delta));
+                        const newZoom = Math.max(1.0, Math.min(3.0, prevZoom + delta));
                         if (newZoom === prevZoom) return prevZoom;
 
                         // Midpoint for anchored zoom
