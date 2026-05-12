@@ -5,50 +5,55 @@ body,
     background-color: #000 !important;
 }
 
+:root {
+    --sidebar-width: 140px;
+}
+
 #root {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 1rem;
+    width: 100%;
+    margin: 0;
+    padding: 0;
     text-align: center;
 }
 
 .App {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: var(--sidebar-width) 1fr var(--sidebar-width);
+    grid-template-rows: 100vh;
     height: 100vh;
-    gap: 1rem;
-    position: relative;
+    width: 100vw;
+    overflow: hidden;
+    background-color: #000;
 }
 
-/* Ensure CRT effect doesn't collapse with fixed children */
-/* Update CRT wrapper to be absolute and bound to its container */
-.crt-effect-wrapper {
-    position: absolute !important;
-    inset: 0 !important;
-    z-index: 10 !important;
-    /* Lower than header but enough to cover game-world */
-    pointer-events: none !important;
+.sidebar-left,
+.sidebar-right {
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    z-index: 20;
+    box-sizing: border-box;
+    border-right: 2px solid #333;
+}
+
+.sidebar-right {
+    border-right: none;
+    border-left: 2px solid #333;
 }
 
 /* New container to hold the CRT effect and the game viewport */
 .viewport-crt-container {
-    flex: 1;
-    min-height: 0;
+    grid-column: 2;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
     position: relative;
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    
-    /* The Master Monitor Frame */
-    box-sizing: border-box;
-    border: 2px solid #444;
-    border-radius: 4px;
-    background: #000;
-}
-
-/* Ensure internal CRT content allows clicks through to interactive elements */
-.crt-effect-wrapper>* {
-    pointer-events: auto;
+    border-left: 2px solid #222;
+    border-right: 2px solid #222;
 }
 
 .game-header {
