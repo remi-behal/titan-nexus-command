@@ -70,14 +70,15 @@ const GameBoard = forwardRef(({
     maxPullDistance,
     isResolving,
     cameraOffset,
-    setCameraOffset
+    setCameraOffset,
+    zoom,
+    setZoom
 }, ref) => {
     const canvasRef = useRef(null);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [isPanning, setIsPanning] = useState(false);
     const panStartRef = useRef({ x: 0, y: 0 });
     const mouseDownPosRef = useRef({ x: 0, y: 0 });
-    const ZOOM_LEVEL = 2; // 50% zoom in
 
     const HUB_RADIUS = ENTITY_STATS.HUB.size;
     const SLING_RING_RADIUS = GLOBAL_STATS.SLING_RING_RADIUS;
@@ -370,7 +371,7 @@ const GameBoard = forwardRef(({
                 // -----------------------------------------------------------------
                 ctx.save();
                 // Apply zoom and camera offset
-                ctx.scale(ZOOM_LEVEL, ZOOM_LEVEL);
+                ctx.scale(zoom, zoom);
                 ctx.translate(-cameraOffset.x, -cameraOffset.y);
 
                 // 2. BACKGROUND (Drawn once for the entire 3x3 area to avoid seams/overlap artifacts)
@@ -586,7 +587,7 @@ const GameBoard = forwardRef(({
                     fctx.fillStyle = '#ffffff';
 
                     // We must apply the same world-space transform to the fog context
-                    fctx.scale(ZOOM_LEVEL, ZOOM_LEVEL);
+                    fctx.scale(zoom, zoom);
                     fctx.translate(-cameraOffset.x, -cameraOffset.y);
 
                     // Tiled loop ensures holes wrap correctly alongside the entities
@@ -642,7 +643,7 @@ const GameBoard = forwardRef(({
                 // 8. FOREGROUND & UI (Entities, Highlights, Aiming)
                 // -----------------------------------------------------------------
                 ctx.save(); // Balance with the final restore() at the end of updateAndDraw
-                ctx.scale(ZOOM_LEVEL, ZOOM_LEVEL);
+                ctx.scale(zoom, zoom);
                 ctx.translate(-cameraOffset.x, -cameraOffset.y);
 
                 for (let offsetOffsetX = -mapW; offsetOffsetX <= mapW; offsetOffsetX += mapW) {
@@ -1521,8 +1522,8 @@ const GameBoard = forwardRef(({
                 offsetY = (rh - ch / scale) / 2;
             }
 
-            const x = ((e.clientX - rect.left - offsetX) * scale) / ZOOM_LEVEL + cameraOffset.x;
-            const y = ((e.clientY - rect.top - offsetY) * scale) / ZOOM_LEVEL + cameraOffset.y;
+            const x = ((e.clientX - rect.left - offsetX) * scale) / zoom + cameraOffset.x;
+            const y = ((e.clientY - rect.top - offsetY) * scale) / zoom + cameraOffset.y;
             return {
                 x: ((x % gameState.map.width) + gameState.map.width) % gameState.map.width,
                 y: ((y % gameState.map.height) + gameState.map.height) % gameState.map.height
@@ -1558,13 +1559,13 @@ const GameBoard = forwardRef(({
         const dy = gameY - cameraOffset.y;
 
         // Viewport-absolute coordinates (master baseline)
-        const primaryX = (dx * ZOOM_LEVEL) / scale + rect.left + offsetX;
-        const primaryY = (dy * ZOOM_LEVEL) / scale + rect.top + offsetY;
+        const primaryX = (dx * zoom) / scale + rect.left + offsetX;
+        const primaryY = (dy * zoom) / scale + rect.top + offsetY;
 
         // We need to account for the 3x3 tiling in the GameBoard.
         // The menu should follow the instance that is actually ON SCREEN.
-        const mapPixelW = (gameState.map.width * ZOOM_LEVEL) / scale;
-        const mapPixelH = (gameState.map.height * ZOOM_LEVEL) / scale;
+        const mapPixelW = (gameState.map.width * zoom) / scale;
+        const mapPixelH = (gameState.map.height * zoom) / scale;
 
         const xInstances = [primaryX - mapPixelW, primaryX, primaryX + mapPixelW];
         const yInstances = [primaryY - mapPixelH, primaryY, primaryY + mapPixelH];
@@ -1605,7 +1606,7 @@ const GameBoard = forwardRef(({
         const finalY = findBest(yInstances, viewportCenterY, rect.top, rect.top + rh);
 
         return { x: finalX, y: finalY };
-    }, [cameraOffset, ZOOM_LEVEL, gameState.map.width, gameState.map.height]);
+    }, [cameraOffset, zoom, gameState.map.width, gameState.map.height]);
 
     useImperativeHandle(ref, () => ({
         getScreenCoords,
@@ -1635,8 +1636,8 @@ const GameBoard = forwardRef(({
                 if (isNaN(scale) || !isFinite(scale)) return;
 
                 setCameraOffset((prev) => ({
-                    x: (prev.x - (((dx * scale) / ZOOM_LEVEL) % gameState.map.width) + gameState.map.width) % gameState.map.width,
-                    y: (prev.y - (((dy * scale) / ZOOM_LEVEL) % gameState.map.height) + gameState.map.height) % gameState.map.height
+                    x: (prev.x - (((dx * scale) / zoom) % gameState.map.width) + gameState.map.width) % gameState.map.width,
+                    y: (prev.y - (((dy * scale) / zoom) % gameState.map.height) + gameState.map.height) % gameState.map.height
                 }));
 
                 panStartRef.current = { x: e.clientX, y: e.clientY };

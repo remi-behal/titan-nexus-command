@@ -52,7 +52,7 @@ function App() {
     const [lobbyStatus, setLobbyStatus] = useState(null);
     const [matchStarted, setMatchStarted] = useState(false);
     const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 });
-    const ZOOM_LEVEL = 2; // Match GameBoard's zoom
+    const [zoom, setZoom] = useState(2); // Dynamic Zoom state
 
     // Help RadialMenu track its hub
     const [hubScreenPos, setHubScreenPos] = useState(null);
@@ -354,7 +354,7 @@ function App() {
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setHubScreenPos(pos);
         }
-    }, [selectedHubId, cameraOffset, playerState]);
+    }, [selectedHubId, cameraOffset, zoom, playerState]);
 
     // Close menu when resolution starts or turn is submitted
     useEffect(() => {
@@ -655,6 +655,8 @@ function App() {
                                 isResolving={isResolvingUI}
                                 cameraOffset={cameraOffset}
                                 setCameraOffset={setCameraOffset}
+                                zoom={zoom}
+                                setZoom={setZoom}
                                 onSelectHub={(id) => {
                                     setSelectedHubId(id);
                                 }}
