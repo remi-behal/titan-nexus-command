@@ -399,54 +399,77 @@ function App() {
     const isUnassigned = !myPlayerId;
     const interactionBlocked = isLocked || isResolvingUI || isSpectator || isUnassigned;
 
-    const header = (
-        <header className="game-header">
+    const sidebarLeft = (
+        <aside className="sidebar-left">
             <div className="player-info" style={{ color: pCurrent.color }}>
-                <h1>Titan: Nexus Command</h1>
-                <div className="status-bars">
-                    <span className="badge">You: {myPlayerId || 'Pending'}</span>
-                    <span className="energy">Energy: {pCurrent.energy}</span>
-                    {(() => {
-                        let projectedIncome = GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
-                        if (playerState?.entities && myPlayerId && !isSpectator) {
-                            playerState.entities.forEach((entity) => {
-                                if (entity.owner === myPlayerId) {
-                                    if (entity.disabledUntilTurn > playerState.turn) return;
+                <h1>Titan: Nexus</h1>
+                <div className="stats-blocks">
+                    <div className="stat-group">
+                        <span className="label">You:</span>
+                        <span className="badge">{myPlayerId || 'Pending'}</span>
+                    </div>
+                    <div className="stat-group energy-group">
+                        <span className="label">Energy:</span>
+                        <span className="value energy">{pCurrent.energy}</span>
+                        {(() => {
+                            let projectedIncome = GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
+                            if (playerState?.entities && myPlayerId && !isSpectator) {
+                                playerState.entities.forEach((entity) => {
+                                    if (entity.owner === myPlayerId) {
+                                        if (entity.disabledUntilTurn > playerState.turn) return;
 
-                                    const stats = ENTITY_STATS[entity.type];
-                                    if (stats && stats.energyGen) {
-                                        projectedIncome += stats.energyGen;
-                                        if (entity.type === 'EXTRACTOR') {
-                                            const node = playerState.map.resources.find((res) => {
-                                                let dx = Math.abs(res.x - entity.x);
-                                                let dy = Math.abs(res.y - entity.y);
-                                                if (dx > playerState.map.width / 2)
-                                                    dx = playerState.map.width - dx;
-                                                if (dy > playerState.map.height / 2)
-                                                    dy = playerState.map.height - dy;
-                                                const dist = Math.sqrt(dx * dx + dy * dy);
-                                                return dist <= GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS;
-                                            });
-                                            if (node) projectedIncome += node.value;
+                                        const stats = ENTITY_STATS[entity.type];
+                                        if (stats && stats.energyGen) {
+                                            projectedIncome += stats.energyGen;
+                                            if (entity.type === 'EXTRACTOR') {
+                                                const node = playerState.map.resources.find((res) => {
+                                                    let dx = Math.abs(res.x - entity.x);
+                                                    let dy = Math.abs(res.y - entity.y);
+                                                    if (dx > playerState.map.width / 2)
+                                                        dx = playerState.map.width - dx;
+                                                    if (dy > playerState.map.height / 2)
+                                                        dy = playerState.map.height - dy;
+                                                    const dist = Math.sqrt(dx * dx + dy * dy);
+                                                    return dist <= GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS;
+                                                });
+                                                if (node) projectedIncome += node.value;
+                                            }
                                         }
                                     }
-                                }
-                            });
-                        }
-                        return (
-                            <span className="income" title="Projected income next turn">
-                                {' '}
-                                (+{projectedIncome})
-                            </span>
-                        );
-                    })()}
-                    <span className="turn">Turn: {playerState?.turn || 1}</span>
-                    <span className={`timer ${timeRemaining <= 10 ? 'low' : ''}`}>
-                        Time: {timeRemaining}s
-                    </span>
+                                });
+                            }
+                            return (
+                                <span className="income" title="Projected income next turn">
+                                    (+{projectedIncome})
+                                </span>
+                            );
+                        })()}
+                    </div>
+                    <div className="stat-group">
+                        <span className="label">Turn:</span>
+                        <span className="value turn">{playerState?.turn || 1}</span>
+                    </div>
+                    <div className="stat-group timer-group">
+                        <span className="label">Time:</span>
+                        <span className={`value timer ${timeRemaining <= 10 ? 'low' : ''}`}>
+                            {timeRemaining}s
+                        </span>
+                    </div>
                 </div>
             </div>
 
+            <div className="footer-hint">
+                {isSpectator
+                    ? "Observing match."
+                    : selectedHubId
+                        ? `Hub ${selectedHubId} Selected.`
+                        : 'Select Hub.'}
+            </div>
+        </aside>
+    );
+
+    const sidebarRight = (
+        <aside className="sidebar-right">
             <div className="sync-monitor">
                 <div
                     className={`player-dot ${syncStatus?.lockedIn?.player1 ? 'ready' : ''}`}
@@ -462,7 +485,7 @@ function App() {
                 </div>
             </div>
 
-            <div className="controls">
+            <div className="controls-stack">
                 <div className="debug-toggle">
                     <label>
                         <input
@@ -470,15 +493,17 @@ function App() {
                             checked={showDebugPreview}
                             onChange={(e) => setShowDebugPreview(e.target.checked)}
                         />
-                        Show Landing Preview
+                        Preview
                     </label>
                 </div>
 
                 {committedActions.length > 0 && !interactionBlocked && (
                     <button className="clear-btn" onClick={handleClearActions}>
-                        Clear All ({committedActions.length})
+                        Clear ({committedActions.length})
                     </button>
                 )}
+
+                <div className="spacer" style={{ flex: 1 }} />
 
                 <button
                     className={`execute-btn ${isLocked ? 'waiting' : ''}`}
@@ -486,19 +511,19 @@ function App() {
                     disabled={interactionBlocked}
                 >
                     {isResolvingUI
-                        ? 'Resolving...'
+                        ? 'Simulating'
                         : isLocked
-                            ? 'Waiting for others...'
+                            ? 'Waiting'
                             : isSpectator
-                                ? 'Observation Only'
+                                ? 'Spectating'
                                 : isUnassigned
                                     ? '...'
                                     : committedActions.length > 0
-                                        ? `Complete Turn (${committedActions.length})`
-                                        : 'Complete Turn'}
+                                        ? `Ready (${committedActions.length})`
+                                        : 'Ready'}
                 </button>
             </div>
-        </header >
+        </aside>
     );
 
     const playerColor = pBase?.color || '#00ff44';
@@ -565,39 +590,42 @@ function App() {
         if (!playerState || !myPlayerId) {
             return (
                 <>
-                    {header}
-                    <div className="loading-screen" style={{ minHeight: '300px' }}>
-                        <p>{!playerState ? 'Downloading Sector Data...' : 'Authenticating Pilot...'}</p>
-                        <div className="status-indicator">
-                            Socket: {isConnected ? 'Online' : 'Offline'} | ID: {myPlayerId || 'Pending'}
-                        </div>
-                        {lastError && (
-                            <div
-                                className="error-display"
-                                style={{ color: '#ff6464', marginTop: '10px' }}
-                            >
-                                Error: {lastError}
+                    {sidebarLeft}
+                    <div className="viewport-crt-container">
+                        <div className="loading-screen" style={{ minHeight: '300px' }}>
+                            <p>{!playerState ? 'Downloading Sector Data...' : 'Authenticating Pilot...'}</p>
+                            <div className="status-indicator">
+                                Socket: {isConnected ? 'Online' : 'Offline'} | ID: {myPlayerId || 'Pending'}
                             </div>
-                        )}
-                        {!isConnected && (
-                            <button
-                                onClick={() => {
-                                    setLastError(null);
-                                    socket.connect();
-                                }}
-                                style={{ marginTop: '10px' }}
-                            >
-                                Reconnect
-                            </button>
-                        )}
+                            {lastError && (
+                                <div
+                                    className="error-display"
+                                    style={{ color: '#ff6464', marginTop: '10px' }}
+                                >
+                                    Error: {lastError}
+                                </div>
+                            )}
+                            {!isConnected && (
+                                <button
+                                    onClick={() => {
+                                        setLastError(null);
+                                        socket.connect();
+                                    }}
+                                    style={{ marginTop: '10px' }}
+                                >
+                                    Reconnect
+                                </button>
+                            )}
+                        </div>
                     </div>
+                    {sidebarRight}
                 </>
             );
         }
 
         return (
             <>
-                {header}
+                {sidebarLeft}
 
                 <div className="viewport-crt-container">
                     <CRTEffect
@@ -693,15 +721,7 @@ function App() {
                     </CRTEffect>
                 </div>
 
-                <footer className="debug-info">
-                    <p>
-                        {isSpectator
-                            ? "You are observing this match."
-                            : selectedHubId
-                                ? `Hub ${selectedHubId} Selected. ${launchMode ? 'Action: Pull back to sling!' : 'Click "Launch" to aim.'}`
-                                : 'Click your Hub to select it.'}
-                    </p>
-                </footer>
+                {sidebarRight}
             </>
         );
     };
