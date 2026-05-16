@@ -203,46 +203,49 @@ const GameBoard = forwardRef(({
                 // LERP_FACTOR targets how fast we reach the server's state.
                 const LERP_FACTOR = 0.3;
 
-                // Define current vision circles for re-scouting check
+                // 1a. Pre-calculate vision circles and cones for re-scouting/vision check
                 const currentVisionCircles = currentGameState.entities
-                    .filter((e) => e.owner === myPlayerId)
+                    .filter((e) => e.owner === myPlayerId && (ENTITY_STATS[e.itemType || e.type]?.vision || 0) > 0 && e.itemType !== 'HOMING_MISSILE')
                     .map((e) => ({
                         x: e.x,
                         y: e.y,
-                        radius: ENTITY_STATS[e.itemType || e.type]?.vision || 0
-                    }))
-                    .filter((v) => v.radius > 0);
+                        radius: ENTITY_STATS[e.itemType || e.type].vision
+                    }));
+
+                const currentVisionCones = currentGameState.entities
+                    .filter((e) => e.owner === myPlayerId && e.itemType === 'HOMING_MISSILE')
+                    .map((e) => {
+                        const stats = ENTITY_STATS[e.itemType];
+                        return {
+                            x: e.x,
+                            y: e.y,
+                            radius: stats.vision || 0,
+                            angle: e.currentAngle || 0,
+                            cone: stats.searchCone || 60
+                        };
+                    })
+                    .filter(c => c.radius > 0);
 
                 const isInVision = (x, y) => {
                     if (!myPlayerId || myPlayerId === 'spectator') return true;
 
-                    // First check current circular vision for buildings
-                    if (
-                        currentVisionCircles.some(
-                            (v) => getToroidalDist(v.x, v.y, x, y, mapW, mapH) <= v.radius
-                        )
-                    ) {
+                    // First check circular vision
+                    if (currentVisionCircles.some((v) => getToroidalDist(v.x, v.y, x, y, mapW, mapH) <= v.radius)) {
                         return true;
                     }
 
-                    // Then check specialized cone vision for projectiles
-                    return currentGameState.entities.some((e) => {
-                        if (e.owner !== myPlayerId) return false;
-                        const stats = ENTITY_STATS[e.itemType || e.type];
-                        const radius = stats?.vision || 0;
-                        if (radius <= 0) return false;
-                        if (e.itemType !== 'HOMING_MISSILE') return false;
-
-                        const d = getToroidalDist(e.x, e.y, x, y, mapW, mapH);
-                        if (d > radius) return false;
+                    // Then check specialized cone vision
+                    return currentVisionCones.some((c) => {
+                        const d = getToroidalDist(c.x, c.y, x, y, mapW, mapH);
+                        if (d > c.radius) return false;
                         if (d < 1) return true; // Always see self
 
-                        const vec = getToroidalDistVector(e.x, e.y, x, y, mapW, mapH);
+                        const vec = getToroidalDistVector(c.x, c.y, x, y, mapW, mapH);
                         const angleToPoint = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
-                        let diff = angleToPoint - (e.currentAngle || 0);
+                        let diff = angleToPoint - c.angle;
                         while (diff > 180) diff -= 360;
                         while (diff < -180) diff += 360;
-                        return Math.abs(diff) <= (stats?.searchCone || 60) / 2;
+                        return Math.abs(diff) <= c.cone / 2;
                     });
                 };
 
@@ -372,6 +375,17 @@ const GameBoard = forwardRef(({
                 // 3x3 TILED RENDERING LOOP
                 // This ensures objects near edges appear on the opposite side.
                 // -----------------------------------------------------------------
+                
+                // Calculate visible viewport bounds in game coordinates for culling
+                const canvasW = canvas.width;
+                const canvasH = canvas.height;
+                const viewportWidth = canvasW / zoom;
+                const viewportHeight = canvasH / zoom;
+                const viewL = cameraOffset.x;
+                const viewT = cameraOffset.y;
+                const viewR = viewL + viewportWidth;
+                const viewB = viewT + viewportHeight;
+
                 ctx.save();
                 // Apply zoom and camera offset
                 ctx.scale(zoom, zoom);
@@ -383,6 +397,15 @@ const GameBoard = forwardRef(({
 
                 for (let offsetOffsetX = -mapW; offsetOffsetX <= mapW; offsetOffsetX += mapW) {
                     for (let offsetOffsetY = -mapH; offsetOffsetY <= mapH; offsetOffsetY += mapH) {
+                        // TILE CULLING: Check if this tile instance overlaps the viewport
+                        const tileL = offsetOffsetX;
+                        const tileT = offsetOffsetY;
+                        const tileR = offsetOffsetX + mapW;
+                        const tileB = offsetOffsetY + mapH;
+
+                        const isVisible = !(tileR < viewL || tileL > viewR || tileB < viewT || tileT > viewB);
+                        if (!isVisible) continue;
+
                         ctx.save();
                         ctx.translate(offsetOffsetX, offsetOffsetY);
 
@@ -390,6 +413,12 @@ const GameBoard = forwardRef(({
 
                         if (currentGameState.map.lakes) {
                             currentGameState.map.lakes.forEach((lake) => {
+                                // Entity Culling: Skip if outside viewport
+                                if (lake.x + offsetOffsetX + lake.radius < viewL || 
+                                    lake.x + offsetOffsetX - lake.radius > viewR ||
+                                    lake.y + offsetOffsetY + lake.radius < viewT || 
+                                    lake.y + offsetOffsetY - lake.radius > viewB) return;
+
                                 // Stable rotation based on position
                                 const rotation = ((lake.x * 12.98 + lake.y * 78.23) % 360) * Math.PI / 180;
                                 drawShape(
@@ -408,6 +437,12 @@ const GameBoard = forwardRef(({
                         // 2a-2. DRAW MOUNTAINS
                         if (currentGameState.map.mountains) {
                             currentGameState.map.mountains.forEach((mtn) => {
+                                // Entity Culling: Skip if outside viewport
+                                if (mtn.x + offsetOffsetX + mtn.radius < viewL || 
+                                    mtn.x + offsetOffsetX - mtn.radius > viewR ||
+                                    mtn.y + offsetOffsetY + mtn.radius < viewT || 
+                                    mtn.y + offsetOffsetY - mtn.radius > viewB) return;
+
                                 // Stable rotation based on position
                                 const rotation = ((mtn.x * 43.21 + mtn.y * 13.57) % 360) * Math.PI / 180;
                                 drawShape(
@@ -426,6 +461,12 @@ const GameBoard = forwardRef(({
                         // 2-c. Craters (Permanent scars)
                         if (currentGameState.map.craters) {
                             currentGameState.map.craters.forEach((crater) => {
+                                // Entity Culling: Skip if outside viewport
+                                if (crater.x + offsetOffsetX + crater.radius < viewL || 
+                                    crater.x + offsetOffsetX - crater.radius > viewR ||
+                                    crater.y + offsetOffsetY + crater.radius < viewT || 
+                                    crater.y + offsetOffsetY - crater.radius > viewB) return;
+
                                 drawShape(
                                     ctx, 
                                     crater.x, 
@@ -445,6 +486,13 @@ const GameBoard = forwardRef(({
                             const from = visualEntities.current[link.from];
                             const to = visualEntities.current[link.to];
                             if (!from || !to) return;
+
+                            // Link Culling: Check if link bounding box overlaps viewport
+                            const minX = Math.min(from.x, to.x) + offsetOffsetX;
+                            const maxX = Math.max(from.x, to.x) + offsetOffsetX;
+                            const minY = Math.min(from.y, to.y) + offsetOffsetY;
+                            const maxY = Math.max(from.y, to.y) + offsetOffsetY;
+                            if (maxX < viewL || minX > viewR || maxY < viewT || minY > viewB) return;
 
                             const ownerId = link.owner || from.owner;
                             const player = currentGameState.players[ownerId];
@@ -495,10 +543,9 @@ const GameBoard = forwardRef(({
                                 ctx.globalAlpha = isSegmentGhost ? 0.2 : 1.0;
                                 if (isSegmentGhost) ctx.setLineDash([4, 4]);
 
-                                // Intensive Glow for Links
+                                // Intensive Glow for Links - REMOVED for performance
                                 if (!isSegmentGhost) {
-                                    ctx.shadowBlur = 10;
-                                    ctx.shadowColor = baseColor;
+                                    // Glow removed
                                 }
 
                                 // Base Cable
@@ -543,6 +590,12 @@ const GameBoard = forwardRef(({
 
                         // 4. DRAW RESOURCES
                         currentGameState.map.resources.forEach((res) => {
+                            // Entity Culling: Skip if outside viewport
+                            if (res.x + offsetOffsetX + (res.radius || 8) < viewL || 
+                                res.x + offsetOffsetX - (res.radius || 8) > viewR ||
+                                res.y + offsetOffsetY + (res.radius || 8) < viewT || 
+                                res.y + offsetOffsetY - (res.radius || 8) > viewB) return;
+
                             const isSuper = res.isSuper === true;
                             const shapeKey = isSuper ? 'SUPER_RESOURCE_NODE' : 'RESOURCE_NODE';
                             const color = isSuper ? '#a020f0' : '#ffa500';
@@ -596,22 +649,39 @@ const GameBoard = forwardRef(({
                     // Tiled loop ensures holes wrap correctly alongside the entities
                     for (let ox = -mapW; ox <= mapW; ox += mapW) {
                         for (let oy = -mapH; oy <= mapH; oy += mapH) {
+                            // TILE CULLING: Skip if this tile instance overlaps the viewport
+                            const tileL = ox;
+                            const tileT = oy;
+                            const tileR = ox + mapW;
+                            const tileB = oy + mapH;
+
+                            const isTileVisible = !(tileR < viewL || tileL > viewR || tileB < viewT || tileT > viewB);
+                            if (!isTileVisible) continue;
+
                             fctx.save();
                             fctx.translate(ox, oy);
 
-                            currentGameState.entities.forEach((e) => {
-                                const stats = ENTITY_STATS[e.itemType || e.type];
+                            // 6. DRAW ENTITIES
+                            currentGameState.entities.forEach((entity) => {
+                                // Culling: Skip if outside viewport
+                                const stats = ENTITY_STATS[entity.itemType || entity.type];
+                                const radius = stats?.size || 20;
+                                if (entity.x + ox + radius < viewL || 
+                                    entity.x + ox - radius > viewR ||
+                                    entity.y + oy + radius < viewT || 
+                                    entity.y + oy - radius > viewB) return;
+
                                 const isOwnProjectile =
-                                    stats?.damageFull !== undefined && e.owner === myPlayerId;
-                                const isOwnEntity = e.owner === myPlayerId;
+                                    stats?.damageFull !== undefined && entity.owner === myPlayerId;
+                                const isOwnEntity = entity.owner === myPlayerId;
 
                                 if (isOwnEntity || isOwnProjectile) {
                                     const radius = stats?.vision || 0;
                                     if (radius > 0) {
-                                        const viz = visualEntities.current[e.id] || e;
+                                        const viz = visualEntities.current[entity.id] || entity;
                                         fctx.beginPath();
 
-                                        if (e.itemType === 'HOMING_MISSILE') {
+                                        if (entity.itemType === 'HOMING_MISSILE') {
                                             const rad = ((viz.currentAngle || 0) * Math.PI) / 180;
                                             const halfCone =
                                                 ((stats.searchCone || 60) * (Math.PI / 180)) / 2;
@@ -651,11 +721,35 @@ const GameBoard = forwardRef(({
 
                 for (let offsetOffsetX = -mapW; offsetOffsetX <= mapW; offsetOffsetX += mapW) {
                     for (let offsetOffsetY = -mapH; offsetOffsetY <= mapH; offsetOffsetY += mapH) {
+                        // TILE CULLING: Check if this tile instance overlaps the viewport
+                        const tileL = offsetOffsetX;
+                        const tileT = offsetOffsetY;
+                        const tileR = offsetOffsetX + mapW;
+                        const tileB = offsetOffsetY + mapH;
+
+                        const isTileVisible = !(tileR < viewL || tileL > viewR || tileB < viewT || tileT > viewB);
+                        if (!isTileVisible) continue;
+
                         ctx.save();
                         ctx.translate(offsetOffsetX, offsetOffsetY);
 
                         // 5. DRAW ENTITIES
                         Object.values(visualEntities.current).forEach((entity) => {
+                            // FRUSTUM CULLING: Skip if entity is outside viewport bounds
+                            const stats = ENTITY_STATS[entity.itemType || entity.type];
+                            const isProjectile =
+                                entity.type === 'PROJECTILE' ||
+                                entity.type === 'NAPALM' ||
+                                (stats?.damageFull !==
+                                    undefined &&
+                                    (entity.type !== 'NUKE' || !entity.detonationTurn));
+                            const radius = stats?.size || (isProjectile ? (GLOBAL_STATS.PROJECTILE_RADIUS || 10) : 20);
+
+                            if (entity.x + offsetOffsetX + radius < viewL || 
+                                entity.x + offsetOffsetX - radius > viewR ||
+                                entity.y + offsetOffsetY + radius < viewT || 
+                                entity.y + offsetOffsetY - radius > viewB) return;
+
                             const player = currentGameState.players[entity.owner];
                             let color = player ? player.color : '#fff';
 
@@ -698,8 +792,7 @@ const GameBoard = forwardRef(({
                             ctx.globalAlpha = displayAsGhost ? 0.4 : isUndeployed ? 0.5 : 1.0;
 
                             if (isSelected) {
-                                ctx.shadowBlur = 15;
-                                ctx.shadowColor = isUndeployed ? '#aaa' : '#fff';
+                                // shadow removed
                             }
 
                             if (isUndeployed) {
@@ -707,16 +800,6 @@ const GameBoard = forwardRef(({
                                 ctx.strokeStyle = '#fff';
                                 ctx.lineWidth = 1;
                             }
-
-                            const isProjectile =
-                                entity.type === 'PROJECTILE' ||
-                                entity.type === 'NAPALM' ||
-                                (ENTITY_STATS[entity.itemType || entity.type]?.damageFull !==
-                                    undefined &&
-                                    (entity.type !== 'NUKE' || !entity.detonationTurn));
-                            const stats = ENTITY_STATS[entity.itemType || entity.type];
-                            const radius =
-                                stats?.size || (isProjectile ? GLOBAL_STATS.PROJECTILE_RADIUS : 20);
 
                             if (isProjectile) {
                                 ctx.save();
@@ -811,8 +894,7 @@ const GameBoard = forwardRef(({
                                 ctx.lineTo(entity.targetX, entity.targetY);
                                 ctx.strokeStyle = '#f0f'; // Magenta laser
                                 ctx.lineWidth = GLOBAL_STATS.LASER_BEAM_WIDTH;
-                                ctx.shadowBlur = 10;
-                                ctx.shadowColor = '#f0f';
+                                // shadow removed
                                 ctx.stroke();
 
                                 // Add a glow effect
@@ -1011,8 +1093,7 @@ const GameBoard = forwardRef(({
                                     ctx.font = `bold ${radius * (isDetonating ? 0.6 : 0.9)}px Orbitron, Arial`;
                                     ctx.textAlign = 'center';
                                     ctx.textBaseline = 'middle';
-                                    ctx.shadowBlur = 10;
-                                    ctx.shadowColor = '#000';
+                                    // shadow removed
                                     if (isDetonating) {
                                         ctx.fillText('CRITICAL', 0, 0);
                                     } else if (remainingTurns > 0) {
@@ -1073,8 +1154,7 @@ const GameBoard = forwardRef(({
                                         ctx.strokeStyle = isActive
                                             ? 'rgba(255, 255, 255, 0.95)'
                                             : 'rgba(255, 255, 255, 0.7)';
-                                        ctx.shadowBlur = isActive ? 15 : 10;
-                                        ctx.shadowColor = '#fff';
+                                        // shadow removed
                                     }
 
                                     ctx.beginPath();
@@ -1098,12 +1178,6 @@ const GameBoard = forwardRef(({
 
                                         if (selectedItemType.includes('DEFENSE') || selectedItemType === 'SHIELD') {
                                             ctx.strokeRect(-iconSize, -iconSize, iconSize * 2, iconSize * 2);
-                                        } else if (selectedItemType === 'EXTRACTOR') {
-                                            ctx.moveTo(0, -iconSize);
-                                            ctx.lineTo(iconSize, iconSize);
-                                            ctx.lineTo(-iconSize, iconSize);
-                                            ctx.closePath();
-                                            ctx.stroke();
                                         } else {
                                             ctx.arc(0, 0, iconSize, 0, Math.PI * 2);
                                             ctx.stroke();

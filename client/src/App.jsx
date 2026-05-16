@@ -661,9 +661,9 @@ function App() {
                         scanlineColor={crtColor}
                         edgeGlowColor={crtColor}
                         glowColor={crtColor}
-                        enableEdgeGlow={true}
+                        enableEdgeGlow={false}
                         enableScanlines={true}
-                        enableGlow={true}
+                        enableGlow={false}
                         enableSweep={false}
                         scanlineOpacity={0.2}
                         scanlineThickness={1}
