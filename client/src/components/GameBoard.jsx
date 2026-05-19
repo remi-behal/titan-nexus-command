@@ -375,7 +375,7 @@ const GameBoard = forwardRef(({
                 // 3x3 TILED RENDERING LOOP
                 // This ensures objects near edges appear on the opposite side.
                 // -----------------------------------------------------------------
-                
+
                 // Calculate visible viewport bounds in game coordinates for culling
                 const canvasW = canvas.width;
                 const canvasH = canvas.height;
@@ -391,8 +391,15 @@ const GameBoard = forwardRef(({
                 ctx.scale(zoom, zoom);
                 ctx.translate(-cameraOffset.x, -cameraOffset.y);
 
+                // Get player object and their color
+                const player = currentGameState.players[myPlayerId];
+                const playerColor = player ? player.color : 'hsl(120, 70%, 50%)';
+                // Dim the player's HSL color to 4% lightness for a gorgeous dark themed floor
+                const floorColor = playerColor.startsWith('hsl')
+                    ? playerColor.replace('50%', '5%')
+                    : '#0c0d12'; // Fallback
                 // 2. BACKGROUND (Drawn once for the entire 3x3 area to avoid seams/overlap artifacts)
-                ctx.fillStyle = '#000000ec';
+                ctx.fillStyle = floorColor;
                 ctx.fillRect(-mapW, -mapH, mapW * 3, mapH * 3);
 
                 for (let offsetOffsetX = -mapW; offsetOffsetX <= mapW; offsetOffsetX += mapW) {
@@ -635,7 +642,7 @@ const GameBoard = forwardRef(({
                     fctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform to identity
                     fctx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
                     fctx.globalCompositeOperation = 'source-over';
-                    fctx.fillStyle = 'rgba(15, 15, 15, 1)';
+                    fctx.fillStyle = 'rgba(0, 0, 0, 1)';
                     fctx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
 
                     // 2. Punch holes
