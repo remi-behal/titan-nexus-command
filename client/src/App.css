@@ -256,6 +256,7 @@ body,
 
 
 .game-world.locked-out {
+    pointer-events: none;
 }
 
 .game-container {
@@ -385,6 +386,10 @@ canvas {
     30% { transform: translate(-4px, -2px); filter: hue-rotate(135deg) contrast(1.5); }
     40% { transform: translate(4px, 2px); filter: hue-rotate(180deg) contrast(2); }
     50% { transform: translate(-2px, 2px); filter: hue-rotate(225deg) contrast(1.5); }
+    60% { transform: translate(2px, -2px); filter: hue-rotate(270deg) contrast(2); }
+    70% { transform: translate(-2px, -2px); filter: hue-rotate(315deg) contrast(1.5); }
+    80% { transform: translate(2px, 2px); filter: hue-rotate(360deg) contrast(1.2); }
+    100% { transform: translate(0); filter: hue-rotate(0deg) contrast(1.1) brightness(0.9); }
 }
 
 /* --- Ultra-Condensed Tactical Mode (< 500px Height) --- */
@@ -458,9 +463,4 @@ canvas {
     .sync-monitor {
         padding-bottom: 0.5rem;
     }
-}
-    60% { transform: translate(2px, -2px); filter: hue-rotate(270deg) contrast(2); }
-    70% { transform: translate(-2px, -2px); filter: hue-rotate(315deg) contrast(1.5); }
-    80% { transform: translate(2px, 2px); filter: hue-rotate(360deg) contrast(1.2); }
-    100% { transform: translate(0); filter: hue-rotate(0deg) contrast(1.1) brightness(0.9); }
 }
