@@ -155,10 +155,7 @@ const GameBoard = forwardRef(({
         return `rgb(${r}, ${g}, ${b})`;
     };
 
-    const getIdentityColor = (playerColor) => {
-        // Force high-intensity neon version of the color
-        return playerColor; // For now assuming passed color is already neon-ready
-    };
+
 
 
     // --- Main Animation & Draw Loop ---
@@ -1054,8 +1051,6 @@ const GameBoard = forwardRef(({
                                 } else if (entity.type === 'HUB' || entity.type === 'EXTRACTOR' || entity.type === 'SHIELD' || entity.type === 'CLOAKING_FIELD' || entity.type === 'TURRET' || entity.type === 'RELAY' || entity.type === 'BARRIER') {
                                     const shapeKey = entity.type; // Use the entity type directly as the shape key
                                     
-                                    // Determine if the entity is in a critical state
-                                    let isWarning = false;
                                     if (entity.type === 'SHIELD') {
                                         const structureWarning = entity.hp <= 1;
                                         const domeWarning = entity.barrierHp !== undefined && entity.barrierHp <= 1;
@@ -1079,8 +1074,6 @@ const GameBoard = forwardRef(({
                                     // Enhanced Nuke Icon (Landed)
                                     ctx.save();
                                     ctx.translate(entity.x, entity.y);
-                                    const time = Date.now();
-
                                     const remainingTurns =
                                         (entity.detonationTurn || 0) - currentGameState.turn;
                                     const isDetonating = remainingTurns <= 0;
@@ -1609,6 +1602,7 @@ const GameBoard = forwardRef(({
         maxPullDistance,
         myPlayerId,
         cameraOffset,
+        setCameraOffset,
         zoom,
         HUB_RADIUS,
         SLING_RING_RADIUS
@@ -1861,6 +1855,7 @@ const GameBoard = forwardRef(({
         isPanning,
         gameState.map.width,
         gameState.map.height,
+        gameState.entities,
         getGameCoords,
         onAimEnd,
         onAimUpdate,

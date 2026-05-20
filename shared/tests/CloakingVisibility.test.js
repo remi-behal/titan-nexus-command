@@ -24,7 +24,7 @@ describe('GameState - Cloaking Field Visibility', () => {
         p2Hub.x = 1000;
         p2Hub.y = 1000;
 
-        const cloakField = game.addEntity({
+        game.addEntity({
             type: 'CLOAKING_FIELD',
             owner: 'player2',
             x: 1000,
@@ -98,7 +98,7 @@ describe('GameState - Cloaking Field Visibility', () => {
         p2Hub.x = 1000;
         p2Hub.y = 1000;
 
-        const cloakField = game.addEntity({
+        game.addEntity({
             type: 'CLOAKING_FIELD',
             owner: 'player2',
             x: 1000,

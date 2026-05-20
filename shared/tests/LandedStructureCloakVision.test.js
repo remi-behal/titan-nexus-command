@@ -47,7 +47,7 @@ describe('GameState - Landed Structure Cloak Vision', () => {
     });
 
     it('should reveal cloaked enemy structure even if the landed structure is still UNDEPLOYED', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'p1');
+
         const p2Hub = game.entities.find(e => e.owner === 'p2');
 
         p2Hub.x = 1000;

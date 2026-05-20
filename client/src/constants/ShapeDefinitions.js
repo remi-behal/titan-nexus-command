@@ -47,12 +47,7 @@ export const SHAPES = {
         bracing: true,
         closed: true
     },
-    CRATER: {
-        type: SHAPE_TYPES.PATH,
-        points: [[0, -1], [0.3, -0.8], [0.5, -0.9], [0.8, -0.5], [1, 0], [0.7, 0.6], [0.3, 0.9], [-0.2, 0.8], [-0.6, 0.7], [-0.9, 0.3], [-1, -0.2], [-0.6, -0.7]],
-        layers: 1,
-        closed: true
-    },
+
     MOUNTAIN: {
         type: SHAPE_TYPES.PATH,
         points: [[0,-1], [0.8,-0.5], [0.8,0.5], [0,1], [-0.8,0.5], [-0.8,-0.5]], // Jagged Hex base
@@ -60,12 +55,7 @@ export const SHAPES = {
         bracing: true,
         closed: true
     },
-    EXPLOSION: {
-        type: SHAPE_TYPES.PATH,
-        points: [[0, -1], [0.2, -0.2], [1, 0], [0.2, 0.2], [0, 1], [-0.2, 0.2], [-1, 0], [-0.2, -0.2]], // 4-Point Star
-        layers: 2,
-        closed: true
-    },
+
     SHIELD_HIT: {
         type: SHAPE_TYPES.PATH,
         points: [[0,-0.5], [0.2,-1], [0.4,-0.5], [1,0], [0.4,0.5], [0.2,1], [0,0.5], [-0.2,1], [-0.4,0.5], [-1,0], [-0.4,-0.5], [-0.2,-1]], // Spiky burst

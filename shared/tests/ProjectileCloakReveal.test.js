@@ -11,7 +11,7 @@ describe('GameState - Projectile Cloak Reveal', () => {
     });
 
     it('should reveal cloaked structure if projectile is within 75px', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'p1');
+
         const p2Hub = game.entities.find(e => e.owner === 'p2');
 
         p2Hub.x = 1000;
@@ -27,7 +27,7 @@ describe('GameState - Projectile Cloak Reveal', () => {
 
         // Add a projectile at (950, 1000) facing p2Hub
         // Distance is 50px (within 75px truesight)
-        const proj = game.addEntity({
+        game.addEntity({
             type: 'PROJECTILE',
             itemType: 'HOMING_MISSILE',
             owner: 'p1',
@@ -44,7 +44,7 @@ describe('GameState - Projectile Cloak Reveal', () => {
     });
 
     it('should NOT reveal cloaked structure if projectile is far away (>75px) even if looking at it', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'p1');
+
         const p2Hub = game.entities.find(e => e.owner === 'p2');
 
         p2Hub.x = 1000;
@@ -59,7 +59,7 @@ describe('GameState - Projectile Cloak Reveal', () => {
         });
 
         // Projectile at 200px away (within homing/vision range 300px, but > 75px cloak detection)
-        const proj = game.addEntity({
+        game.addEntity({
             type: 'PROJECTILE',
             itemType: 'HOMING_MISSILE',
             owner: 'p1',

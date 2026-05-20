@@ -42,7 +42,7 @@ function App() {
     const [launchMode, setLaunchMode] = useState(false);
     const [isAiming, setIsAiming] = useState(false);
     const [committedActions, setCommittedActions] = useState([]);
-    const [showDebugPreview, setShowDebugPreview] = useState(true);
+    const [showDebugPreview] = useState(true);
     const [timeRemaining, setTimeRemaining] = useState(30);
     const [isResolving, setIsResolving] = useState(false);
     const [glitchActive, setGlitchActive] = useState(false);
@@ -53,7 +53,7 @@ function App() {
     const [matchStarted, setMatchStarted] = useState(false);
     const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(2); // Dynamic Zoom state
-    const [minZoom, setMinZoom] = useState(1.0);
+    const [minZoom] = useState(1.0);
     const viewportRef = useRef(null);
 
     // Help RadialMenu track its hub
@@ -324,6 +324,7 @@ function App() {
     // Zooming below 1.0 would show empty space on the internal canvas.
     useEffect(() => {
         // Force zoom into legal range if it was outside (e.g. on load)
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setZoom(prev => Math.max(1.0, Math.min(3.0, prev)));
     }, [playerState?.map]);
 
@@ -383,10 +384,10 @@ function App() {
             const nx = pos.x - rect.left;
             const ny = pos.y - rect.top;
 
-            // eslint-disable-next-line react-hooks/set-state-in-effect
+             
             setHubScreenPos({ x: nx, y: ny });
         } else {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
+             
             setHubScreenPos(pos);
         }
     }, [selectedHubId, cameraOffset, zoom, playerState]);
@@ -396,7 +397,7 @@ function App() {
         if (isResolvingUI || isLocked) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setSelectedHubId(null);
-            // eslint-disable-next-line react-hooks/set-state-in-effect
+             
             setLaunchMode(false);
         }
     }, [isResolvingUI, isLocked]);
@@ -610,6 +611,7 @@ function App() {
                     onSetMap={handleSetMap}
                     onOpenDesigner={() => setCurrentView('DESIGNER')}
                     socketId={socket.id}
+                    socket={socket}
                 />
             );
         }

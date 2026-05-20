@@ -74,7 +74,7 @@ describe('GameState - Hazard and Flak Timing Delay', () => {
         p2Hub.x = 900; p2Hub.y = 300;
 
         // Setup Flak for P2 at (700, 300)
-        const flak = game.addEntity({
+        game.addEntity({
             type: 'FLAK_DEFENSE',
             owner: 'p2',
             x: 700,

@@ -1,7 +1,7 @@
 import React from 'react';
 import './LobbyOverlay.css';
 
-export const LobbyOverlay = ({ lobbyUpdate, availableMaps, onClaimSeat, onReadyToggle, onSetMap, onOpenDesigner, socketId }) => {
+export const LobbyOverlay = ({ lobbyUpdate, availableMaps, onClaimSeat, onReadyToggle, onSetMap, onOpenDesigner, socketId, socket }) => {
     if (!lobbyUpdate) return null;
 
     const mySeat = lobbyUpdate.slots.find(s => s && s.socketId === socketId);

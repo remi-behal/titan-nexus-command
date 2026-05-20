@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import GameBoard from './GameBoard';
 import { ENTITY_STATS, GLOBAL_STATS, RESOURCE_NODE_STATS } from '../../../shared/constants/EntityStats.js';
 import './MapDesigner.css';
@@ -28,7 +28,6 @@ const MapDesigner = ({ onSave, onBack }) => {
     });
 
     const [selectedTool, setSelectedTool] = useState(TOOLS.SELECT);
-    const [selectedId, setSelectedId] = useState(null);
     const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 });
     const gameBoardRef = useRef(null);
 

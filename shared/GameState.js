@@ -473,7 +473,7 @@ export class GameState {
      * Link Decay: Any structure not connected (via links) to
      * its player's starter hub is destroyed.
      */
-    checkLinkIntegrity(round = 0) {
+    checkLinkIntegrity() {
         const toDestroy = new Set();
 
         Object.keys(this.players).forEach((pid) => {
@@ -859,7 +859,6 @@ export class GameState {
                 // Cloaking Check: Break lock if target enters a Cloaking Field
                 const targetX = target.x !== undefined ? target.x : target.currX;
                 const targetY = target.y !== undefined ? target.y : target.currY;
-                const dist = this.getToroidalDistance(proj.currX, proj.currY, targetX, targetY);
 
                 if (this.isPositionCloaked(target.owner, targetX, targetY)) {
                     target = null; // Lose target

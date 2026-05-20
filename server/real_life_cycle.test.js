@@ -43,7 +43,7 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
         p2.on('gameStateUpdate', (s) => {
             p2State = s;
         });
-        p1.on('syncStatus', (s) => {
+        p1.on('syncStatus', () => {
             // Silenced
         });
         p1.on('resolutionStatus', (s) => {

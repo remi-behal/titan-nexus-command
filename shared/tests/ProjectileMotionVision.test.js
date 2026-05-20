@@ -24,7 +24,7 @@ describe('GameState - Projectile Motion Vision', () => {
         });
 
         // Add a projectile with x=0 (launch) and currX=950 (current)
-        const proj = game.addEntity({
+        game.addEntity({
             type: 'PROJECTILE',
             itemType: 'HOMING_MISSILE',
             owner: 'p1',

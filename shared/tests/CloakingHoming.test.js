@@ -69,7 +69,7 @@ describe('GameState - Cloaking vs Homing', () => {
         p2Hub.y = 400;
 
         // Add a second non-cloaked hub
-        const p2Hub2 = game.addEntity({
+        game.addEntity({
             type: 'HUB',
             owner: 'p2',
             x: 500,
@@ -108,9 +108,7 @@ describe('GameState - Cloaking vs Homing', () => {
 
         expect(lockSnap).toBeDefined();
 
-        const finalSnap = snapshots[snapshots.length - 1];
-        const proj = finalSnap.state.entities.find(e => e.itemType === 'HOMING_MISSILE');
-        // If it locked, it should be closer to p2Hub2 than the cloaked p2Hub
+        // If it locked, it should be closer to the non-cloaked hub than the cloaked p2Hub
         // (Wait, homing missiles currently lock on FIRST found target in range)
     });
 });
