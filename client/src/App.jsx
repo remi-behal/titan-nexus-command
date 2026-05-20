@@ -589,6 +589,26 @@ function App() {
     useEffect(() => {
         document.documentElement.style.setProperty('--player-accent-color', playerColor);
         document.documentElement.style.setProperty('--player-accent-glow', crtColor);
+
+        // Convert player HSL to comma-separated RGB values for repeating-linear-gradient
+        if (playerColor.startsWith('hsl')) {
+            const matches = playerColor.match(/\d+/g);
+            if (matches && matches.length >= 3) {
+                const h = parseInt(matches[0]);
+                const s = parseInt(matches[1]) / 100;
+                const l = parseInt(matches[2]) / 100;
+                const k = n => (n + h / 30) % 12;
+                const a = s * Math.min(l, 1 - l);
+                const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+                const r = Math.round(255 * f(0));
+                const g = Math.round(255 * f(8));
+                const b = Math.round(255 * f(4));
+                document.documentElement.style.setProperty('--player-accent-color-rgb', `${r}, ${g}, ${b}`);
+            }
+        } else {
+            // Hex fallback green rgb (0, 255, 68)
+            document.documentElement.style.setProperty('--player-accent-color-rgb', '0, 255, 68');
+        }
     }, [playerColor, crtColor]);
 
     const renderContent = () => {
@@ -657,6 +677,7 @@ function App() {
                 {sidebarLeft}
 
                 <div className="viewport-crt-container" ref={viewportRef} onWheel={handleWheel}>
+                    <div className="crt-scanlines-pixel-perfect" />
                     <CRTEffect
                         key={playerColor}
                         theme="custom"

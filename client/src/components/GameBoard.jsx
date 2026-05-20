@@ -90,8 +90,6 @@ const GameBoard = forwardRef(({
     const visualEntities = useRef({});
     const visualLinks = useRef({});
     const fogCanvasRef = useRef(null); // Reuse for performance
-    const scanlinePatternRef = useRef(null);
-    const lastPatternColorRef = useRef('');
 
     // Use a Ref to provide the animation loop with the latest props without restarting the loop
     const propsRef = useRef({
@@ -1552,35 +1550,6 @@ const GameBoard = forwardRef(({
                 }
                 ctx.restore();
 
-                // 9. STATIC SCREEN-SPACE CANVAS SCANLINES (Highly Performant)
-                if (myPlayerId && myPlayerId !== 'spectator') {
-                    if (!scanlinePatternRef.current || lastPatternColorRef.current !== playerColor) {
-                        const patternCanvas = document.createElement('canvas');
-                        patternCanvas.width = 1;
-                        patternCanvas.height = 4; // Spacing: 1px line + 3px gap
-                        const pctx = patternCanvas.getContext('2d');
-
-                        let patternColor = 'rgba(0, 255, 68, 0.12)'; // Default fallback green
-                        if (playerColor.startsWith('hsl')) {
-                            patternColor = playerColor.replace('hsl', 'hsla').replace('50%)', '50%, 0.12)');
-                        } else if (playerColor.startsWith('#')) {
-                            patternColor = playerColor + '1f'; // 12% opacity hex
-                        }
-
-                        pctx.fillStyle = patternColor;
-                        pctx.fillRect(0, 0, 1, 1); // Draw 1px scanline
-
-                        scanlinePatternRef.current = ctx.createPattern(patternCanvas, 'repeat');
-                        lastPatternColorRef.current = playerColor;
-                    }
-
-                    if (scanlinePatternRef.current) {
-                        ctx.save();
-                        ctx.fillStyle = scanlinePatternRef.current;
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.restore();
-                    }
-                }
 
             } catch (err) {
                 console.error("Rendering Error:", err);
