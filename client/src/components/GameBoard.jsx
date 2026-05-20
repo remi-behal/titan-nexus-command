@@ -667,13 +667,13 @@ const GameBoard = forwardRef(({
 
                             // 6. DRAW ENTITIES
                             currentGameState.entities.forEach((entity) => {
-                                // Culling: Skip if outside viewport
+                                // Culling: Skip if the VISION circle is outside the viewport
                                 const stats = ENTITY_STATS[entity.itemType || entity.type];
-                                const radius = stats?.size || 20;
-                                if (entity.x + ox + radius < viewL || 
-                                    entity.x + ox - radius > viewR ||
-                                    entity.y + oy + radius < viewT || 
-                                    entity.y + oy - radius > viewB) return;
+                                const cullingRadius = Math.max(stats?.vision || 0, stats?.size || 20);
+                                if (entity.x + ox + cullingRadius < viewL || 
+                                    entity.x + ox - cullingRadius > viewR ||
+                                    entity.y + oy + cullingRadius < viewT || 
+                                    entity.y + oy - cullingRadius > viewB) return;
 
                                 const isOwnProjectile =
                                     stats?.damageFull !== undefined && entity.owner === myPlayerId;
@@ -749,10 +749,20 @@ const GameBoard = forwardRef(({
                                     (entity.type !== 'NUKE' || !entity.detonationTurn));
                             const radius = stats?.size || (isProjectile ? (GLOBAL_STATS.PROJECTILE_RADIUS || 10) : 20);
 
-                            if (entity.x + offsetOffsetX + radius < viewL || 
-                                entity.x + offsetOffsetX - radius > viewR ||
-                                entity.y + offsetOffsetY + radius < viewT || 
-                                entity.y + offsetOffsetY - radius > viewB) return;
+                            // Include larger visual effects in the culling check so they don't clip at the screen edges
+                            let cullingRadius = radius;
+                            if (stats) {
+                                if (stats.vision) cullingRadius = Math.max(cullingRadius, stats.vision);
+                                if (stats.range) cullingRadius = Math.max(cullingRadius, stats.range);
+                                if (stats.cloakRange) cullingRadius = Math.max(cullingRadius, stats.cloakRange);
+                                if (stats.homingRange) cullingRadius = Math.max(cullingRadius, stats.homingRange);
+                            }
+                            if (entity.radius) cullingRadius = Math.max(cullingRadius, entity.radius);
+
+                            if (entity.x + offsetOffsetX + cullingRadius < viewL || 
+                                entity.x + offsetOffsetX - cullingRadius > viewR ||
+                                entity.y + offsetOffsetY + cullingRadius < viewT || 
+                                entity.y + offsetOffsetY - cullingRadius > viewB) return;
 
                             const player = currentGameState.players[entity.owner];
                             let color = player ? player.color : '#fff';
