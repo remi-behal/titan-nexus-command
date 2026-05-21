@@ -14,5 +14,8 @@ export default defineConfig({
                 ws: true
             }
         }
+    },
+    optimizeDeps: {
+        exclude: ['chiptune3']
     }
 });
