@@ -10,6 +10,7 @@ import { io } from 'socket.io-client';
 import CRTEffect from 'vault66-crt-effect';
 import "vault66-crt-effect/dist/vault66-crt-effect.css";
 import AssetGallery from './components/AssetGallery';
+import { audioManager } from './utils/AudioManager';
 
 const socket = io('/', {
     transports: ['polling', 'websocket'],
@@ -34,6 +35,19 @@ function App() {
     const turnRef = useRef(1); // Track turn for stale closures in listeners
     const [isConnected, setIsConnected] = useState(socket.connected);
     const [myPlayerId, setMyPlayerId] = useState(null);
+    const [audioVolume, setAudioVolume] = useState(0.5);
+    const [audioMuted, setAudioMuted] = useState(false);
+
+    const handleVolumeChange = (e) => {
+        const val = parseFloat(e.target.value);
+        setAudioVolume(val);
+        audioManager.setVolume(val);
+    };
+
+    const handleMuteToggle = () => {
+        audioManager.toggleMute();
+        setAudioMuted(audioManager.isMuted);
+    };
     const [syncStatus, setSyncStatus] = useState({ lockedIn: { player1: false, player2: false } });
     const [lastError, setLastError] = useState(null);
     const [availableMaps, setAvailableMaps] = useState([]);
@@ -59,6 +73,16 @@ function App() {
     // Help RadialMenu track its hub
     const [hubScreenPos, setHubScreenPos] = useState(null);
     const gameBoardRef = useRef(null);
+
+    // Warm up AudioContext on standard user interaction
+    useEffect(() => {
+        const warmUpAudio = () => {
+            audioManager.init();
+            window.removeEventListener('click', warmUpAudio);
+        };
+        window.addEventListener('click', warmUpAudio);
+        return () => window.removeEventListener('click', warmUpAudio);
+    }, []);
 
     const isResolvingPhase = playerState?.phase === 'RESOLVING';
     const isResolvingUI = isResolving || isResolvingPhase;
@@ -197,6 +221,7 @@ function App() {
 
             const token = getSessionToken();
             socket.emit('authenticate', token);
+            audioManager.playMusic('/audio/tracks/hackurr_-_banana.xm');
         };
 
         const onDisconnect = () => {
@@ -214,6 +239,7 @@ function App() {
                 setSelectedHubId(null);
                 setLaunchMode(false);
                 turnRef.current = newState.turn;
+                audioManager.playRoundStart();
             }
         };
 
@@ -480,6 +506,32 @@ function App() {
                                 </span>
                             );
                         })()}
+                    </div>
+                </div>
+            </div>
+
+            <div className="audio-panel">
+                <div className="panel-title">COMM AUDIO</div>
+                <div className="audio-controls">
+                    <button 
+                        className={`mute-btn ${audioMuted ? 'muted' : ''}`} 
+                        onClick={handleMuteToggle}
+                        title={audioMuted ? "Unmute Audio" : "Mute Audio"}
+                    >
+                        {audioMuted ? "OFF" : "ON"}
+                    </button>
+                    <div className="slider-container">
+                        <span className="slider-label">VOL:</span>
+                        <input 
+                            type="range" 
+                            min="0" 
+                            max="1" 
+                            step="0.05" 
+                            value={audioVolume} 
+                            onChange={handleVolumeChange}
+                            className="retro-slider"
+                            disabled={audioMuted}
+                        />
                     </div>
                 </div>
             </div>
