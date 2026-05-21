@@ -407,7 +407,8 @@ const GameBoard = forwardRef(({
                         const tileR = offsetOffsetX + mapW;
                         const tileB = offsetOffsetY + mapH;
 
-                        const isVisible = !(tileR < viewL || tileL > viewR || tileB < viewT || tileT > viewB);
+                        const pad = 800; // Account for large visual effects crossing tile boundaries
+                        const isVisible = !(tileR + pad < viewL || tileL - pad > viewR || tileB + pad < viewT || tileT - pad > viewB);
                         if (!isVisible) continue;
 
                         ctx.save();
@@ -659,7 +660,8 @@ const GameBoard = forwardRef(({
                             const tileR = ox + mapW;
                             const tileB = oy + mapH;
 
-                            const isTileVisible = !(tileR < viewL || tileL > viewR || tileB < viewT || tileT > viewB);
+                            const pad = 800; // Account for large visual effects crossing tile boundaries
+                            const isTileVisible = !(tileR + pad < viewL || tileL - pad > viewR || tileB + pad < viewT || tileT - pad > viewB);
                             if (!isTileVisible) continue;
 
                             fctx.save();
@@ -731,7 +733,8 @@ const GameBoard = forwardRef(({
                         const tileR = offsetOffsetX + mapW;
                         const tileB = offsetOffsetY + mapH;
 
-                        const isTileVisible = !(tileR < viewL || tileL > viewR || tileB < viewT || tileT > viewB);
+                        const pad = 800; // Account for large visual effects crossing tile boundaries
+                        const isTileVisible = !(tileR + pad < viewL || tileL - pad > viewR || tileB + pad < viewT || tileT - pad > viewB);
                         if (!isTileVisible) continue;
 
                         ctx.save();
