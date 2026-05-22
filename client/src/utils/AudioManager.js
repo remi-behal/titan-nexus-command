@@ -106,48 +106,48 @@ class AudioManager {
 
     playRoundStart() {
         // High fidelity retro ping/chime sound array for Round Start
-        const roundStartParams = [0.5, , 150, .4, .1, .2, 1, 1.5, , , , , , , , , .1, .8, .1];
+        const roundStartParams = [0.5, undefined, 150, .4, .1, .2, 1, 1.5, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, .1, .8, .1];
         this.playSfx(roundStartParams);
     }
 
     playShoot() {
         // Snappy pitch-sliding blip for standard projectiles
-        this.playSfx([0.2, , 400, .05, , .1, , , 50, -500]);
+        this.playSfx([0.2, undefined, 400, .05, undefined, .1, undefined, undefined, 50, -500]);
     }
 
     playHeavyLaunch() {
         // Deep rocket rumble/thrust for Homing Missiles and Nukes
-        this.playSfx([0.4, , 80, .1, .2, .3, , 1.5, , -5]);
+        this.playSfx([0.4, undefined, 80, .1, .2, .3, undefined, 1.5, undefined, -5]);
     }
 
     playLaser() {
         // Rapid, high-pitched clean chirp for Laser Point Defense
-        this.playSfx([0.15, , 1200, .01, .05, .05, , , , -20]);
+        this.playSfx([0.15, undefined, 1200, .01, .05, .05, undefined, undefined, undefined, -20]);
     }
 
     playExplosion() {
         // Classic white-noise crunchy explosion for normal weapon impacts
-        this.playSfx([0.35, , 100, .05, .1, .3, , 2.5, , , , , , , , , .2, .5]);
+        this.playSfx([0.35, undefined, 100, .05, .1, .3, undefined, 2.5, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, .2, .5]);
     }
 
     playShieldHit() {
         // Metallic "ping/deflect" sound when shield takes damage or spark occurs
-        this.playSfx([0.25, , 800, .02, , .08, 1, , , , , , , 200, .02]);
+        this.playSfx([0.25, undefined, 800, .02, undefined, .08, 1, undefined, undefined, undefined, undefined, undefined, undefined, 200, .02]);
     }
 
     playNukeDetonation() {
         // Massive, earth-shaking low-frequency sweep with long release
-        this.playSfx([0.65, , 45, .2, .4, 1.2, , 3.8, , -1, , , , , , , .3, .2, .5]);
+        this.playSfx([0.65, undefined, 45, .2, .4, 1.2, undefined, 3.8, undefined, -1, undefined, undefined, undefined, undefined, undefined, undefined, .3, .2, .5]);
     }
 
     playLinkSevered() {
         // Snappy descending energy snap when connection is severed
-        this.playSfx([0.25, , 600, .01, , .15, , 1.2, , -30, 200]);
+        this.playSfx([0.25, undefined, 600, .01, undefined, .15, undefined, 1.2, undefined, -30, 200]);
     }
 
     playStructureDestroyed() {
         // Descending breakdown chime when a structure collapses
-        this.playSfx([0.35, , 120, .05, .15, .4, , 1.8, , -8]);
+        this.playSfx([0.35, undefined, 120, .05, .15, .4, undefined, 1.8, undefined, -8]);
     }
 }
 

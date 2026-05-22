@@ -6,6 +6,7 @@ import { shouldHighlightRing } from '../utils/uiLogic.js';
 import { getGhostColor } from '../utils/RenderingHelpers.js';
 import { drawShape, drawField } from '../utils/ShapeRenderer.js';
 import { SHAPES } from '../constants/ShapeDefinitions.js';
+import { audioManager } from '../utils/AudioManager';
 
 /**
  * GameBoard Component
@@ -257,8 +258,33 @@ const GameBoard = forwardRef(({
                             lastSeen: Date.now(),
                             scouted: serverEnt.scouted // server should provide this
                         };
+
+                        // Play procedural SFX for newly spawned entities
+                        if (serverEnt.type === 'PROJECTILE') {
+                            if (serverEnt.itemType === 'HOMING_MISSILE') {
+                                audioManager.playHeavyLaunch();
+                            } else {
+                                audioManager.playShoot();
+                            }
+                        } else if (serverEnt.type === 'LASER_BEAM') {
+                            audioManager.playLaser();
+                        } else if (serverEnt.type === 'EXPLOSION') {
+                            if (serverEnt.itemType === 'NUKE') {
+                                audioManager.playNukeDetonation();
+                            } else {
+                                audioManager.playExplosion();
+                            }
+                        } else if (serverEnt.type === 'SHIELD_HIT' || serverEnt.type === 'LINK_COLLISION' || serverEnt.type === 'SPARK') {
+                            audioManager.playShieldHit();
+                        }
                     } else {
                         const viz = visualEntities.current[serverEnt.id];
+
+                        // Play impact SFX if HP decreases
+                        if (serverEnt.hp < viz.hp) {
+                            audioManager.playShieldHit();
+                        }
+
                         let dx = serverEnt.x - viz.x;
                         if (Math.abs(dx) > mapW / 2) dx = dx > 0 ? dx - mapW : dx + mapW;
                         viz.x = (viz.x + ((dx * LERP_FACTOR) % mapW) + mapW) % mapW;
@@ -296,6 +322,15 @@ const GameBoard = forwardRef(({
                 Object.keys(visualEntities.current).forEach((id) => {
                     if (!serverIds.has(id)) {
                         const viz = visualEntities.current[id];
+
+                        // Play breakdown/destroyed sound for structures before deletion
+                        const STRUCTURE_TYPES = ['HUB', 'EXTRACTOR', 'SHIELD', 'CLOAKING_FIELD', 'TURRET', 'RELAY', 'BARRIER'];
+                        if (STRUCTURE_TYPES.includes(viz.type)) {
+                            // Only play if previously visible/scouted and not a ghost
+                            if (viz.scouted !== false && !viz.isGhost) {
+                                audioManager.playStructureDestroyed();
+                            }
+                        }
 
                         // If it's a transient effect/projectile OR if it was OUR structure, it disappears immediately
                         const TRANSIENT_TYPES = [
@@ -358,6 +393,10 @@ const GameBoard = forwardRef(({
                         const toVisible = isInVision(to.x, to.y);
 
                         if (fromVisible || toVisible) {
+                            // Link was severed while visible! Play break sound
+                            if (!viz.isGhost) {
+                                audioManager.playLinkSevered();
+                            }
                             delete visualLinks.current[linkId];
                         } else {
                             viz.isGhost = true;
