@@ -90,5 +90,34 @@ describe('AudioManager', () => {
             zzfxSpy.mockClear();
         }
     });
+
+    it('verifies new interactive and planning sound playback methods', async () => {
+        const mockContext = {
+            state: 'running',
+            resume: vi.fn().mockResolvedValue()
+        };
+        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
+
+        await audioManager.init();
+
+        const methods = [
+            'playClick',
+            'playSeatClaim',
+            'playUplink',
+            'playTerminalSelect',
+            'playLinkStage',
+            'playActionReset',
+            'playStructureLanding'
+        ];
+
+        for (const method of methods) {
+            audioManager[method]();
+            // Wait for microtasks to resolve
+            await new Promise(resolve => setTimeout(resolve, 1));
+            expect(zzfxSpy).toHaveBeenCalled();
+            zzfxSpy.mockClear();
+        }
+    });
 });
 

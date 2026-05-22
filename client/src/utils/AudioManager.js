@@ -149,6 +149,41 @@ class AudioManager {
         // Descending breakdown chime when a structure collapses
         this.playSfx([0.35, undefined, 120, .05, .15, .4, undefined, 1.8, undefined, -8]);
     }
+
+    playClick() {
+        // Short high-pass pop for menu clicks
+        this.playSfx([0.1, undefined, 1000, .01, undefined, .04, 1, undefined, undefined, undefined, undefined, undefined, undefined, 100, .05]);
+    }
+
+    playSeatClaim() {
+        // Mechanical lock-in sound for joining seats
+        this.playSfx([0.3, undefined, 200, .05, .05, .15, 1, .8, undefined, undefined, undefined, undefined, undefined, 300, .02]);
+    }
+
+    playUplink() {
+        // Telemetry sweep for turn submission
+        this.playSfx([0.25, undefined, 300, .08, .1, .2, 1, 1.2, undefined, 25]);
+    }
+
+    playTerminalSelect() {
+        // Rapid terminal scan chirp for selecting outposts
+        this.playSfx([0.12, undefined, 600, .01, .03, .05, undefined, undefined, undefined, 15]);
+    }
+
+    playLinkStage() {
+        // Cyber stretching ping for link staging
+        this.playSfx([0.18, undefined, 350, .03, .05, .06, undefined, 0.5, undefined, 5]);
+    }
+
+    playActionReset() {
+        // Low-frequency buzz when clearing actions
+        this.playSfx([0.2, undefined, 150, .02, .05, .12, undefined, undefined, undefined, -15]);
+    }
+
+    playStructureLanding() {
+        // Pneumatic hydraulic impact slam when structures land
+        this.playSfx([0.55, undefined, 65, .08, .12, .35, undefined, 2.2, undefined, -3]);
+    }
 }
 
 export const audioManager = new AudioManager();
