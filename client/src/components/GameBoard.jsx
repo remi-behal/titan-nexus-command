@@ -276,6 +276,8 @@ const GameBoard = forwardRef(({
                             }
                         } else if (serverEnt.type === 'SHIELD_HIT' || serverEnt.type === 'LINK_COLLISION' || serverEnt.type === 'SPARK') {
                             audioManager.playShieldHit();
+                        } else if (['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(serverEnt.type)) {
+                            audioManager.playStructureLanding();
                         }
                     } else {
                         const viz = visualEntities.current[serverEnt.id];
@@ -1854,6 +1856,7 @@ const GameBoard = forwardRef(({
                     });
 
                     if (clickedHub && clickedHub.owner === myPlayerId) {
+                        audioManager.playTerminalSelect();
                         onSelectHub(clickedHub.id);
                     } else {
                         onSelectHub(null);
