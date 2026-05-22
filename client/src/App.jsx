@@ -148,6 +148,7 @@ function App() {
 
         if (isInvalid) {
             // Trigger rejection glitch
+            audioManager.playActionReset();
             setGlitchActive(true);
             setTimeout(() => setGlitchActive(false), 400);
             
@@ -166,6 +167,12 @@ function App() {
             angle: angle,
             distance: distance
         };
+
+        if (selectedItemType === 'LINK') {
+            audioManager.playLinkStage();
+        } else {
+            audioManager.playClick();
+        }
 
         setCommittedActions((prev) => [...prev, action]);
         setLaunchMode(false);
