@@ -90,11 +90,19 @@
                     repeatCount: -1
                 });
 
-                status.innerText = "STATUS: FETCHING TRACK MEMORY...";
-                player.load('/audio/tracks/hackurr_-_banana.xm');
-                
-                status.innerText = "STATUS: PLAYING TACTICAL BACKGROUND MUSIC...";
-                playBtn.innerText = "RESTART PLAYBACK";
+                // FIX 1: Explicitly connect gain node output to context destination
+                player.gain.connect(ctx.destination);
+
+                // FIX 2: Wait for WASM worklet loading and compilation to finish before playing
+                player.onInitialized(() => {
+                    status.innerText = "STATUS: FETCHING & STREAMING TRACK MEMORY...";
+                    try {
+                        player.load('/audio/tracks/hackurr_-_banana.xm');
+                        playBtn.innerText = "RESTART PLAYBACK";
+                    } catch (err) {
+                        status.innerText = "PLAYBACK ERROR: " + err.message;
+                    }
+                });
             } catch (err) {
                 console.error(err);
                 status.innerText = "ERROR: " + err.message;

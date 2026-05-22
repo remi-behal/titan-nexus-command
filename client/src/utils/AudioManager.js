@@ -10,24 +10,38 @@ class AudioManager {
         this.isPlaying = false;
     }
 
-    async init() {
-        if (this.ctx) return;
-        
-        try {
-            const AudioCtx = window.AudioContext || window.webkitAudioContext;
-            this.ctx = new AudioCtx();
-            setZzfxContext(this.ctx);
-            
-            // Dynamic import of chiptune3 only in browser context
-            const { ChiptuneJsPlayer } = await import('chiptune3/chiptune3.js');
-            this.player = new ChiptuneJsPlayer({
-                context: this.ctx,
-                repeatCount: -1
-            });
-            this.player.setVol(this.volume);
-        } catch (e) {
-            console.error('AudioManager initialization failed:', e);
-        }
+    init() {
+        if (this.initPromise) return this.initPromise;
+
+        this.initPromise = new Promise(async (resolve, reject) => {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioCtx();
+                setZzfxContext(this.ctx);
+                
+                // Dynamic import of chiptune3 only in browser context
+                const { ChiptuneJsPlayer } = await import('chiptune3/chiptune3.js');
+                this.player = new ChiptuneJsPlayer({
+                    context: this.ctx,
+                    repeatCount: -1
+                });
+                
+                // Explicitly connect gain node output to context destination
+                this.player.gain.connect(this.ctx.destination);
+                
+                // Wait for worklet module to load and compile before resolving
+                this.player.onInitialized(() => {
+                    this.player.setVol(this.volume);
+                    resolve();
+                });
+            } catch (e) {
+                console.error('AudioManager initialization failed:', e);
+                this.initPromise = null;
+                reject(e);
+            }
+        });
+
+        return this.initPromise;
     }
 
     async playMusic(trackPath) {

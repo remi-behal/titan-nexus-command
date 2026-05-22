@@ -3,13 +3,21 @@ import { audioManager } from './AudioManager';
 import * as ZzFXModule from './ZzFX';
 
 vi.mock('chiptune3/chiptune3.js', () => {
-    const mockPlayer = vi.fn().mockImplementation(() => ({
-        setVol: vi.fn(),
-        load: vi.fn(),
-        play: vi.fn(),
-        stop: vi.fn()
-    }));
-    return { ChiptuneJsPlayer: mockPlayer };
+    class MockPlayer {
+        constructor() {
+            this.gain = {
+                connect: vi.fn()
+            };
+        }
+        setVol() {}
+        load() {}
+        play() {}
+        stop() {}
+        onInitialized(callback) {
+            callback();
+        }
+    }
+    return { ChiptuneJsPlayer: MockPlayer };
 });
 
 describe('AudioManager', () => {
@@ -18,6 +26,7 @@ describe('AudioManager', () => {
         // Reset properties
         audioManager.ctx = null;
         audioManager.player = null;
+        audioManager.initPromise = null;
         audioManager.currentTrack = null;
         audioManager.volume = 0.5;
         audioManager.isMuted = false;
@@ -44,10 +53,11 @@ describe('AudioManager', () => {
         vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
         const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
 
+        await audioManager.init();
         audioManager.playRoundStart();
         
-        // Wait for asynchronous init chain to run
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // Wait for microtasks to resolve
+        await new Promise(resolve => setTimeout(resolve, 10));
         expect(zzfxSpy).toHaveBeenCalled();
     });
 });
