@@ -343,6 +343,34 @@
                 <span>08. OUTPOST COLLAPSE</span>
                 <span class="btn-desc">Digital breakdown slide</span>
             </button>
+            <button class="sfx-btn" data-sfx="click">
+                <span>09. UI CLICK</span>
+                <span class="btn-desc">High-pass menu blip pop</span>
+            </button>
+            <button class="sfx-btn green" data-sfx="seatClaim">
+                <span>10. SEAT CLAIM</span>
+                <span class="btn-desc">Mechanical lock-in chiptune</span>
+            </button>
+            <button class="sfx-btn" data-sfx="uplink">
+                <span>11. TELEMETRY UPLINK</span>
+                <span class="btn-desc">Turn execution ascending sweep</span>
+            </button>
+            <button class="sfx-btn green" data-sfx="terminalSelect">
+                <span>12. TERM SELECT</span>
+                <span class="btn-desc">Sci-fi terminal scan chirp</span>
+            </button>
+            <button class="sfx-btn" data-sfx="linkStage">
+                <span>13. LINK STAGING</span>
+                <span class="btn-desc">Metallic cable stretching ping</span>
+            </button>
+            <button class="sfx-btn heavy" data-sfx="actionReset">
+                <span>14. RESET BUZZ</span>
+                <span class="btn-desc">Descending rejection error buzz</span>
+            </button>
+            <button class="sfx-btn heavy" data-sfx="structureLanding">
+                <span>15. DROP LANDING</span>
+                <span class="btn-desc">Orbital landing hydraulic slam</span>
+            </button>
         </div>
 
         <!-- Status Bar -->
@@ -369,7 +397,14 @@
             shieldHit: [0.25, undefined, 800, .02, undefined, .08, 1, undefined, undefined, undefined, undefined, undefined, undefined, 200, .02],
             nukeDetonation: [0.65, undefined, 45, .2, .4, 1.2, undefined, 3.8, undefined, -1, undefined, undefined, undefined, undefined, undefined, undefined, .3, .2, .5],
             linkSevered: [0.25, undefined, 600, .01, undefined, .15, undefined, 1.2, undefined, -30, 200],
-            structureDestroyed: [0.35, undefined, 120, .05, .15, .4, undefined, 1.8, undefined, -8]
+            structureDestroyed: [0.35, undefined, 120, .05, .15, .4, undefined, 1.8, undefined, -8],
+            click: [0.1, undefined, 1000, .01, undefined, .04, 1, undefined, undefined, undefined, undefined, undefined, undefined, 100, .05],
+            seatClaim: [0.3, undefined, 200, .05, .05, .15, 1, .8, undefined, undefined, undefined, undefined, undefined, 300, .02],
+            uplink: [0.25, undefined, 300, .08, .1, .2, 1, 1.2, undefined, 25],
+            terminalSelect: [0.12, undefined, 600, .01, .03, .05, undefined, undefined, undefined, 15],
+            linkStage: [0.18, undefined, 350, .03, .05, .06, undefined, 0.5, undefined, 5],
+            actionReset: [0.2, undefined, 150, .02, .05, .12, undefined, undefined, undefined, -15],
+            structureLanding: [0.55, undefined, 65, .08, .12, .35, undefined, 2.2, undefined, -3]
         };
 
         const playTrackerBtn = document.getElementById('playTrackerBtn');
