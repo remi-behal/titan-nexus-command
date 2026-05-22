@@ -77,7 +77,7 @@ function App() {
     // Warm up AudioContext on standard user interaction
     useEffect(() => {
         const warmUpAudio = () => {
-            audioManager.init();
+            audioManager.playMusic('/audio/tracks/hackurr_-_banana.xm');
             window.removeEventListener('click', warmUpAudio);
         };
         window.addEventListener('click', warmUpAudio);
@@ -221,7 +221,6 @@ function App() {
 
             const token = getSessionToken();
             socket.emit('authenticate', token);
-            audioManager.playMusic('/audio/tracks/hackurr_-_banana.xm');
         };
 
         const onDisconnect = () => {
