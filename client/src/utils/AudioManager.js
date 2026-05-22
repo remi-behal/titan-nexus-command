@@ -20,7 +20,10 @@ class AudioManager {
             
             // Dynamic import of chiptune3 only in browser context
             const { ChiptuneJsPlayer } = await import('chiptune3/chiptune3.js');
-            this.player = new ChiptuneJsPlayer(new ChiptuneJsPlayer.Config());
+            this.player = new ChiptuneJsPlayer({
+                context: this.ctx,
+                repeatCount: -1
+            });
             this.player.setVol(this.volume);
         } catch (e) {
             console.error('AudioManager initialization failed:', e);
@@ -42,14 +45,8 @@ class AudioManager {
         this.isPlaying = true;
 
         if (this.player && trackPath) {
-            this.player.load(trackPath, (buffer) => {
-                if (this.currentTrack === trackPath && this.isPlaying) {
-                    this.player.play(buffer);
-                    this.player.setVol(this.isMuted ? 0 : this.volume);
-                }
-            }, (err) => {
-                console.error('AudioManager: Failed to play music', trackPath, err);
-            });
+            this.player.load(trackPath);
+            this.player.setVol(this.isMuted ? 0 : this.volume);
         }
     }
 

@@ -5,11 +5,10 @@ import * as ZzFXModule from './ZzFX';
 vi.mock('chiptune3/chiptune3.js', () => {
     const mockPlayer = vi.fn().mockImplementation(() => ({
         setVol: vi.fn(),
-        load: vi.fn((path, success) => success('mock-buffer')),
+        load: vi.fn(),
         play: vi.fn(),
         stop: vi.fn()
     }));
-    mockPlayer.Config = vi.fn();
     return { ChiptuneJsPlayer: mockPlayer };
 });
 
