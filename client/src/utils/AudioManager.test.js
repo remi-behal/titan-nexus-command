@@ -60,4 +60,35 @@ describe('AudioManager', () => {
         await new Promise(resolve => setTimeout(resolve, 10));
         expect(zzfxSpy).toHaveBeenCalled();
     });
+
+    it('verifies all procedural sound playback methods', async () => {
+        const mockContext = {
+            state: 'running',
+            resume: vi.fn().mockResolvedValue()
+        };
+        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
+
+        await audioManager.init();
+
+        const methods = [
+            'playShoot',
+            'playHeavyLaunch',
+            'playLaser',
+            'playExplosion',
+            'playShieldHit',
+            'playNukeDetonation',
+            'playLinkSevered',
+            'playStructureDestroyed'
+        ];
+
+        for (const method of methods) {
+            audioManager[method]();
+            // Wait for microtasks to resolve
+            await new Promise(resolve => setTimeout(resolve, 1));
+            expect(zzfxSpy).toHaveBeenCalled();
+            zzfxSpy.mockClear();
+        }
+    });
 });
+

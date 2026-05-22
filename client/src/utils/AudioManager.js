@@ -109,6 +109,46 @@ class AudioManager {
         const roundStartParams = [0.5, , 150, .4, .1, .2, 1, 1.5, , , , , , , , , .1, .8, .1];
         this.playSfx(roundStartParams);
     }
+
+    playShoot() {
+        // Snappy pitch-sliding blip for standard projectiles
+        this.playSfx([0.2, , 400, .05, , .1, , , 50, -500]);
+    }
+
+    playHeavyLaunch() {
+        // Deep rocket rumble/thrust for Homing Missiles and Nukes
+        this.playSfx([0.4, , 80, .1, .2, .3, , 1.5, , -5]);
+    }
+
+    playLaser() {
+        // Rapid, high-pitched clean chirp for Laser Point Defense
+        this.playSfx([0.15, , 1200, .01, .05, .05, , , , -20]);
+    }
+
+    playExplosion() {
+        // Classic white-noise crunchy explosion for normal weapon impacts
+        this.playSfx([0.35, , 100, .05, .1, .3, , 2.5, , , , , , , , , .2, .5]);
+    }
+
+    playShieldHit() {
+        // Metallic "ping/deflect" sound when shield takes damage or spark occurs
+        this.playSfx([0.25, , 800, .02, , .08, 1, , , , , , , 200, .02]);
+    }
+
+    playNukeDetonation() {
+        // Massive, earth-shaking low-frequency sweep with long release
+        this.playSfx([0.65, , 45, .2, .4, 1.2, , 3.8, , -1, , , , , , , .3, .2, .5]);
+    }
+
+    playLinkSevered() {
+        // Snappy descending energy snap when connection is severed
+        this.playSfx([0.25, , 600, .01, , .15, , 1.2, , -30, 200]);
+    }
+
+    playStructureDestroyed() {
+        // Descending breakdown chime when a structure collapses
+        this.playSfx([0.35, , 120, .05, .15, .4, , 1.8, , -8]);
+    }
 }
 
 export const audioManager = new AudioManager();
