@@ -173,6 +173,7 @@ function App() {
     };
 
     const handleExecuteTurn = () => {
+        audioManager.playUplink();
         if (committedActions.length > 0) {
             socket.emit('submitActions', committedActions);
         } else {
@@ -181,11 +182,13 @@ function App() {
     };
 
     const handleClearActions = () => {
+        audioManager.playActionReset();
         setCommittedActions([]);
         setLaunchMode(false);
     };
 
     const handleRestart = () => {
+        audioManager.playActionReset();
         socket.emit('restartGame');
         setCommittedActions([]);
         setSelectedHubId(null);
@@ -194,14 +197,17 @@ function App() {
     };
 
     const handleClaimSeat = (index) => {
+        audioManager.playSeatClaim();
         socket.emit('lobby:claimSeat', index);
     };
 
     const handleReadyToggle = (isReady) => {
+        audioManager.playClick();
         socket.emit('lobby:ready', isReady);
     };
 
     const handleSetMap = (mapName) => {
+        audioManager.playClick();
         socket.emit('lobby:setMap', mapName);
     };
 
