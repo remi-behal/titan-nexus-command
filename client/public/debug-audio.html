@@ -371,6 +371,18 @@
                 <span>15. DROP LANDING</span>
                 <span class="btn-desc">Orbital landing hydraulic slam</span>
             </button>
+            <button class="sfx-btn" data-sfx="samLaunch">
+                <span>16. SAM LAUNCH</span>
+                <span class="btn-desc">Pneumatic mechanical launch eject pop</span>
+            </button>
+            <button class="sfx-btn" data-sfx="samFlight">
+                <span>17. SAM FLIGHT</span>
+                <span class="btn-desc">Pulsed rocket engine thruster rumble</span>
+            </button>
+            <button class="sfx-btn green" data-sfx="samLock">
+                <span>18. SAM LOCK ON</span>
+                <span class="btn-desc">High pitch dual-tone target lock chime</span>
+            </button>
         </div>
 
         <!-- Status Bar -->
@@ -404,7 +416,10 @@
             terminalSelect: [0.12, undefined, 600, .01, .03, .05, undefined, undefined, undefined, 15],
             linkStage: [0.18, undefined, 350, .03, .05, .06, undefined, 0.5, undefined, 5],
             actionReset: [0.2, undefined, 150, .02, .05, .12, undefined, undefined, undefined, -15],
-            structureLanding: [0.55, undefined, 65, .08, .12, .35, undefined, 2.2, undefined, -3]
+            structureLanding: [0.55, undefined, 65, .08, .12, .35, undefined, 2.2, undefined, -3],
+            samLaunch: [0.35, undefined, 180, 0.05, 0.05, 0.2, undefined, 1.2, undefined, 10, undefined, undefined, undefined, 200, 0.02],
+            samFlight: [0.08, undefined, 75, 0.04, undefined, 0.08, undefined, 0.5, undefined, -15],
+            samLock: [0.22, undefined, 950, 0.01, 0.03, 0.08, 1, 1.8, undefined, 10, 300, 0.02, 0.05]
         };
 
         const playTrackerBtn = document.getElementById('playTrackerBtn');
