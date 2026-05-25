@@ -2,6 +2,8 @@
 
 This document serves as the master catalog and strategic roadmap for all procedural chiptune and cybernetic sound effects within the *Titan: Nexus Command* audio system.
 
+**Note** All sound effects are unrefined currently, developer needs to adjust all sounds.
+
 ---
 
 ## Phase 1: Combat & Tactical Resolution
@@ -35,11 +37,22 @@ These sounds cover real-time user interface selections, interactive strategic pl
 
 ---
 
+### Not Designed yet
+#### Weapon sounds
+- **Standard explosion**
+- **EMP explosion**
+- **napalm burn**
+- **flak**
+- **reclaimer**
+- **sam missile launch**
+- **sam missile flight**
+- **sam missile lock on**
+
+
 ## Phase 3: Future Strategic Concepts
 *Status: POSTPONED (Future Roadmap)*
 
 These concepts are designed for future strategic extensions as the game's simulation and sensory warning features expand.
 
 - **Red-Alert: Base Under Attack**: A subtle, pulsing low-frequency warning klaxon that signals when base shields are breached.
-- **Resource Depletion Alert**: A harsh, digital triple-beep when an Extractor runs out of raw minerals.
 - **Stealth Cloaking hum**: A continuous, high-frequency phase-modulation drone that plays while a cloaked outpost remains undetected.
