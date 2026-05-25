@@ -300,7 +300,21 @@
         <div class="tracker-section">
             <div class="tracker-info">
                 <span class="tracker-label">TRACKER TRACK</span>
-                <span class="tracker-value" id="trackName">HACKURR - BANANA (STANDBY)</span>
+                <select id="trackSelect" style="
+                    background: rgba(0, 0, 0, 0.7);
+                    color: var(--accent-green);
+                    border: 1px solid var(--border-color);
+                    border-radius: 4px;
+                    padding: 6px 12px;
+                    font-family: 'Share Tech Mono', monospace;
+                    font-size: 0.95rem;
+                    outline: none;
+                    cursor: pointer;
+                    margin-top: 5px;
+                ">
+                    <option value="/audio/tracks/twimble.mod">TWIMBLE.MOD (DEFAULT)</option>
+                    <option value="/audio/tracks/hackurr_-_banana.xm">BANANA.XM</option>
+                </select>
             </div>
             <button class="action-btn" id="playTrackerBtn">START TRACKER</button>
         </div>
@@ -423,7 +437,7 @@
         };
 
         const playTrackerBtn = document.getElementById('playTrackerBtn');
-        const trackName = document.getElementById('trackName');
+        const trackSelect = document.getElementById('trackSelect');
         const statusLight = document.getElementById('statusLight');
         const statusText = document.getElementById('statusText');
         const canvas = document.getElementById('visualizerCanvas');
@@ -493,6 +507,13 @@
             ctx2d.stroke();
         }
 
+        // Dynamic hot-swapping when track is changed
+        trackSelect.addEventListener('change', () => {
+            if (chiptunePlayer) {
+                playTrackerBtn.click();
+            }
+        });
+
         // Trigger Tracker music
         playTrackerBtn.addEventListener('click', async () => {
             initAudio();
@@ -516,11 +537,12 @@
             // Route chiptune player through visualizer node
             chiptunePlayer.gain.connect(analyser);
 
+            const selectedTrack = trackSelect.value;
+
             chiptunePlayer.onInitialized(() => {
                 statusText.innerText = "BUFFERING CHIPTUNE TRACK...";
                 try {
-                    chiptunePlayer.load('/audio/tracks/hackurr_-_banana.xm');
-                    trackName.innerText = "HACKURR - BANANA.XM (PLAYING)";
+                    chiptunePlayer.load(selectedTrack);
                     statusText.innerText = "TRACK CONSOLE ACTIVE";
                 } catch (err) {
                     statusText.innerText = "TRACK STREAMING ERROR: " + err.message;
