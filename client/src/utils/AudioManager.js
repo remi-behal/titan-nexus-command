@@ -184,6 +184,10 @@ class AudioManager {
         // Pneumatic hydraulic impact slam when structures land
         this.playSfx([0.55, undefined, 65, .08, .12, .35, undefined, 2.2, undefined, -3]);
     }
+
+    playSamLaunch() {}
+    playSamFlight() {}
+    playSamLockOn() {}
 }
 
 export const audioManager = new AudioManager();

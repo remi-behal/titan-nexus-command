@@ -108,7 +108,10 @@ describe('AudioManager', () => {
             'playTerminalSelect',
             'playLinkStage',
             'playActionReset',
-            'playStructureLanding'
+            'playStructureLanding',
+            'playSamLaunch',
+            'playSamFlight',
+            'playSamLockOn'
         ];
 
         for (const method of methods) {
