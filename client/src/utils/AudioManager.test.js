@@ -122,5 +122,37 @@ describe('AudioManager', () => {
             zzfxSpy.mockClear();
         }
     });
+
+    it('verifies exact ZzFX parameters for SAM missile audio features', async () => {
+        const mockContext = {
+            state: 'running',
+            resume: vi.fn().mockResolvedValue()
+        };
+        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
+
+        await audioManager.init();
+
+        // 1. Launch
+        audioManager.playSamLaunch();
+        await new Promise(resolve => setTimeout(resolve, 10));
+        expect(zzfxSpy).toHaveBeenLastCalledWith(
+            0.175, undefined, 180, 0.05, 0.05, 0.2, undefined, 1.2, undefined, 10, undefined, undefined, undefined, 200, 0.02
+        );
+
+        // 2. Flight
+        audioManager.playSamFlight();
+        await new Promise(resolve => setTimeout(resolve, 10));
+        expect(zzfxSpy).toHaveBeenLastCalledWith(
+            0.04, undefined, 75, 0.04, undefined, 0.08, undefined, 0.5, undefined, -15
+        );
+
+        // 3. Lock On
+        audioManager.playSamLockOn();
+        await new Promise(resolve => setTimeout(resolve, 10));
+        expect(zzfxSpy).toHaveBeenLastCalledWith(
+            0.11, undefined, 950, 0.01, 0.03, 0.08, 1, 1.8, undefined, 10, 300, 0.02, 0.05
+        );
+    });
 });
 

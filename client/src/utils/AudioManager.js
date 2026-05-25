@@ -185,9 +185,20 @@ class AudioManager {
         this.playSfx([0.55, undefined, 65, .08, .12, .35, undefined, 2.2, undefined, -3]);
     }
 
-    playSamLaunch() {}
-    playSamFlight() {}
-    playSamLockOn() {}
+    playSamLaunch() {
+        // Pneumatic eject noise pop + rising frequency sweep whistle
+        this.playSfx([0.35, undefined, 180, 0.05, 0.05, 0.2, undefined, 1.2, undefined, 10, undefined, undefined, undefined, 200, 0.02]);
+    }
+
+    playSamFlight() {
+        // Soft low-frequency rocket engine thruster rumble
+        this.playSfx([0.08, undefined, 75, 0.04, undefined, 0.08, undefined, 0.5, undefined, -15]);
+    }
+
+    playSamLockOn() {
+        // Snappy high-frequency dual-tone cybernetic lock alarm chime
+        this.playSfx([0.22, undefined, 950, 0.01, 0.03, 0.08, 1, 1.8, undefined, 10, 300, 0.02, 0.05]);
+    }
 }
 
 export const audioManager = new AudioManager();
