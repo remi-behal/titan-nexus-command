@@ -1,5 +1,10 @@
 import { zzfx, setZzfxContext } from './ZzFX';
 
+export const TRACKS = [
+    { id: 'twimble', name: 'TWIMBLE.MOD', path: '/audio/tracks/twimble.mod' },
+    { id: 'banana', name: 'BANANA.XM', path: '/audio/tracks/hackurr_-_banana.xm' }
+];
+
 class AudioManager {
     constructor() {
         this.ctx = null;

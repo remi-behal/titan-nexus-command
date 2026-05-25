@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { audioManager } from './AudioManager';
+import { audioManager, TRACKS } from './AudioManager';
 import * as ZzFXModule from './ZzFX';
 
 vi.mock('chiptune3/chiptune3.js', () => {
@@ -153,6 +153,31 @@ describe('AudioManager', () => {
         expect(zzfxSpy).toHaveBeenLastCalledWith(
             0.11, undefined, 950, 0.01, 0.03, 0.08, 1, 1.8, undefined, 10, 300, 0.02, 0.05
         );
+    });
+
+    it('defines and exports a valid TRACKS playlist', () => {
+        expect(TRACKS).toBeDefined();
+        expect(TRACKS.length).toBe(2);
+        expect(TRACKS[0].id).toBe('twimble');
+        expect(TRACKS[1].id).toBe('banana');
+    });
+
+    it('plays different tracks from the playlist via playMusic', async () => {
+        const mockContext = {
+            state: 'running',
+            resume: vi.fn().mockResolvedValue()
+        };
+        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+
+        await audioManager.init();
+        const loadSpy = vi.spyOn(audioManager.player, 'load');
+
+        await audioManager.playMusic('/audio/tracks/twimble.mod');
+        expect(loadSpy).toHaveBeenCalledWith('/audio/tracks/twimble.mod');
+        expect(audioManager.currentTrack).toBe('/audio/tracks/twimble.mod');
+
+        await audioManager.playMusic('/audio/tracks/hackurr_-_banana.xm');
+        expect(loadSpy).toHaveBeenLastCalledWith('/audio/tracks/hackurr_-_banana.xm');
     });
 });
 
