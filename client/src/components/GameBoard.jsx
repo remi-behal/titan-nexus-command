@@ -263,6 +263,8 @@ const GameBoard = forwardRef(({
                         if (serverEnt.type === 'PROJECTILE') {
                             if (serverEnt.itemType === 'HOMING_MISSILE') {
                                 audioManager.playHeavyLaunch();
+                            } else if (serverEnt.itemType === 'SAM_MISSILE' || serverEnt.itemType === 'SMART_SAM_MISSILE') {
+                                audioManager.playSamLaunch();
                             } else {
                                 audioManager.playShoot();
                             }
@@ -305,8 +307,16 @@ const GameBoard = forwardRef(({
                         viz.currentAngle = serverEnt.currentAngle;
                         viz.angle = serverEnt.angle;
                         viz.searchMode = serverEnt.searchMode;
+                        const prevLockFound = viz.lockFound;
                         viz.lockFound = serverEnt.lockFound;
                         viz.flakActive = serverEnt.flakActive;
+                        
+                        // Play alert lock-on chime upon positive transition
+                        if (viz.lockFound && !prevLockFound) {
+                            if (serverEnt.itemType === 'SAM_MISSILE' || serverEnt.itemType === 'SMART_SAM_MISSILE' || serverEnt.itemType === 'HOMING_MISSILE') {
+                                audioManager.playSamLockOn();
+                            }
+                        }
                         viz.flakAngle = serverEnt.flakAngle;
                         viz.flakTriggerTick = serverEnt.flakTriggerTick;
                         viz.barrierHp = serverEnt.barrierHp;
