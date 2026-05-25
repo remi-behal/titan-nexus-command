@@ -10,7 +10,7 @@ import { io } from 'socket.io-client';
 import CRTEffect from 'vault66-crt-effect';
 import "vault66-crt-effect/dist/vault66-crt-effect.css";
 import AssetGallery from './components/AssetGallery';
-import { audioManager } from './utils/AudioManager';
+import { audioManager, TRACKS } from './utils/AudioManager';
 
 const socket = io('/', {
     transports: ['polling', 'websocket'],
@@ -37,6 +37,7 @@ function App() {
     const [myPlayerId, setMyPlayerId] = useState(null);
     const [audioVolume, setAudioVolume] = useState(0.5);
     const [audioMuted, setAudioMuted] = useState(false);
+    const [currentTrackPath, setCurrentTrackPath] = useState('/audio/tracks/twimble.mod');
 
     const handleVolumeChange = (e) => {
         const val = parseFloat(e.target.value);
@@ -47,6 +48,13 @@ function App() {
     const handleMuteToggle = () => {
         audioManager.toggleMute();
         setAudioMuted(audioManager.isMuted);
+    };
+
+    const handleTrackChange = (path) => {
+        setCurrentTrackPath(path);
+        if (audioManager.isPlaying || audioManager.ctx) {
+            audioManager.playMusic(path);
+        }
     };
     const [syncStatus, setSyncStatus] = useState({ lockedIn: { player1: false, player2: false } });
     const [lastError, setLastError] = useState(null);
@@ -77,12 +85,12 @@ function App() {
     // Warm up AudioContext on standard user interaction
     useEffect(() => {
         const warmUpAudio = () => {
-            audioManager.playMusic('/audio/tracks/hackurr_-_banana.xm');
+            audioManager.playMusic(currentTrackPath);
             window.removeEventListener('click', warmUpAudio);
         };
         window.addEventListener('click', warmUpAudio);
         return () => window.removeEventListener('click', warmUpAudio);
-    }, []);
+    }, [currentTrackPath]);
 
     const isResolvingPhase = playerState?.phase === 'RESOLVING';
     const isResolvingUI = isResolving || isResolvingPhase;
@@ -545,6 +553,29 @@ function App() {
                             disabled={audioMuted}
                         />
                     </div>
+                </div>
+                <div className="track-selector-container" style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <span className="slider-label" style={{ fontSize: '0.75rem', color: '#64748b', letterSpacing: '1px' }}>TRACK:</span>
+                    <select 
+                        value={currentTrackPath} 
+                        onChange={(e) => handleTrackChange(e.target.value)}
+                        className="retro-select"
+                        style={{
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            color: 'var(--player-accent-color)',
+                            border: '1px solid var(--player-accent-glow)',
+                            borderRadius: '4px',
+                            padding: '4px 8px',
+                            fontFamily: '"Share Tech Mono", monospace',
+                            fontSize: '0.85rem',
+                            outline: 'none',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        {TRACKS.map(t => (
+                            <option key={t.id} value={t.path}>{t.name}</option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
