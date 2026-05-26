@@ -38,23 +38,55 @@ function App() {
     const [audioVolume, setAudioVolume] = useState(0.5);
     const [audioMuted, setAudioMuted] = useState(false);
     const [currentTrackPath, setCurrentTrackPath] = useState('/audio/tracks/twimble.mod');
-
+    const [audioPaused, setAudioPaused] = useState(false);
+    const [audioPlaying, setAudioPlaying] = useState(false);
+    const [audioShuffle, setAudioShuffle] = useState(false);
+ 
     const handleVolumeChange = (e) => {
         const val = parseFloat(e.target.value);
         setAudioVolume(val);
         audioManager.setVolume(val);
     };
-
+ 
     const handleMuteToggle = () => {
         audioManager.toggleMute();
         setAudioMuted(audioManager.isMuted);
     };
-
+ 
+    const handlePlayPauseToggle = () => {
+        if (audioManager.isPlaying) {
+            audioManager.pauseMusic();
+        } else {
+            audioManager.resumeMusic();
+        }
+        setAudioPaused(audioManager.isPaused);
+        setAudioPlaying(audioManager.isPlaying);
+    };
+ 
+    const handleNextTrack = async () => {
+        const nextPath = await audioManager.nextTrack();
+        setCurrentTrackPath(nextPath);
+        setAudioPaused(false);
+        setAudioPlaying(true);
+    };
+ 
+    const handlePrevTrack = async () => {
+        const prevPath = await audioManager.prevTrack();
+        setCurrentTrackPath(prevPath);
+        setAudioPaused(false);
+        setAudioPlaying(true);
+    };
+ 
+    const handleShuffleToggle = () => {
+        const nextShuffle = audioManager.toggleShuffle();
+        setAudioShuffle(nextShuffle);
+    };
+ 
     const handleTrackChange = (path) => {
         setCurrentTrackPath(path);
-        if (audioManager.isPlaying || audioManager.ctx) {
-            audioManager.playMusic(path);
-        }
+        audioManager.playMusic(path);
+        setAudioPaused(false);
+        setAudioPlaying(true);
     };
     const [syncStatus, setSyncStatus] = useState({ lockedIn: { player1: false, player2: false } });
     const [lastError, setLastError] = useState(null);
@@ -554,28 +586,40 @@ function App() {
                         />
                     </div>
                 </div>
-                <div className="track-selector-container" style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <span className="slider-label" style={{ fontSize: '0.75rem', color: '#64748b', letterSpacing: '1px' }}>TRACK:</span>
+                <div className="track-selector-container">
+                    <span className="slider-label" style={{ fontSize: '0.55rem', color: '#666', letterSpacing: '1px' }}>TRACK:</span>
                     <select 
                         value={currentTrackPath} 
                         onChange={(e) => handleTrackChange(e.target.value)}
                         className="retro-select"
-                        style={{
-                            background: 'rgba(0, 0, 0, 0.5)',
-                            color: 'var(--player-accent-color)',
-                            border: '1px solid var(--player-accent-glow)',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            fontFamily: '"Share Tech Mono", monospace',
-                            fontSize: '0.85rem',
-                            outline: 'none',
-                            cursor: 'pointer'
-                        }}
                     >
                         {TRACKS.map(t => (
                             <option key={t.id} value={t.path}>{t.name}</option>
                         ))}
                     </select>
+                    
+                    <div className="media-controls-grid">
+                        <button className="media-btn" onClick={handlePrevTrack} title="Previous Track">
+                            PREV
+                        </button>
+                        <button 
+                            className={`media-btn ${audioPlaying ? 'active' : ''}`} 
+                            onClick={handlePlayPauseToggle} 
+                            title={audioPlaying ? "Pause" : "Play"}
+                        >
+                            {audioPlaying ? "PAUS" : "PLAY"}
+                        </button>
+                        <button className="media-btn" onClick={handleNextTrack} title="Next Track">
+                            NEXT
+                        </button>
+                        <button 
+                            className={`media-btn ${audioShuffle ? 'active' : ''}`} 
+                            onClick={handleShuffleToggle} 
+                            title="Toggle Shuffle"
+                        >
+                            SHUF
+                        </button>
+                    </div>
                 </div>
             </div>
 
