@@ -298,7 +298,7 @@
 
         <!-- Tracker Audio Stream -->
         <div class="tracker-section">
-            <div class="tracker-info">
+            <div class="tracker-info" style="width: 100%;">
                 <span class="tracker-label">TRACKER TRACK</span>
                 <select id="trackSelect" style="
                     background: rgba(0, 0, 0, 0.7);
@@ -311,10 +311,19 @@
                     outline: none;
                     cursor: pointer;
                     margin-top: 5px;
+                    width: 100%;
+                    box-sizing: border-box;
                 ">
                     <option value="/audio/tracks/twimble.mod">TWIMBLE.MOD (DEFAULT)</option>
                     <option value="/audio/tracks/hackurr_-_banana.xm">BANANA.XM</option>
                 </select>
+                
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px;">
+                    <button class="action-btn" id="prevBtn" style="padding: 4px 8px; font-size: 0.75rem;">PREV</button>
+                    <button class="action-btn" id="playPauseBtn" style="padding: 4px 8px; font-size: 0.75rem;">PAUSE</button>
+                    <button class="action-btn" id="nextBtn" style="padding: 4px 8px; font-size: 0.75rem;">NEXT</button>
+                    <button class="action-btn" id="shuffleBtn" style="padding: 4px 8px; font-size: 0.75rem;">SHUF</button>
+                </div>
             </div>
             <button class="action-btn" id="playTrackerBtn">START TRACKER</button>
         </div>
@@ -544,10 +553,60 @@
                 try {
                     chiptunePlayer.load(selectedTrack);
                     statusText.innerText = "TRACK CONSOLE ACTIVE";
+                    playPauseBtn.innerText = "PAUSE";
                 } catch (err) {
                     statusText.innerText = "TRACK STREAMING ERROR: " + err.message;
                 }
             });
+        });
+
+        const prevBtn = document.getElementById('prevBtn');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const shuffleBtn = document.getElementById('shuffleBtn');
+        let isShuffle = false;
+
+        playPauseBtn.addEventListener('click', () => {
+            if (!chiptunePlayer) return;
+            chiptunePlayer.togglePause();
+            playPauseBtn.innerText = playPauseBtn.innerText === "PAUSE" ? "PLAY" : "PAUSE";
+            statusText.innerText = playPauseBtn.innerText === "PAUSE" ? "TRACK PLAYING" : "TRACK PAUSED";
+        });
+
+        const triggerTrackLoad = (path) => {
+            trackSelect.value = path;
+            playTrackerBtn.click();
+        };
+
+        nextBtn.addEventListener('click', () => {
+            const options = Array.from(trackSelect.options);
+            let nextIdx;
+            if (isShuffle) {
+                nextIdx = Math.floor(Math.random() * options.length);
+            } else {
+                const currentIdx = trackSelect.selectedIndex;
+                nextIdx = (currentIdx + 1) % options.length;
+            }
+            triggerTrackLoad(options[nextIdx].value);
+        });
+
+        prevBtn.addEventListener('click', () => {
+            const options = Array.from(trackSelect.options);
+            let prevIdx;
+            if (isShuffle) {
+                prevIdx = Math.floor(Math.random() * options.length);
+            } else {
+                const currentIdx = trackSelect.selectedIndex;
+                prevIdx = (currentIdx - 1 + options.length) % options.length;
+            }
+            triggerTrackLoad(options[prevIdx].value);
+        });
+
+        shuffleBtn.addEventListener('click', () => {
+            isShuffle = !isShuffle;
+            shuffleBtn.style.borderColor = isShuffle ? 'var(--accent-green)' : 'var(--border-color)';
+            shuffleBtn.style.color = isShuffle ? 'var(--accent-green)' : '';
+            shuffleBtn.style.boxShadow = isShuffle ? 'var(--green-glow)' : '';
         });
 
         // Trigger individual ZzFX procedural sound effects
