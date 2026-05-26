@@ -13,6 +13,8 @@ class AudioManager {
         this.volume = 0.5;
         this.isMuted = false;
         this.isPlaying = false;
+        this.isPaused = false;
+        this.shuffle = false;
     }
 
     init() {
@@ -62,7 +64,8 @@ class AudioManager {
         this.stopMusic();
         this.currentTrack = trackPath;
         this.isPlaying = true;
-
+        this.isPaused = false;
+ 
         if (this.player && trackPath) {
             this.player.load(trackPath);
             this.player.setVol(this.isMuted ? 0 : this.volume);
@@ -71,6 +74,7 @@ class AudioManager {
 
     stopMusic() {
         this.isPlaying = false;
+        this.isPaused = false;
         if (this.player) {
             try {
                 this.player.stop();
@@ -78,6 +82,57 @@ class AudioManager {
                 // Ignore silent stop failures
             }
         }
+    }
+
+    pauseMusic() {
+        if (this.player && this.isPlaying) {
+            this.player.pause();
+            this.isPaused = true;
+            this.isPlaying = false;
+        }
+    }
+
+    resumeMusic() {
+        if (this.player && this.isPaused) {
+            this.player.unpause();
+            this.isPaused = false;
+            this.isPlaying = true;
+        } else if (this.currentTrack) {
+            this.playMusic(this.currentTrack);
+        } else {
+            this.playMusic(TRACKS[0].path);
+        }
+    }
+
+    async nextTrack() {
+        let nextIndex;
+        if (this.shuffle) {
+            nextIndex = Math.floor(Math.random() * TRACKS.length);
+        } else {
+            const currentIndex = TRACKS.findIndex(t => t.path === this.currentTrack);
+            nextIndex = (currentIndex + 1) % TRACKS.length;
+        }
+        const track = TRACKS[nextIndex];
+        await this.playMusic(track.path);
+        return track.path;
+    }
+
+    async prevTrack() {
+        let prevIndex;
+        if (this.shuffle) {
+            prevIndex = Math.floor(Math.random() * TRACKS.length);
+        } else {
+            const currentIndex = TRACKS.findIndex(t => t.path === this.currentTrack);
+            prevIndex = (currentIndex - 1 + TRACKS.length) % TRACKS.length;
+        }
+        const track = TRACKS[prevIndex];
+        await this.playMusic(track.path);
+        return track.path;
+    }
+
+    toggleShuffle() {
+        this.shuffle = !this.shuffle;
+        return this.shuffle;
     }
 
     setVolume(vol) {

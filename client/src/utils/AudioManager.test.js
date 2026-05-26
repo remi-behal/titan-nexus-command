@@ -13,6 +13,9 @@ vi.mock('chiptune3/chiptune3.js', () => {
         load() {}
         play() {}
         stop() {}
+        pause() {}
+        unpause() {}
+        togglePause() {}
         onInitialized(callback) {
             callback();
         }
@@ -178,6 +181,51 @@ describe('AudioManager', () => {
 
         await audioManager.playMusic('/audio/tracks/hackurr_-_banana.xm');
         expect(loadSpy).toHaveBeenLastCalledWith('/audio/tracks/hackurr_-_banana.xm');
+    });
+
+    it('handles pause and resume correctly', async () => {
+        const mockContext = {
+            state: 'running',
+            resume: vi.fn().mockResolvedValue()
+        };
+        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+
+        await audioManager.init();
+        const pauseSpy = vi.spyOn(audioManager.player, 'pause');
+        const unpauseSpy = vi.spyOn(audioManager.player, 'unpause');
+
+        audioManager.isPlaying = true;
+        audioManager.pauseMusic();
+        expect(pauseSpy).toHaveBeenCalled();
+        expect(audioManager.isPaused).toBe(true);
+        expect(audioManager.isPlaying).toBe(false);
+
+        audioManager.resumeMusic();
+        expect(unpauseSpy).toHaveBeenCalled();
+        expect(audioManager.isPaused).toBe(false);
+        expect(audioManager.isPlaying).toBe(true);
+    });
+
+    it('handles next, previous, and shuffle toggling', async () => {
+        const mockContext = {
+            state: 'running',
+            resume: vi.fn().mockResolvedValue()
+        };
+        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+
+        await audioManager.init();
+        
+        audioManager.shuffle = false;
+        audioManager.currentTrack = TRACKS[0].path;
+
+        const nextTrack = await audioManager.nextTrack();
+        expect(nextTrack).toBe(TRACKS[1].path);
+
+        const prevTrack = await audioManager.prevTrack();
+        expect(prevTrack).toBe(TRACKS[0].path);
+
+        audioManager.toggleShuffle();
+        expect(audioManager.shuffle).toBe(true);
     });
 });
 
