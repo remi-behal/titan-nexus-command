@@ -38,7 +38,6 @@ function App() {
     const [audioVolume, setAudioVolume] = useState(0.5);
     const [audioMuted, setAudioMuted] = useState(false);
     const [currentTrackPath, setCurrentTrackPath] = useState('/audio/tracks/twimble.mod');
-    const [audioPaused, setAudioPaused] = useState(false);
     const [audioPlaying, setAudioPlaying] = useState(false);
     const [audioShuffle, setAudioShuffle] = useState(false);
  
@@ -59,21 +58,18 @@ function App() {
         } else {
             audioManager.resumeMusic();
         }
-        setAudioPaused(audioManager.isPaused);
         setAudioPlaying(audioManager.isPlaying);
     };
  
     const handleNextTrack = async () => {
         const nextPath = await audioManager.nextTrack();
         setCurrentTrackPath(nextPath);
-        setAudioPaused(false);
         setAudioPlaying(true);
     };
  
     const handlePrevTrack = async () => {
         const prevPath = await audioManager.prevTrack();
         setCurrentTrackPath(prevPath);
-        setAudioPaused(false);
         setAudioPlaying(true);
     };
  
@@ -85,7 +81,6 @@ function App() {
     const handleTrackChange = (path) => {
         setCurrentTrackPath(path);
         audioManager.playMusic(path);
-        setAudioPaused(false);
         setAudioPlaying(true);
     };
     const [syncStatus, setSyncStatus] = useState({ lockedIn: { player1: false, player2: false } });
