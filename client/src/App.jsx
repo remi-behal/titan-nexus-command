@@ -10,7 +10,9 @@ import { io } from 'socket.io-client';
 import CRTEffect from 'vault66-crt-effect';
 import "vault66-crt-effect/dist/vault66-crt-effect.css";
 import AssetGallery from './components/AssetGallery';
-import { audioManager } from './utils/AudioManager';
+import { audioManager, TRACKS } from './utils/AudioManager';
+import SidebarLeft from './components/HUD/SidebarLeft';
+import SidebarRight from './components/HUD/SidebarRight';
 
 const socket = io('/', {
     transports: ['polling', 'websocket'],
@@ -37,16 +39,51 @@ function App() {
     const [myPlayerId, setMyPlayerId] = useState(null);
     const [audioVolume, setAudioVolume] = useState(0.5);
     const [audioMuted, setAudioMuted] = useState(false);
-
+    const [currentTrackPath, setCurrentTrackPath] = useState('/audio/tracks/twimble.mod');
+    const [audioPlaying, setAudioPlaying] = useState(false);
+    const [audioShuffle, setAudioShuffle] = useState(false);
+ 
     const handleVolumeChange = (e) => {
         const val = parseFloat(e.target.value);
         setAudioVolume(val);
         audioManager.setVolume(val);
     };
-
+ 
     const handleMuteToggle = () => {
         audioManager.toggleMute();
         setAudioMuted(audioManager.isMuted);
+    };
+ 
+    const handlePlayPauseToggle = () => {
+        if (audioManager.isPlaying) {
+            audioManager.pauseMusic();
+        } else {
+            audioManager.resumeMusic();
+        }
+        setAudioPlaying(audioManager.isPlaying);
+    };
+ 
+    const handleNextTrack = async () => {
+        const nextPath = await audioManager.nextTrack();
+        setCurrentTrackPath(nextPath);
+        setAudioPlaying(true);
+    };
+ 
+    const handlePrevTrack = async () => {
+        const prevPath = await audioManager.prevTrack();
+        setCurrentTrackPath(prevPath);
+        setAudioPlaying(true);
+    };
+ 
+    const handleShuffleToggle = () => {
+        const nextShuffle = audioManager.toggleShuffle();
+        setAudioShuffle(nextShuffle);
+    };
+ 
+    const handleTrackChange = (path) => {
+        setCurrentTrackPath(path);
+        audioManager.playMusic(path);
+        setAudioPlaying(true);
     };
     const [syncStatus, setSyncStatus] = useState({ lockedIn: { player1: false, player2: false } });
     const [lastError, setLastError] = useState(null);
@@ -77,12 +114,12 @@ function App() {
     // Warm up AudioContext on standard user interaction
     useEffect(() => {
         const warmUpAudio = () => {
-            audioManager.playMusic('/audio/tracks/hackurr_-_banana.xm');
+            audioManager.playMusic(currentTrackPath);
             window.removeEventListener('click', warmUpAudio);
         };
         window.addEventListener('click', warmUpAudio);
         return () => window.removeEventListener('click', warmUpAudio);
-    }, []);
+    }, [currentTrackPath]);
 
     const isResolvingPhase = playerState?.phase === 'RESOLVING';
     const isResolvingUI = isResolving || isResolvingPhase;
@@ -148,6 +185,7 @@ function App() {
 
         if (isInvalid) {
             // Trigger rejection glitch
+            audioManager.playActionReset();
             setGlitchActive(true);
             setTimeout(() => setGlitchActive(false), 400);
             
@@ -167,12 +205,19 @@ function App() {
             distance: distance
         };
 
+        if (selectedItemType === 'LINK') {
+            audioManager.playLinkStage();
+        } else {
+            audioManager.playClick();
+        }
+
         setCommittedActions((prev) => [...prev, action]);
         setLaunchMode(false);
         setSelectedHubId(null);
     };
 
     const handleExecuteTurn = () => {
+        audioManager.playUplink();
         if (committedActions.length > 0) {
             socket.emit('submitActions', committedActions);
         } else {
@@ -181,11 +226,13 @@ function App() {
     };
 
     const handleClearActions = () => {
+        audioManager.playActionReset();
         setCommittedActions([]);
         setLaunchMode(false);
     };
 
     const handleRestart = () => {
+        audioManager.playActionReset();
         socket.emit('restartGame');
         setCommittedActions([]);
         setSelectedHubId(null);
@@ -194,14 +241,17 @@ function App() {
     };
 
     const handleClaimSeat = (index) => {
+        audioManager.playSeatClaim();
         socket.emit('lobby:claimSeat', index);
     };
 
     const handleReadyToggle = (isReady) => {
+        audioManager.playClick();
         socket.emit('lobby:ready', isReady);
     };
 
     const handleSetMap = (mapName) => {
+        audioManager.playClick();
         socket.emit('lobby:setMap', mapName);
     };
 
@@ -461,158 +511,44 @@ function App() {
     const interactionBlocked = isLocked || isResolvingUI || isSpectator || isUnassigned;
 
     const sidebarLeft = (
-        <aside className="sidebar-left">
-            <div className="player-info" style={{ color: pCurrent.color }}>
-                <h1>Titan: Nexus</h1>
-                <div className="stats-blocks">
-                    <div className="stat-group">
-                        <span className="label">You:</span>
-                        <span className="badge">{myPlayerId || 'Pending'}</span>
-                    </div>
-                    <div className="stat-group energy-group">
-                        <span className="label">Energy:</span>
-                        <span className="value energy">{pCurrent.energy}</span>
-                        {(() => {
-                            let projectedIncome = GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
-                            if (playerState?.entities && myPlayerId && !isSpectator) {
-                                playerState.entities.forEach((entity) => {
-                                    if (entity.owner === myPlayerId) {
-                                        if (entity.disabledUntilTurn > playerState.turn) return;
-
-                                        const stats = ENTITY_STATS[entity.type];
-                                        if (stats && stats.energyGen) {
-                                            projectedIncome += stats.energyGen;
-                                            if (entity.type === 'EXTRACTOR') {
-                                                const node = playerState.map.resources.find((res) => {
-                                                    let dx = Math.abs(res.x - entity.x);
-                                                    let dy = Math.abs(res.y - entity.y);
-                                                    if (dx > playerState.map.width / 2)
-                                                        dx = playerState.map.width - dx;
-                                                    if (dy > playerState.map.height / 2)
-                                                        dy = playerState.map.height - dy;
-                                                    const dist = Math.sqrt(dx * dx + dy * dy);
-                                                    return dist <= GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS;
-                                                });
-                                                if (node) projectedIncome += node.value;
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-                            return (
-                                <span className="income" title="Projected income next turn">
-                                    (+{projectedIncome})
-                                </span>
-                            );
-                        })()}
-                    </div>
-                </div>
-            </div>
-
-            <div className="audio-panel">
-                <div className="panel-title">COMM AUDIO</div>
-                <div className="audio-controls">
-                    <button 
-                        className={`mute-btn ${audioMuted ? 'muted' : ''}`} 
-                        onClick={handleMuteToggle}
-                        title={audioMuted ? "Unmute Audio" : "Mute Audio"}
-                    >
-                        {audioMuted ? "OFF" : "ON"}
-                    </button>
-                    <div className="slider-container">
-                        <span className="slider-label">VOL:</span>
-                        <input 
-                            type="range" 
-                            min="0" 
-                            max="1" 
-                            step="0.05" 
-                            value={audioVolume} 
-                            onChange={handleVolumeChange}
-                            className="retro-slider"
-                            disabled={audioMuted}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            <div className="footer-hint">
-                {isSpectator
-                    ? "Observing match."
-                    : selectedHubId
-                        ? `Hub ${selectedHubId} Selected.`
-                        : 'Select Hub.'}
-            </div>
-        </aside>
+        <SidebarLeft
+            myPlayerId={myPlayerId}
+            pCurrent={pCurrent}
+            playerState={playerState}
+            isSpectator={isSpectator}
+            selectedHubId={selectedHubId}
+            audioVolume={audioVolume}
+            audioMuted={audioMuted}
+            currentTrackPath={currentTrackPath}
+            audioPlaying={audioPlaying}
+            audioShuffle={audioShuffle}
+            handleVolumeChange={handleVolumeChange}
+            handleMuteToggle={handleMuteToggle}
+            handlePlayPauseToggle={handlePlayPauseToggle}
+            handlePrevTrack={handlePrevTrack}
+            handleNextTrack={handleNextTrack}
+            handleShuffleToggle={handleShuffleToggle}
+            handleTrackChange={handleTrackChange}
+        />
     );
 
     const sidebarRight = (
-        <aside className="sidebar-right">
-            <div className="sync-monitor">
-                <div
-                    className={`player-dot ${syncStatus?.lockedIn?.player1 ? 'ready' : ''}`}
-                    title="Player 1"
-                >
-                    P1
-                </div>
-                <div
-                    className={`player-dot ${syncStatus?.lockedIn?.player2 ? 'ready' : ''}`}
-                    title="Player 2"
-                >
-                    P2
-                </div>
-            </div>
-
-            <div className="controls-stack">
-                <div className="stats-blocks">
-                    <div className="stat-group">
-                        <span className="label">Turn:</span>
-                        <span className="value turn">{playerState?.turn || 1}</span>
-                    </div>
-                    <div className="stat-group timer-group">
-                        <span className="label">Time:</span>
-                        <span className={`value timer ${timeRemaining <= 10 ? 'low' : ''}`}>
-                            {timeRemaining}s
-                        </span>
-                    </div>
-                    {showDebugPreview && playerState?.map && (
-                        <>
-                            <div className="stat-group" style={{ color: '#0f0', fontSize: '0.8em', marginTop: '10px' }}>
-                                <span className="label">Center:</span>
-                                <span className="value">
-                                    {(cameraOffset.x + (playerState.map.width / zoom) / 2).toFixed(0)}, {(cameraOffset.y + (playerState.map.height / zoom) / 2).toFixed(0)}
-                                </span>
-                            </div>
-                        </>
-                    )}
-                </div>
-
-                {committedActions.length > 0 && !interactionBlocked && (
-                    <button className="clear-btn" onClick={handleClearActions}>
-                        Clear ({committedActions.length})
-                    </button>
-                )}
-
-                <div className="spacer" style={{ flex: 1 }} />
-
-                <button
-                    className={`execute-btn ${isLocked ? 'waiting' : ''}`}
-                    onClick={handleExecuteTurn}
-                    disabled={interactionBlocked}
-                >
-                    {isResolvingUI
-                        ? 'Simulating'
-                        : isLocked
-                            ? 'Waiting'
-                            : isSpectator
-                                ? 'Spectating'
-                                : isUnassigned
-                                    ? '...'
-                                    : committedActions.length > 0
-                                        ? `Ready (${committedActions.length})`
-                                        : 'Ready'}
-                </button>
-            </div>
-        </aside>
+        <SidebarRight
+            syncStatus={syncStatus}
+            playerState={playerState}
+            timeRemaining={timeRemaining}
+            showDebugPreview={showDebugPreview}
+            cameraOffset={cameraOffset}
+            zoom={zoom}
+            committedActions={committedActions}
+            interactionBlocked={interactionBlocked}
+            handleClearActions={handleClearActions}
+            handleExecuteTurn={handleExecuteTurn}
+            isLocked={isLocked}
+            isResolvingUI={isResolvingUI}
+            isSpectator={isSpectator}
+            isUnassigned={isUnassigned}
+        />
     );
 
     const playerColor = pBase?.color || '#00ff44';

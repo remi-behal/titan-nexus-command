@@ -7,6 +7,9 @@
  */
 
 import { ENTITY_STATS, GLOBAL_STATS, RESOURCE_NODE_STATS } from './constants/EntityStats.js';
+import * as TorusMath from './utils/TorusMath.js';
+import { CollisionSystem } from './systems/CollisionSystem.js';
+import { ProjectileSystem } from './systems/ProjectileSystem.js';
 
 export class GameState {
     constructor() {
@@ -31,10 +34,7 @@ export class GameState {
      * Given a raw pull distance, returns the tactical launch distance.
      */
     static calculateLaunchDistance(pullDistance) {
-        const clampedPull = Math.min(pullDistance, GLOBAL_STATS.MAX_PULL);
-        const ratio = clampedPull / GLOBAL_STATS.MAX_PULL;
-        // Exponential curve: precision at low power, high sensitivity at high power
-        return Math.pow(ratio, GLOBAL_STATS.POWER_EXPONENT) * GLOBAL_STATS.MAX_LAUNCH;
+        return TorusMath.calculateLaunchDistance(pullDistance);
     }
 
     /**
@@ -42,25 +42,14 @@ export class GameState {
      * Note: The launch direction is OPPOSITE to the pull direction.
      */
     static calculateLaunchAngle(dx, dy) {
-        if (isNaN(dx) || isNaN(dy) || (dx === 0 && dy === 0)) return 0;
-        // We pull away from target, so launch is opposite (-dx, -dy)
-        return Math.atan2(-dy, -dx) * (180 / Math.PI);
+        return TorusMath.calculateLaunchAngle(dx, dy);
     }
 
     /**
      * Helper to get the shortest distance vector (dx, dy) between two points on a torus.
      */
     static getToroidalVector(x1, y1, x2, y2, w, h) {
-        if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return { dx: 0, dy: 0 };
-        if (w <= 0 || h <= 0) return { dx: 0, dy: 0 };
-
-        let dx = x2 - x1;
-        let dy = y2 - y1;
-        if (dx > w / 2) dx -= w;
-        if (dx < -w / 2) dx += w;
-        if (dy > h / 2) dy -= h;
-        if (dy < -h / 2) dy += h;
-        return { dx, dy };
+        return TorusMath.getToroidalVector(x1, y1, x2, y2, w, h);
     }
 
     /**
@@ -68,59 +57,25 @@ export class GameState {
      * Accounts for toroidal wrapping by normalizing relative to the circle center.
      */
     static lineCircleIntersection(x1, y1, x2, y2, cx, cy, radius, w, h) {
-        // Step 1: Get vectors from circle center to segment endpoints
-        const v1 = this.getToroidalVector(cx, cy, x1, y1, w, h);
-        const v2 = this.getToroidalVector(cx, cy, x2, y2, w, h);
-
-        // Coordinates relative to cx=0, cy=0
-        const p1x = v1.dx;
-        const p1y = v1.dy;
-        const p2x = v2.dx;
-        const p2y = v2.dy;
-
-        const d_x = p2x - p1x;
-        const d_y = p2y - p1y;
-
-        const lensq = d_x * d_x + d_y * d_y;
-        let t = 0;
-        if (lensq > 0) {
-            // Project origin (circle center) onto the line segment: t = dot(-P1, D) / |D|^2
-            t = Math.max(0, Math.min(1, (-p1x * d_x + -p1y * d_y) / lensq));
-        }
-
-        const closestX = p1x + t * d_x;
-        const closestY = p1y + t * d_y;
-        const distSq = closestX * closestX + closestY * closestY;
-
-        return distSq <= radius * radius;
+        return TorusMath.lineCircleIntersection(x1, y1, x2, y2, cx, cy, radius, w, h);
     }
 
     /**
      * Map wrapping logic for Toroidal world
      */
     wrapX(x) {
-        const w = this.map.width;
-        return ((x % w) + w) % w;
+        return TorusMath.wrapX(x, this.map.width);
     }
 
     wrapY(y) {
-        const h = this.map.height;
-        return ((y % h) + h) % h;
+        return TorusMath.wrapY(y, this.map.height);
     }
 
     /**
      * Shortest distance between two points on a torus
      */
     getToroidalDistance(x1, y1, x2, y2) {
-        if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return 0;
-
-        let dx = Math.abs(x2 - x1);
-        let dy = Math.abs(y2 - y1);
-
-        if (dx > this.map.width / 2) dx = this.map.width - dx;
-        if (dy > this.map.height / 2) dy = this.map.height - dy;
-
-        return Math.sqrt(dx * dx + dy * dy) || 0;
+        return TorusMath.getToroidalDistance(x1, y1, x2, y2, this.map.width, this.map.height);
     }
 
     /**
@@ -762,233 +717,8 @@ export class GameState {
         });
     }
 
-    /**
-     * Updates a seeker/homing projectile (Weapon or Interceptor).
-     * Handles target acquisition, tracking, movement, and proximity detonation.
-     * @param {object} proj - The projectile instance.
-     * @param {object} stats - The ENTITY_STATS for this projectile type/itemType.
-     * @param {Array} tempProjectiles - Reference to other active projectiles in a round.
-     */
     updateSeekerProjectile(proj, stats, tempProjectiles) {
-        // 1. Lifecycle Check: Ignite seeker at 50% distance
-        if (
-            !proj.searchMode &&
-            proj.totalDistanceMoved >= proj.intendedDistance * 0.5
-        ) {
-            proj.searchMode = true;
-        }
-
-        // 2. Seeker Logic: Target Acquisition
-        if (proj.searchMode && !proj.targetId) {
-            let minDist = Infinity;
-            let closestTarget = null;
-
-            // Interceptors search through tempProjectiles (incoming weapons)
-            // Homing weapons search through this.entities (enemy structures)
-            const targets = stats.isInterceptor ? tempProjectiles : this.entities;
-
-            targets.forEach((ent) => {
-                if (ent.owner === proj.owner) return;
-
-                // Filtering Logic
-                if (stats.isInterceptor) {
-                    // Interceptors target weapons/projectiles that are active (except other interceptors)
-                    const entStats = ENTITY_STATS[ent.type] || ENTITY_STATS[ent.itemType];
-                    if (!ent.active || entStats?.isInterceptor) return;
-                } else {
-                    // Weapons target structures (not projectiles/resources)
-                    if (
-                        ent.type === 'WEAPON' ||
-                        ent.type === 'PROJECTILE' ||
-                        ent.type === 'RESOURCE'
-                    )
-                        return;
-                }
-
-                const dist = this.getToroidalDistance(
-                    proj.currX,
-                    proj.currY,
-                    ent.x !== undefined ? ent.x : ent.currX,
-                    ent.y !== undefined ? ent.y : ent.currY
-                );
-                if (dist > stats.homingRange) return;
-
-                const isCloaked = this.isPositionCloaked(ent.owner, ent.x !== undefined ? ent.x : ent.currX, ent.y !== undefined ? ent.y : ent.currY);
-                if (isCloaked) return;
-
-                const vec = this.constructor.getToroidalVector(
-                    proj.currX,
-                    proj.currY,
-                    ent.x !== undefined ? ent.x : ent.currX,
-                    ent.y !== undefined ? ent.y : ent.currY,
-                    this.map.width,
-                    this.map.height
-                );
-                const angleToTarget =
-                    Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
-                let diff = angleToTarget - proj.currentAngle;
-                while (diff > 180) diff -= 360;
-                while (diff < -180) diff += 360;
-
-                if (Math.abs(diff) <= stats.searchCone / 2) {
-                    if (dist < minDist) {
-                        minDist = dist;
-                        closestTarget = ent;
-                    }
-                }
-            });
-
-            if (closestTarget) {
-                proj.targetId = closestTarget.id;
-                proj.lockFound = true;
-                proj.searchMode = false; // Stop searching once locked
-            }
-        }
-
-        // 3. Tracking Logic
-        if (proj.targetId) {
-            let target = this.entities.find((e) => e.id === proj.targetId);
-            // Interceptors search in the active projectile list
-            if (!target && stats?.isInterceptor) {
-                target = tempProjectiles.find(
-                    (p) => p.id === proj.targetId && p.active
-                );
-            }
-
-            if (target && (target.hp > 0 || target.active)) {
-                // Cloaking Check: Break lock if target enters a Cloaking Field
-                const targetX = target.x !== undefined ? target.x : target.currX;
-                const targetY = target.y !== undefined ? target.y : target.currY;
-
-                if (this.isPositionCloaked(target.owner, targetX, targetY)) {
-                    target = null; // Lose target
-                }
-            }
-
-            if (target && (target.hp > 0 || target.active)) {
-                // Accelerate if target is still active
-                if (proj.velocity < stats.maxSpeed) {
-                    proj.velocity = Math.min(
-                        stats.maxSpeed,
-                        proj.velocity + stats.acceleration
-                    );
-                }
-
-                const targetX =
-                    target.x !== undefined ? target.x : target.currX;
-                const targetY =
-                    target.y !== undefined ? target.y : target.currY;
-
-                // Save last known coordinates for persistence
-                proj.targetX = targetX;
-                proj.targetY = targetY;
-
-                const vec = this.constructor.getToroidalVector(
-                    proj.currX,
-                    proj.currY,
-                    targetX,
-                    targetY,
-                    this.map.width,
-                    this.map.height
-                );
-                const angleToTarget =
-                    Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
-
-                let diff = angleToTarget - proj.currentAngle;
-                while (diff > 180) diff -= 360;
-                while (diff < -180) diff += 360;
-
-                // Toroidal flip protection
-                if (Math.abs(diff) > 170) diff = 0;
-
-                const turn =
-                    Math.sign(diff) *
-                    Math.min(Math.abs(diff), stats.turnRadius);
-                proj.currentAngle += turn;
-            } else {
-                proj.lockFound = false; // Target lost
-
-                // SMART LOGIC: Re-enable search and slow down
-                if (stats.reacquire) {
-                    proj.targetId = null;
-                    proj.searchMode = true;
-                    proj.velocity = GLOBAL_STATS.SPEED_TIERS.SLOW; // Slow down to conserve fuel
-                }
-            }
-        } else if (proj.searchMode) {
-            // Passive acceleration during search phase (unless smart and searching)
-            const targetSpeed = stats.reacquire ? GLOBAL_STATS.SPEED_TIERS.SLOW : stats.maxSpeed;
-
-            if (proj.velocity < targetSpeed) {
-                proj.velocity = Math.min(
-                    targetSpeed,
-                    proj.velocity + stats.acceleration
-                );
-            } else if (proj.velocity > targetSpeed) {
-                proj.velocity = Math.max(
-                    targetSpeed,
-                    proj.velocity - stats.acceleration
-                );
-            }
-        }
-
-        // 4. Step-based Movement
-        const moveDist = proj.velocity;
-        const rad = (proj.currentAngle || 0) * (Math.PI / 180);
-        proj.currX = this.wrapX(proj.currX + Math.cos(rad) * moveDist);
-        proj.currY = this.wrapY(proj.currY + Math.sin(rad) * moveDist);
-        proj.totalDistanceMoved += moveDist;
-
-        // 5. Fuel & Endurance Checks
-        const fuelLimit =
-            proj.intendedDistance * 0.5 + (stats.homingFuel || 400);
-        if (proj.totalDistanceMoved >= fuelLimit) {
-            proj.active = false;
-            proj.hitThisTick = true;
-        }
-
-        // 6. Impact Triggering (Proximity)
-        if (proj.targetId) {
-            let target = this.entities.find((e) => e.id === proj.targetId);
-            if (!target && stats?.isInterceptor) {
-                target = tempProjectiles.find(
-                    (p) => p.id === proj.targetId && p.active
-                );
-            }
-
-            if (target && (target.hp > 0 || target.active)) {
-                const tx = target.x !== undefined ? target.x : target.currX;
-                const ty = target.y !== undefined ? target.y : target.currY;
-                const actualDist = this.getToroidalDistance(
-                    proj.currX,
-                    proj.currY,
-                    tx,
-                    ty
-                );
-
-                const targetStats =
-                    ENTITY_STATS[target.type] ||
-                    ENTITY_STATS[target.itemType];
-                const hitDist = (targetStats?.size || 10) + 2;
-
-                if (actualDist <= hitDist) {
-                    proj.active = false;
-                    proj.hitThisTick = true;
-                }
-            } else if (proj.targetX !== undefined && !stats?.reacquire) {
-                // Target lost: detonate at last known coordinates
-                const actualDist = this.getToroidalDistance(
-                    proj.currX,
-                    proj.currY,
-                    proj.targetX,
-                    proj.targetY
-                );
-                if (actualDist <= 15) {
-                    proj.active = false;
-                    proj.hitThisTick = true;
-                }
-            }
-        }
+        ProjectileSystem.updateSeekerProjectile(this, proj, stats, tempProjectiles);
     }
 
     /**
@@ -1590,321 +1320,21 @@ export class GameState {
                                 const stats = ENTITY_STATS[proj.type];
                                 this.updateSeekerProjectile(proj, stats, tempProjectiles);
                             } else {
-                                // Standard Projectile Logic (Buildings etc.)
-
-                                // --- Cluster Bomb Special Logic ---
-                                const clusterStats = ENTITY_STATS.CLUSTER_BOMB;
-                                if (
-                                    proj.type === 'CLUSTER_BOMB' &&
-                                    !proj.hasSplit &&
-                                    t >= proj.arrivalTick * clusterStats.splitTickRatio
-                                ) {
-                                    proj.active = false;
-                                    proj.hasSplit = true;
-
-                                    const originalTargetX = proj.startX + proj.intendedDx;
-                                    const originalTargetY = proj.startY + proj.intendedDy;
-
-                                    // Calculate perpendicular unit vector
-                                    const dist = Math.sqrt(
-                                        proj.intendedDx * proj.intendedDx +
-                                        proj.intendedDy * proj.intendedDy
-                                    );
-                                    const px = -proj.intendedDy / dist;
-                                    const py = proj.intendedDx / dist;
-
-                                    const count = clusterStats.subBombCount;
-                                    const totalSpread = clusterStats.spreadDistance;
-                                    const step = totalSpread / (count - 1 || 1);
-
-                                    for (let i = 0; i < count; i++) {
-                                        const offset = i * step - totalSpread / 2;
-                                        const subTargetX = originalTargetX + offset * px;
-                                        const subTargetY = originalTargetY + offset * py;
-
-                                        const splitX =
-                                            proj.startX + proj.intendedDx * (t / proj.arrivalTick);
-                                        const splitY =
-                                            proj.startY + proj.intendedDy * (t / proj.arrivalTick);
-
-                                        // Math to ensure sub-bomb arrives at subTargetX/Y at proj.arrivalTick
-                                        // using the standard progress = t / arrivalTick formula.
-                                        const factor = proj.arrivalTick / (t - proj.arrivalTick);
-                                        const subIntendedDx = (splitX - subTargetX) * factor;
-                                        const subIntendedDy = (splitY - subTargetY) * factor;
-                                        const subStartX = subTargetX - subIntendedDx;
-                                        const subStartY = subTargetY - subIntendedDy;
-
-                                        tempProjectiles.push({
-                                            ...proj,
-                                            id: `${proj.id}-sub-${i}`,
-                                            type: 'CLUSTER_FRAGMENT', // Use fragment visual for sub-munitions
-                                            startX: subStartX,
-                                            startY: subStartY,
-                                            intendedDx: subIntendedDx,
-                                            intendedDy: subIntendedDy,
-                                            active: true,
-                                            hasSplit: true, // Prevent re-splitting
-                                            hitByFlakDefense: new Set() // Fresh flak state for sub-bombs
-                                        });
-                                    }
-                                }
-
-                                const progress = t / proj.arrivalTick;
-
-                                if (t < proj.arrivalTick) {
-                                    // Use explicit intended vector to avoid "Shortest Path" directional flips
-                                    proj.currX = this.wrapX(
-                                        proj.startX + proj.intendedDx * progress
-                                    );
-                                    proj.currY = this.wrapY(
-                                        proj.startY + proj.intendedDy * progress
-                                    );
-                                } else if (t === proj.arrivalTick) {
-                                    // Final arrival precisely at arrivalTick
-                                    proj.currX = this.wrapX(proj.startX + proj.intendedDx);
-                                    proj.currY = this.wrapY(proj.startY + proj.intendedDy);
-                                    proj.active = false;
-                                    proj.hitThisTick = true;
-
-                                    if (proj.type === 'RECLAIMER') {
-                                        this.handleReclaim(
-                                            proj.currX,
-                                            proj.currY,
-                                            proj.owner,
-                                            tempVisuals,
-                                            impacts
-                                        );
-                                    }
-                                    const stats = ENTITY_STATS[proj.type];
-                                    // Bug 2: landAsStructure: false avoids duplicate entities for weapons like Napalm
-                                    if (
-                                        ((stats?.damageFull === undefined &&
-                                            proj.type !== 'RECLAIMER') ||
-                                            stats?.landAsStructure) &&
-                                        stats?.landAsStructure !== false
-                                    ) {
-                                        const data = {
-                                            type: proj.type,
-                                            owner: proj.owner,
-                                            x: proj.currX,
-                                            y: proj.currY,
-                                            sourceId: proj.sourceId,
-                                            intendedDx: proj.intendedDx,
-                                            intendedDy: proj.intendedDy,
-                                            deployed: false,
-                                            hp: GLOBAL_STATS.UNDEPLOYED_HP
-                                        };
-                                        const newEnt = this.addEntity(data);
-                                        if (
-                                            data.sourceId &&
-                                            data.intendedDx !== undefined &&
-                                            data.intendedDy !== undefined
-                                        ) {
-                                            this.addLink(
-                                                data.sourceId,
-                                                newEnt.id,
-                                                data.owner,
-                                                data.intendedDx,
-                                                data.intendedDy
-                                            );
-                                        }
-                                    }
-
-                                    // --- Napalm Special Logic (Always deploy fire on arrival) ---
-                                    if (proj.type === 'NAPALM') {
-                                        const nStats = ENTITY_STATS.NAPALM_FIRE;
-                                        this.addEntity({
-                                            type: 'NAPALM_FIRE',
-                                            owner: proj.owner,
-                                            x: proj.currX, // Impact point (base of stadium)
-                                            y: proj.currY,
-                                            startX: proj.currX, // Base
-                                            startY: proj.currY,
-                                            endX: proj.originalTargetX, // Tip (Original target)
-                                            endY: proj.originalTargetY,
-                                            roundsLeft: 2, // New internal round tracking
-                                            deployed: true,
-                                            isHazard: true,
-                                            hp: nStats.hp
-                                        });
-
-                                        // Push specialized landing snapshot for visual feedback
-                                        snapshots.push({
-                                            type: 'LANDING',
-                                            tick: t,
-                                            round: round,
-                                            playerId: proj.owner,
-                                            itemType: proj.type,
-                                            state: this.getState()
-                                        });
-                                    }
-
-                                    if (proj.type === 'OVERLOAD' && proj.hitThisTick) {
-                                        this.triggerOverload(
-                                            proj.currX,
-                                            proj.currY,
-                                            stats,
-                                            tempVisuals,
-                                            impacts,
-                                            overloadedThisRound
-                                        );
-                                        proj.hitThisTick = false;
-                                    }
-
-                                    if (
-                                        stats?.damageFull !== undefined &&
-                                        !stats?.landAsStructure &&
-                                        proj.hitThisTick
-                                    ) {
-                                        const potentialTargets = [
-                                            ...this.entities,
-                                            ...tempProjectiles.filter((p) => p.active)
-                                        ];
-
-                                        this.triggerExplosion(
-                                            proj.currX,
-                                            proj.currY,
-                                            stats,
-                                            tempVisuals,
-                                            impacts,
-                                            potentialTargets
-                                        );
-                                        proj.hitThisTick = false;
-                                    }
-                                }
+                                ProjectileSystem.updateStandardProjectile(
+                                    this,
+                                    proj,
+                                    t,
+                                    round,
+                                    tempProjectiles,
+                                    tempVisuals,
+                                    impacts,
+                                    overloadedThisRound,
+                                    snapshots
+                                );
                             }
 
-                            // --- SHIELD PASSIVE INTERCEPTION (The Crossing Rule) ---
-                            this.entities.forEach((shield) => {
-                                if (!proj.active && !proj.hitThisTick) return;
-                                if (shield.type !== 'SHIELD' || shield.barrierHp <= 0) return;
-
-                                // Check if shield is disabled by EMP
-                                if (shield.disabledUntilTurn > this.turn) return;
-
-                                // 1. Reclaimer Exception: Friendly management tools bypass shields
-                                if (proj.type === 'RECLAIMER' || proj.itemType === 'RECLAIMER') return;
-
-                                const sStats = ENTITY_STATS.SHIELD;
-                                const prevDist = this.getToroidalDistance(
-                                    shield.x,
-                                    shield.y,
-                                    prevX,
-                                    prevY
-                                );
-                                const currDist = this.getToroidalDistance(
-                                    shield.x,
-                                    shield.y,
-                                    proj.currX,
-                                    proj.currY
-                                );
-
-                                if (prevDist > sStats.range && currDist <= sStats.range) {
-                                    // BLOCK!
-                                    proj.active = false;
-                                    proj.hitThisTick = false; // Prevent landing or detonation
-
-                                    const pStats =
-                                        ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
-                                    const isStructure =
-                                        proj.type === 'HUB' ||
-                                        proj.type === 'NUKE' ||
-                                        proj.type === 'EXTRACTOR';
-
-                                    if (proj.itemType === 'EMP') {
-                                        // EMP detonates immediately on barrier impact
-                                        this.triggerExplosion(
-                                            proj.currX,
-                                            proj.currY,
-                                            pStats,
-                                            tempVisuals,
-                                            impacts,
-                                            this.entities
-                                        );
-                                    } else if (!isStructure) {
-                                        const damage = pStats?.damageFull || 1;
-                                        shield.barrierHp -= damage;
-                                        if (shield.barrierHp < 0) shield.barrierHp = 0;
-
-                                        console.log(
-                                            `[Shield Hit] ${proj.id || proj.itemType} blocked by ${shield.id}. Shield HP: ${shield.barrierHp}`
-                                        );
-                                    } else {
-                                        console.log(
-                                            `[Shield Structure Block] ${proj.id} destroyed by ${shield.id}. No damage to shield.`
-                                        );
-                                    }
-
-                                    // Visual effect
-                                    tempVisuals.push({
-                                        type: 'SPARK',
-                                        x: proj.currX,
-                                        y: proj.currY,
-                                        duration: 15
-                                    });
-                                }
-                            });
-
-                            // --- Post-Movement Hazard Collision ---
-                            if (proj.active) {
-                                const hazards = this.entities.filter(
-                                    (e) => e.type === 'EXPLOSION_HAZARD' || e.type === 'NAPALM_FIRE'
-                                );
-                                hazards.forEach((h) => {
-                                    const hStats = ENTITY_STATS[h.type];
-                                    let isHit = false;
-
-                                    if (h.type === 'NAPALM_FIRE') {
-                                        const dist = GameState.getPointToSegmentDistance(
-                                            proj.currX,
-                                            proj.currY,
-                                            h.startX,
-                                            h.startY,
-                                            h.endX,
-                                            h.endY,
-                                            this.map.width,
-                                            this.map.height
-                                        );
-                                        // Projectile incineration uses its radius (size or default)
-                                        if (
-                                            dist <=
-                                            hStats.width / 2 + (ENTITY_STATS[proj.type]?.size || 8)
-                                        )
-                                            isHit = true;
-                                    } else {
-                                        if (
-                                            GameState.lineCircleIntersection(
-                                                prevX,
-                                                prevY,
-                                                proj.currX,
-                                                proj.currY,
-                                                h.x,
-                                                h.y,
-                                                hStats.radius || 200,
-                                                this.map.width,
-                                                this.map.height
-                                            )
-                                        ) {
-                                            isHit = true;
-                                        }
-                                    }
-
-                                    if (isHit) {
-                                        if (!proj.scheduledEffects.some(e => e.sourceId === h.id)) {
-                                            const delay = 5 + Math.floor(Math.random() * 5);
-                                            proj.scheduledEffects.push({
-                                                type: 'incinerate',
-                                                tick: t + delay,
-                                                sourceId: h.id
-                                            });
-                                            console.log(
-                                                `[Hazard] Projectile ${proj.id} entry detected by ${h.type} at (${Math.round(h.x)}, ${Math.round(h.y)}). Delaying destruction.`
-                                            );
-                                        }
-                                    }
-                                });
-                            }
+                            CollisionSystem.checkShieldInterception(this, proj, prevX, prevY, tempVisuals, impacts);
+                            CollisionSystem.checkHazardCollision(this, proj, prevX, prevY, t);
                         });
 
                         // Second pass for Weapons to catch anything that landed this tick (AOE Damage)
@@ -2372,57 +1802,7 @@ export class GameState {
      * Decomposes a toroidal link into 1, 2, or 4 Euclidean segments.
      */
     static getLinkSegments(p1, p2, width, height) {
-        const dx = p2.x - p1.x;
-        const dy = p2.y - p1.y;
-
-        // Effective vector taking shortest toroidal path
-        let edx = dx;
-        if (Math.abs(dx) > width / 2) {
-            edx = dx > 0 ? dx - width : dx + width;
-        }
-
-        let edy = dy;
-        if (Math.abs(dy) > height / 2) {
-            edy = dy > 0 ? dy - height : dy + height;
-        }
-
-        const segments = [];
-        const wrapX = Math.abs(dx) > width / 2;
-        const wrapY = Math.abs(dy) > height / 2;
-
-        if (!wrapX && !wrapY) {
-            segments.push({ p1: { ...p1 }, p2: { ...p2 } });
-        } else {
-            // Complex case: Break into segments at boundaries
-            // We use the effective vector to trace the path and split at 0/width or 0/height
-
-            // For simplicity in a prototype:
-            // High-res sampling is robust but slow.
-            // Euclidean splitting:
-            if (wrapX && !wrapY) {
-                const xEdge = edx > 0 ? width : 0;
-                const distToEdge = Math.abs(xEdge - p1.x);
-                const t = distToEdge / Math.abs(edx);
-                const yEdge = p1.y + edy * t;
-
-                segments.push({ p1: { ...p1 }, p2: { x: xEdge, y: yEdge } });
-                segments.push({ p1: { x: width - xEdge, y: yEdge }, p2: { ...p2 } });
-            } else if (!wrapX && wrapY) {
-                const yEdge = edy > 0 ? height : 0;
-                const distToEdge = Math.abs(yEdge - p1.y);
-                const t = distToEdge / Math.abs(edy);
-                const xEdge = p1.x + edx * t;
-
-                segments.push({ p1: { ...p1 }, p2: { x: xEdge, y: yEdge } });
-                segments.push({ p1: { x: xEdge, y: height - yEdge }, p2: { ...p2 } });
-            } else {
-                // Double wrap (rare corner case)
-                // Just use the two main endpoints for now to avoid overcomplicating
-                // but let's at least handle the primary segments
-                segments.push({ p1: { ...p1 }, p2: { ...p1 } }); // Placeholder for quad split
-            }
-        }
-        return segments;
+        return TorusMath.getLinkSegments(p1, p2, width, height);
     }
 
     /**
@@ -2500,19 +1880,7 @@ export class GameState {
      * Returns the shortest physical distance from point (px, py) to line segment (x1, y1)-(x2, y2)
      */
     static getPointToSegmentDistance(px, py, x1, y1, x2, y2, width = 2000, height = 2000) {
-        // Translate problem to be relative to (x1, y1) in a toroidal way
-        let dx = x2 - x1;
-        let dy = y2 - y1;
-        if (Math.abs(dx) > width / 2) dx = dx > 0 ? dx - width : dx + width;
-        if (Math.abs(dy) > height / 2) dy = dy > 0 ? dy - height : dy + height;
-
-        let ppx = px - x1;
-        let ppy = py - y1;
-        if (Math.abs(ppx) > width / 2) ppx = ppx > 0 ? ppx - width : ppx + width;
-        if (Math.abs(ppy) > height / 2) ppy = ppy > 0 ? ppy - height : ppy + height;
-
-        const proj = GameState.getPointOnSegment(ppx, ppy, 0, 0, dx, dy);
-        return Math.sqrt(Math.pow(ppx - proj.x, 2) + Math.pow(ppy - proj.y, 2));
+        return TorusMath.getPointToSegmentDistance(px, py, x1, y1, x2, y2, width, height);
     }
 
     /**
@@ -2520,18 +1888,7 @@ export class GameState {
      * Returns the closest point on segment (x1, y1)-(x2, y2) to (px, py)
      */
     static getPointOnSegment(px, py, x1, y1, x2, y2) {
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        if (dx === 0 && dy === 0) return { x: x1, y: y1 };
-
-        const t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
-        if (t < 0) return { x: x1, y: y1 };
-        if (t > 1) return { x: x2, y: y2 };
-
-        return {
-            x: x1 + t * dx,
-            y: y1 + t * dy
-        };
+        return TorusMath.getPointOnSegment(px, py, x1, y1, x2, y2);
     }
 
     /**
