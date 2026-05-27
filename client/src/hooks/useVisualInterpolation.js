@@ -3,26 +3,25 @@ import { ENTITY_STATS } from '../../../shared/constants/EntityStats.js';
 import * as TorusMath from '../../../shared/utils/TorusMath.js';
 import { audioManager } from '../utils/AudioManager';
 
-export function toroidalLerp(curr, target, maxDim, factor) {
-    let delta = target - curr;
-    if (Math.abs(delta) > maxDim / 2) {
-        delta = delta > 0 ? delta - maxDim : delta + maxDim;
-    }
-    return (curr + (delta * factor) + maxDim) % maxDim;
-}
-
 export function useVisualInterpolation() {
     const visualEntities = useRef({});
     const visualLinks = useRef({});
 
-    const updateInterpolation = (gameState, myPlayerId, LERP_FACTOR) => {
-        if (!gameState) return { visualEntities: {}, visualLinks: {}, isInVision: () => true };
+    const updateInterpolation = (currentGameState, myPlayerId) => {
+        if (!currentGameState) {
+            return {
+                visualEntities: visualEntities.current,
+                visualLinks: visualLinks.current,
+                isInVision: () => true
+            };
+        }
 
-        const mapW = gameState.map.width;
-        const mapH = gameState.map.height;
+        const mapW = currentGameState.map.width;
+        const mapH = currentGameState.map.height;
+        const LERP_FACTOR = 0.3;
 
-        // 1. Calculate active player vision circles
-        const currentVisionCircles = gameState.entities
+        // 1a. Pre-calculate vision circles and cones for re-scouting/vision check
+        const currentVisionCircles = currentGameState.entities
             .filter((e) => e.owner === myPlayerId && (ENTITY_STATS[e.itemType || e.type]?.vision || 0) > 0 && e.itemType !== 'HOMING_MISSILE')
             .map((e) => ({
                 x: e.x,
@@ -30,7 +29,7 @@ export function useVisualInterpolation() {
                 radius: ENTITY_STATS[e.itemType || e.type].vision
             }));
 
-        const currentVisionCones = gameState.entities
+        const currentVisionCones = currentGameState.entities
             .filter((e) => e.owner === myPlayerId && e.itemType === 'HOMING_MISSILE')
             .map((e) => {
                 const stats = ENTITY_STATS[e.itemType];
@@ -65,10 +64,9 @@ export function useVisualInterpolation() {
             });
         };
 
-        const serverIds = new Set(gameState.entities.map((e) => e.id));
+        const serverIds = new Set(currentGameState.entities.map((e) => e.id));
 
-        // Update / Add new entities with interpolation
-        gameState.entities.forEach((serverEnt) => {
+        currentGameState.entities.forEach((serverEnt) => {
             if (!visualEntities.current[serverEnt.id]) {
                 visualEntities.current[serverEnt.id] = {
                     ...serverEnt,
@@ -77,7 +75,7 @@ export function useVisualInterpolation() {
                     scouted: serverEnt.scouted
                 };
 
-                // Play Audio
+                // Play procedural SFX for newly spawned entities
                 if (serverEnt.type === 'PROJECTILE') {
                     if (serverEnt.itemType === 'HOMING_MISSILE') {
                         audioManager.playHeavyLaunch();
@@ -101,12 +99,18 @@ export function useVisualInterpolation() {
                 }
             } else {
                 const viz = visualEntities.current[serverEnt.id];
+
                 if (serverEnt.hp < viz.hp) {
                     audioManager.playShieldHit();
                 }
 
-                viz.x = toroidalLerp(viz.x, serverEnt.x, mapW, LERP_FACTOR);
-                viz.y = toroidalLerp(viz.y, serverEnt.y, mapH, LERP_FACTOR);
+                let dx = serverEnt.x - viz.x;
+                if (Math.abs(dx) > mapW / 2) dx = dx > 0 ? dx - mapW : dx + mapW;
+                viz.x = (viz.x + ((dx * LERP_FACTOR) % mapW) + mapW) % mapW;
+
+                let dy = serverEnt.y - viz.y;
+                if (Math.abs(dy) > mapH / 2) dy = dy > 0 ? dy - mapH : dy + mapH;
+                viz.y = (viz.y + ((dy * LERP_FACTOR) % mapH) + mapH) % mapH;
 
                 viz.type = serverEnt.type;
                 viz.owner = serverEnt.owner;
@@ -123,7 +127,7 @@ export function useVisualInterpolation() {
                 viz.flakActive = serverEnt.flakActive;
                 
                 if (viz.lockFound && !prevLockFound) {
-                    if (['SAM_MISSILE', 'SMART_SAM_MISSILE', 'HOMING_MISSILE'].includes(serverEnt.itemType)) {
+                    if (serverEnt.itemType === 'SAM_MISSILE' || serverEnt.itemType === 'SMART_SAM_MISSILE' || serverEnt.itemType === 'HOMING_MISSILE') {
                         audioManager.playSamLockOn();
                     }
                 }
@@ -140,24 +144,37 @@ export function useVisualInterpolation() {
             }
         });
 
-        // Resolve Ghosts
+        // Handle Ghosts: entities in visualEntities NOT in serverIds
         Object.keys(visualEntities.current).forEach((id) => {
             if (!serverIds.has(id)) {
                 const viz = visualEntities.current[id];
                 const STRUCTURE_TYPES = ['HUB', 'EXTRACTOR', 'SHIELD', 'CLOAKING_FIELD', 'TURRET', 'RELAY', 'BARRIER'];
+                
                 if (STRUCTURE_TYPES.includes(viz.type)) {
                     if (viz.scouted !== false && !viz.isGhost) {
                         audioManager.playStructureDestroyed();
                     }
                 }
 
-                const TRANSIENT_TYPES = ['PROJECTILE', 'WEAPON', 'SUPER_BOMB', 'EXPLOSION', 'RECLAIM', 'LASER_BEAM', 'LINK_COLLISION', 'SPARK'];
+                const TRANSIENT_TYPES = [
+                    'PROJECTILE',
+                    'WEAPON',
+                    'SUPER_BOMB',
+                    'EXPLOSION',
+                    'RECLAIM',
+                    'LASER_BEAM',
+                    'LINK_COLLISION',
+                    'SPARK'
+                ];
+                
                 if (TRANSIENT_TYPES.includes(viz.type) || viz.owner === myPlayerId) {
                     delete visualEntities.current[id];
                     return;
                 }
 
-                if (isInVision(viz.x, viz.y)) {
+                const currentlyInVision = isInVision(viz.x, viz.y);
+
+                if (currentlyInVision) {
                     delete visualEntities.current[id];
                 } else if (viz.scouted) {
                     viz.isGhost = true;
@@ -167,8 +184,8 @@ export function useVisualInterpolation() {
             }
         });
 
-        // Update visual links and ghosts
-        gameState.links.forEach((serverLink) => {
+        // Handle Links Ghosts
+        currentGameState.links.forEach((serverLink) => {
             const linkId = `${serverLink.from}-${serverLink.to}`;
             if (!visualLinks.current[linkId]) {
                 visualLinks.current[linkId] = { ...serverLink, isGhost: false };
@@ -179,7 +196,7 @@ export function useVisualInterpolation() {
 
         Object.keys(visualLinks.current).forEach((linkId) => {
             const viz = visualLinks.current[linkId];
-            const inServer = gameState.links.some((l) => `${l.from}-${l.to}` === linkId);
+            const inServer = currentGameState.links.some((l) => `${l.from}-${l.to}` === linkId);
 
             if (!inServer) {
                 const from = visualEntities.current[viz.from];
@@ -212,8 +229,8 @@ export function useVisualInterpolation() {
     };
 
     return {
-        updateInterpolation,
         visualEntities,
-        visualLinks
+        visualLinks,
+        updateInterpolation
     };
 }

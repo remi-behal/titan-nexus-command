@@ -1,12 +1,11 @@
 import { drawShape } from '../../utils/ShapeRenderer.js';
 
-export function drawGridFloor(ctx, gameState, myPlayerId, viewBounds, offsetOffsetX, offsetOffsetY) {
-    const { lakes, mountains, craters, resources } = gameState.map;
-    const { viewL, viewT, viewR, viewB } = viewBounds;
+export function drawGridFloor(ctx, map, viewBounds, offsetOffsetX, offsetOffsetY) {
+    const { viewL, viewR, viewT, viewB } = viewBounds;
 
-    // 1. Draw Lakes (Link-blocking obstacles)
-    if (lakes) {
-        lakes.forEach((lake) => {
+    // Draw Lakes
+    if (map.lakes) {
+        map.lakes.forEach((lake) => {
             if (lake.x + offsetOffsetX + lake.radius < viewL || 
                 lake.x + offsetOffsetX - lake.radius > viewR ||
                 lake.y + offsetOffsetY + lake.radius < viewT || 
@@ -17,9 +16,9 @@ export function drawGridFloor(ctx, gameState, myPlayerId, viewBounds, offsetOffs
         });
     }
 
-    // 2. Draw Mountains (Buildable blocking, traversable links)
-    if (mountains) {
-        mountains.forEach((mtn) => {
+    // Draw Mountains
+    if (map.mountains) {
+        map.mountains.forEach((mtn) => {
             if (mtn.x + offsetOffsetX + mtn.radius < viewL || 
                 mtn.x + offsetOffsetX - mtn.radius > viewR ||
                 mtn.y + offsetOffsetY + mtn.radius < viewT || 
@@ -30,9 +29,9 @@ export function drawGridFloor(ctx, gameState, myPlayerId, viewBounds, offsetOffs
         });
     }
 
-    // 3. Draw permanent scars (impact craters)
-    if (craters) {
-        craters.forEach((crater) => {
+    // Draw Craters
+    if (map.craters) {
+        map.craters.forEach((crater) => {
             if (crater.x + offsetOffsetX + crater.radius < viewL || 
                 crater.x + offsetOffsetX - crater.radius > viewR ||
                 crater.y + offsetOffsetY + crater.radius < viewT || 
@@ -41,21 +40,17 @@ export function drawGridFloor(ctx, gameState, myPlayerId, viewBounds, offsetOffs
             drawShape(ctx, crater.x, crater.y, 'CRATER', crater.radius, '#222', 0, false);
         });
     }
-
-    // 4. Draw Energy Extraction Nodes
-    if (resources) {
-        resources.forEach((res) => {
-            const rad = res.radius || 8;
-            if (res.x + offsetOffsetX + rad < viewL || 
-                res.x + offsetOffsetX - rad > viewR ||
-                res.y + offsetOffsetY + rad < viewT || 
-                res.y + offsetOffsetY - rad > viewB) return;
+    
+    // Draw Resources
+    if (map.resources) {
+        map.resources.forEach((res) => {
+            if (res.x + offsetOffsetX + (res.radius || 8) < viewL || 
+                res.x + offsetOffsetX - (res.radius || 8) > viewR ||
+                res.y + offsetOffsetY + (res.radius || 8) < viewT || 
+                res.y + offsetOffsetY - (res.radius || 8) > viewB) return;
 
             const isSuper = res.isSuper === true;
-            const shapeKey = isSuper ? 'SUPER_RESOURCE_NODE' : 'RESOURCE_NODE';
-            const color = isSuper ? '#a020f0' : '#ffa500';
-
-            drawShape(ctx, res.x, res.y, shapeKey, rad, color, 0, false);
+            drawShape(ctx, res.x, res.y, isSuper ? 'SUPER_RESOURCE_NODE' : 'RESOURCE_NODE', res.radius || 8, isSuper ? '#a020f0' : '#ffa500', 0, false);
         });
     }
 }

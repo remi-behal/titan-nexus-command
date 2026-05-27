@@ -2,14 +2,15 @@ import { getGhostColor } from '../../utils/RenderingHelpers.js';
 import { VISUAL_STATS } from '../../constants/VisualStats.js';
 import { GLOBAL_STATS } from '../../../../shared/constants/EntityStats.js';
 
-export function drawLinks(ctx, gameState, visualEntities, visualLinks, isInVision, viewBounds, mapW, mapH, offsetOffsetX, offsetOffsetY) {
-    const { viewL, viewT, viewR, viewB } = viewBounds;
+export function drawLinks(ctx, visualLinks, visualEntities, players, viewBounds, mapW, mapH, offsetOffsetX, offsetOffsetY, isInVision) {
+    const { viewL, viewR, viewT, viewB } = viewBounds;
 
     Object.values(visualLinks).forEach((link) => {
         const from = visualEntities[link.from];
         const to = visualEntities[link.to];
         if (!from || !to) return;
 
+        // Link Culling: Check if link bounding box overlaps viewport
         const minX = Math.min(from.x, to.x) + offsetOffsetX;
         const maxX = Math.max(from.x, to.x) + offsetOffsetX;
         const minY = Math.min(from.y, to.y) + offsetOffsetY;
@@ -17,14 +18,20 @@ export function drawLinks(ctx, gameState, visualEntities, visualLinks, isInVisio
         if (maxX < viewL || minX > viewR || maxY < viewT || minY > viewB) return;
 
         const ownerId = link.owner || from.owner;
-        const player = gameState.players[ownerId];
+        const player = players[ownerId];
         const baseColor = player ? player.color : '#666';
+
+        // Calculate desaturated color for ghost segments (Bug 1 fix)
         const ghostColor = getGhostColor(baseColor, VISUAL_STATS.FOG_OF_WAR.GHOST_SATURATION);
 
-        let dx = link.intendedDx !== null && link.intendedDx !== undefined ? link.intendedDx : to.x - from.x;
-        let dy = link.intendedDy !== null && link.intendedDy !== undefined ? link.intendedDy : to.y - from.y;
-        
-        if (link.intendedDx === null || link.intendedDx === undefined) {
+        // Determine path
+        let dx, dy;
+        if (link.intendedDx !== null && link.intendedDx !== undefined) {
+            dx = link.intendedDx;
+            dy = link.intendedDy;
+        } else {
+            dx = to.x - from.x;
+            dy = to.y - from.y;
             if (Math.abs(dx) > mapW / 2) dx = dx > 0 ? dx - mapW : dx + mapW;
             if (Math.abs(dy) > mapH / 2) dy = dy > 0 ? dy - mapH : dy + mapH;
         }
@@ -42,10 +49,13 @@ export function drawLinks(ctx, gameState, visualEntities, visualLinks, isInVisio
             const x2 = from.x + dx * rEnd;
             const y2 = from.y + dy * rEnd;
 
+            // Sample middle of segment for visibility check
             const midX = (from.x + (((dx * (rStart + rEnd)) / 2) % mapW) + mapW) % mapW;
             const midY = (from.y + (((dy * (rStart + rEnd)) / 2) % mapH) + mapH) % mapH;
 
             const segmentInVision = isInVision(midX, midY);
+
+            // A segment is a ghost if it's personally out of vision OR if the whole link is a ghost
             const isSegmentGhost = !segmentInVision || link.isGhost;
 
             ctx.save();
@@ -54,12 +64,13 @@ export function drawLinks(ctx, gameState, visualEntities, visualLinks, isInVisio
             ctx.globalAlpha = isSegmentGhost ? 0.2 : 1.0;
             if (isSegmentGhost) ctx.setLineDash([4, 4]);
 
+            // Base Cable
             ctx.beginPath();
             ctx.moveTo(x1, y1);
             ctx.lineTo(x2, y2);
             ctx.stroke();
 
-            // Link pulses
+            // Simple Pulse Dash
             if (!isSegmentGhost) {
                 const pulse = (Date.now() / 150) % 20;
                 ctx.strokeStyle = '#fff';
@@ -69,11 +80,12 @@ export function drawLinks(ctx, gameState, visualEntities, visualLinks, isInVisio
                 ctx.stroke();
             }
 
-            // Directional link arrows
+            // Draw directional arrow pointing back (only once per link at the overall midpoint)
+            // We check if this segment contains the midpoint (ratio 0.5)
             if (!isSegmentGhost && rStart <= 0.5 && rEnd > 0.5) {
                 const arrowX = (x1 + x2) / 2;
                 const arrowY = (y1 + y2) / 2;
-                const angle = Math.atan2(dy, dx) + Math.PI;
+                const angle = Math.atan2(dy, dx) + Math.PI; // Point BACK
                 const size = GLOBAL_STATS.LINK_ARROW_SIZE || 10;
 
                 ctx.save();
