@@ -748,19 +748,37 @@ describe('GameState - Slingshot Safety', () => {
             const map = { width: 1000, height: 1000 };
 
             // Launching at 15 degrees (Too tight)
-            const rad15 = 15 * Math.PI / 180;
+            const rad15 = (15 * Math.PI) / 180;
             const tx15 = 500 + Math.cos(rad15) * 100;
             const ty15 = 500 + Math.sin(rad15) * 100;
 
-            const isInvalid = GameState.checkLinkAngleSeparation('HUB', 'hub1', tx15, ty15, links, stagedActions, entities, map);
+            const isInvalid = GameState.checkLinkAngleSeparation(
+                'HUB',
+                'hub1',
+                tx15,
+                ty15,
+                links,
+                stagedActions,
+                entities,
+                map
+            );
             expect(isInvalid).toBe(true);
 
             // Launching at 45 degrees (Allowed)
-            const rad45 = 45 * Math.PI / 180;
+            const rad45 = (45 * Math.PI) / 180;
             const tx45 = 500 + Math.cos(rad45) * 100;
             const ty45 = 500 + Math.sin(rad45) * 100;
 
-            const isValid = GameState.checkLinkAngleSeparation('HUB', 'hub1', tx45, ty45, links, stagedActions, entities, map);
+            const isValid = GameState.checkLinkAngleSeparation(
+                'HUB',
+                'hub1',
+                tx45,
+                ty45,
+                links,
+                stagedActions,
+                entities,
+                map
+            );
             expect(isValid).toBe(false);
         });
 
@@ -775,11 +793,20 @@ describe('GameState - Slingshot Safety', () => {
             const map = { width: 1000, height: 1000 };
 
             // Launching at 5 degrees
-            const rad5 = 5 * Math.PI / 180;
+            const rad5 = (5 * Math.PI) / 180;
             const tx5 = 500 + Math.cos(rad5) * 100;
             const ty5 = 500 + Math.sin(rad5) * 100;
 
-            const isInvalid = GameState.checkLinkAngleSeparation('HUB', 'hub1', tx5, ty5, links, stagedActions, entities, map);
+            const isInvalid = GameState.checkLinkAngleSeparation(
+                'HUB',
+                'hub1',
+                tx5,
+                ty5,
+                links,
+                stagedActions,
+                entities,
+                map
+            );
             expect(isInvalid).toBe(true);
         });
 
@@ -793,14 +820,56 @@ describe('GameState - Slingshot Safety', () => {
 
             // Hub1's incoming link is from the top (pointing DOWN at 90 deg relative to Hub2)
             // But at Hub1, the vector points UP to Hub2 (-90 deg or 270 deg)
-            
+
             // Launching from Hub1 at 280 deg (-80 deg) (Too tight to the incoming link)
-            const rad280 = 280 * Math.PI / 180;
+            const rad280 = (280 * Math.PI) / 180;
             const tx280 = 500 + Math.cos(rad280) * 100;
             const ty280 = 500 + Math.sin(rad280) * 100;
 
-            const isInvalid = GameState.checkLinkAngleSeparation('HUB', 'hub1', tx280, ty280, links, stagedActions, entities, map);
+            const isInvalid = GameState.checkLinkAngleSeparation(
+                'HUB',
+                'hub1',
+                tx280,
+                ty280,
+                links,
+                stagedActions,
+                entities,
+                map
+            );
             expect(isInvalid).toBe(true);
+        });
+
+        it('should NOT deny a structure launch if a staged action is a non-structure launch within 30 degrees', () => {
+            const hub = { id: 'hub1', x: 500, y: 500 };
+            const entities = [hub];
+            const links = [];
+            const stagedActions = [
+                {
+                    playerId: 'player1',
+                    sourceId: 'hub1',
+                    itemType: 'WEAPON', // Non-structure type launch
+                    angle: 15,
+                    distance: 100
+                }
+            ];
+            const map = { width: 1000, height: 1000 };
+
+            // Launching a HUB at 15 degrees (Same angle as the staged WEAPON)
+            const rad15 = (15 * Math.PI) / 180;
+            const tx15 = 500 + Math.cos(rad15) * 100;
+            const ty15 = 500 + Math.sin(rad15) * 100;
+
+            const isInvalid = GameState.checkLinkAngleSeparation(
+                'HUB',
+                'hub1',
+                tx15,
+                ty15,
+                links,
+                stagedActions,
+                entities,
+                map
+            );
+            expect(isInvalid).toBe(false);
         });
     });
 });

@@ -95,7 +95,7 @@ export class GameState {
                     e.type === 'WEAPON' ||
                     e.type === 'HOMING_MISSILE' ||
                     e.type === 'SAM_MISSILE') &&
-                    e.itemType
+                e.itemType
                     ? e.itemType
                     : e.type;
             const stats = ENTITY_STATS[statKey];
@@ -174,7 +174,7 @@ export class GameState {
                         e.type === 'WEAPON' ||
                         e.type === 'HOMING_MISSILE' ||
                         e.type === 'SAM_MISSILE') &&
-                        e.itemType
+                    e.itemType
                         ? e.itemType
                         : e.type;
                 const stats = ENTITY_STATS[statKey];
@@ -327,12 +327,7 @@ export class GameState {
                 const canSeeSpot = this.isPositionVisible(playerId, e.x, e.y, sourceEntities);
 
                 // Conditions to return entity:
-                if (
-                    isOwn ||
-                    inVision ||
-                    isLinkEndpoint ||
-                    (e.scouted && !canSeeSpot)
-                ) {
+                if (isOwn || inVision || isLinkEndpoint || (e.scouted && !canSeeSpot)) {
                     return {
                         ...e,
                         scouted: isOwn || inVision || e.scouted
@@ -372,7 +367,8 @@ export class GameState {
 
                 // Find base by owner or by index
                 const pKey = `player${index + 1}`;
-                const base = mapConfig.playerBases?.find(b => b.owner === pKey) ||
+                const base =
+                    mapConfig.playerBases?.find((b) => b.owner === pKey) ||
                     mapConfig.playerBases?.[index];
 
                 if (base) {
@@ -797,7 +793,9 @@ export class GameState {
                         if (entity.type === 'EXTRACTOR') {
                             this.updateExtractorStatus(entity);
                             if (entity.isCapturing && entity.capturedNodeId) {
-                                const node = this.map.resources.find(r => r.id === entity.capturedNodeId);
+                                const node = this.map.resources.find(
+                                    (r) => r.id === entity.capturedNodeId
+                                );
                                 if (node) {
                                     entityIncome += node.value || 0;
                                     console.log(
@@ -1114,20 +1112,30 @@ export class GameState {
                             if (proj.hitByFlakDefense) proj.hitByFlakDefense.clear();
 
                             // --- Process Scheduled Effects ---
-                            if (proj.active && proj.scheduledEffects && proj.scheduledEffects.length > 0) {
+                            if (
+                                proj.active &&
+                                proj.scheduledEffects &&
+                                proj.scheduledEffects.length > 0
+                            ) {
                                 for (let i = proj.scheduledEffects.length - 1; i >= 0; i--) {
                                     const effect = proj.scheduledEffects[i];
                                     if (t >= effect.tick) {
                                         if (effect.type === 'incinerate') {
                                             proj.active = false;
                                             proj.hitThisTick = false; // Incinerated mid-air
-                                            console.log(`[Scheduled] Projectile ${proj.id} incinerated by ${effect.sourceId} at tick ${t}`);
+                                            console.log(
+                                                `[Scheduled] Projectile ${proj.id} incinerated by ${effect.sourceId} at tick ${t}`
+                                            );
                                         } else if (effect.type === 'damage') {
                                             proj.hp -= effect.amount;
-                                            console.log(`[Scheduled] Projectile ${proj.id} took ${effect.amount} damage from ${effect.sourceId} at tick ${t}. HP: ${proj.hp}`);
+                                            console.log(
+                                                `[Scheduled] Projectile ${proj.id} took ${effect.amount} damage from ${effect.sourceId} at tick ${t}. HP: ${proj.hp}`
+                                            );
                                             if (proj.hp <= 0) {
                                                 proj.active = false;
-                                                const pStats = ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
+                                                const pStats =
+                                                    ENTITY_STATS[proj.type] ||
+                                                    ENTITY_STATS[proj.itemType];
                                                 if (pStats?.deathEffect === 'DETONATE') {
                                                     proj.hitThisTick = true;
                                                 }
@@ -1144,12 +1152,22 @@ export class GameState {
                             const stats = ENTITY_STATS[def.type];
                             if (!stats || !stats.range) return;
                             if (def.deployed === false) return;
-                            if (typeof def.fuel === 'number' && def.fuel <= 0 && !(def.type === 'FLAK_DEFENSE' && def.flakActive)) return;
+                            if (
+                                typeof def.fuel === 'number' &&
+                                def.fuel <= 0 &&
+                                !(def.type === 'FLAK_DEFENSE' && def.flakActive)
+                            )
+                                return;
 
                             if (def.disabledUntilTurn > this.turn) return;
 
                             // Rule: One defensive action per turn round per structure (EXCEPT persistent ones)
-                            if (def.lastRoundFired === round && def.type !== 'FLAK_DEFENSE' && def.type !== 'SHIELD') return;
+                            if (
+                                def.lastRoundFired === round &&
+                                def.type !== 'FLAK_DEFENSE' &&
+                                def.type !== 'SHIELD'
+                            )
+                                return;
 
                             // Flak logic: If already active, it doesn't need to re-trigger or search
                             if (def.type === 'FLAK_DEFENSE' && def.flakActive) {
@@ -1157,16 +1175,27 @@ export class GameState {
                                 tempProjectiles.forEach((proj) => {
                                     if (!proj.active || proj.hitByFlakDefense.has(def.id)) return;
 
-                                    const pStats = ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
+                                    const pStats =
+                                        ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
                                     if (pStats?.isInterceptable === false) return;
 
-                                    const dist = this.getToroidalDistance(def.x, def.y, proj.currX, proj.currY);
+                                    const dist = this.getToroidalDistance(
+                                        def.x,
+                                        def.y,
+                                        proj.currX,
+                                        proj.currY
+                                    );
                                     if (dist <= stats.range) {
                                         const vec = this.constructor.getToroidalVector(
-                                            def.x, def.y, proj.currX, proj.currY,
-                                            this.map.width, this.map.height
+                                            def.x,
+                                            def.y,
+                                            proj.currX,
+                                            proj.currY,
+                                            this.map.width,
+                                            this.map.height
                                         );
-                                        const angleToProj = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+                                        const angleToProj =
+                                            Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
 
                                         let diff = angleToProj - (def.flakAngle || 0);
                                         while (diff > 180) diff -= 360;
@@ -1174,7 +1203,11 @@ export class GameState {
 
                                         if (Math.abs(diff) <= stats.arc / 2) {
                                             // Check if already scheduled a hit from this source
-                                            if (!proj.scheduledEffects.some(e => e.sourceId === def.id)) {
+                                            if (
+                                                !proj.scheduledEffects.some(
+                                                    (e) => e.sourceId === def.id
+                                                )
+                                            ) {
                                                 const delay = 5 + Math.floor(Math.random() * 5);
                                                 proj.scheduledEffects.push({
                                                     type: 'damage',
@@ -1200,19 +1233,20 @@ export class GameState {
                             tempProjectiles.forEach((proj) => {
                                 if (!proj.active || proj.owner === def.owner) return;
 
-
                                 const pStats =
                                     ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
                                 if (pStats?.isInterceptable === false) return;
 
                                 const dist = this.getToroidalDistance(
-                                    def.x, def.y, proj.currX, proj.currY
+                                    def.x,
+                                    def.y,
+                                    proj.currX,
+                                    proj.currY
                                 );
                                 // Deterministic Tie-break: if distances are equal, pick by ID (lexicographical)
                                 if (
                                     dist < minDist ||
-                                    (dist === minDist &&
-                                        (!closestProj || proj.id < closestProj.id))
+                                    (dist === minDist && (!closestProj || proj.id < closestProj.id))
                                 ) {
                                     minDist = dist;
                                     closestProj = proj;
@@ -1261,13 +1295,18 @@ export class GameState {
                                         this.map.width,
                                         this.map.height
                                     );
-                                    def.flakAngle =
-                                        Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
-                                } else if (def.type === 'LIGHT_SAM_DEFENSE' || def.type === 'SMART_SAM_DEFENSE') {
+                                    def.flakAngle = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+                                } else if (
+                                    def.type === 'LIGHT_SAM_DEFENSE' ||
+                                    def.type === 'SMART_SAM_DEFENSE'
+                                ) {
                                     // SAM Intercept!
                                     def.fuel--;
 
-                                    const projectileType = def.type === 'SMART_SAM_DEFENSE' ? 'SMART_SAM_MISSILE' : 'SAM_MISSILE';
+                                    const projectileType =
+                                        def.type === 'SMART_SAM_DEFENSE'
+                                            ? 'SMART_SAM_MISSILE'
+                                            : 'SAM_MISSILE';
                                     const samStats = ENTITY_STATS[projectileType];
                                     const vec = this.constructor.getToroidalVector(
                                         def.x,
@@ -1303,7 +1342,6 @@ export class GameState {
                                     tempProjectiles.push(samMissile);
                                 }
                             }
-
                         });
 
                         tempProjectiles.forEach((proj) => {
@@ -1333,7 +1371,14 @@ export class GameState {
                                 );
                             }
 
-                            CollisionSystem.checkShieldInterception(this, proj, prevX, prevY, tempVisuals, impacts);
+                            CollisionSystem.checkShieldInterception(
+                                this,
+                                proj,
+                                prevX,
+                                prevY,
+                                tempVisuals,
+                                impacts
+                            );
                             CollisionSystem.checkHazardCollision(this, proj, prevX, prevY, t);
                         });
 
@@ -1809,15 +1854,27 @@ export class GameState {
      * Slingshot Safety: Check if a proposed launch is too close in angle to existing connections.
      * Returns true if any connection (incoming or outgoing) is within 30 degrees.
      */
-    static checkLinkAngleSeparation(itemType, sourceHubId, targetX, targetY, links, stagedActions, entities, map) {
+    static checkLinkAngleSeparation(
+        itemType,
+        sourceHubId,
+        targetX,
+        targetY,
+        links,
+        stagedActions,
+        entities,
+        map
+    ) {
         // 0. Determine if this item type even creates a link.
         // Projectiles (Weapons, Bombs) do not create links and should not be denied by angle.
         const stats = ENTITY_STATS[itemType];
-        const createsLink = ((stats?.damageFull === undefined && itemType !== 'RECLAIMER') || stats?.landAsStructure) && stats?.landAsStructure !== false;
-        
+        const createsLink =
+            ((stats?.damageFull === undefined && itemType !== 'RECLAIMER') ||
+                stats?.landAsStructure) &&
+            stats?.landAsStructure !== false;
+
         if (!createsLink) return false;
 
-        const hub = entities.find(e => String(e.id) === String(sourceHubId));
+        const hub = entities.find((e) => String(e.id) === String(sourceHubId));
         if (!hub) {
             console.warn(`[AngleCheck] Hub not found for ID: ${sourceHubId}`);
             return false;
@@ -1843,13 +1900,15 @@ export class GameState {
             let otherId = null;
             if (String(link.from) === String(sourceHubId)) otherId = link.to;
             else if (String(link.to) === String(sourceHubId)) otherId = link.from;
-            
+
             if (otherId) {
-                const other = entities.find(e => String(e.id) === String(otherId));
+                const other = entities.find((e) => String(e.id) === String(otherId));
                 if (other) {
                     const tooTight = isAngleTooTight(other.x, other.y);
                     if (tooTight) {
-                        console.log(`[AngleCheck] Denied: Angle too close to existing link to ${otherId}`);
+                        console.log(
+                            `[AngleCheck] Denied: Angle too close to existing link to ${otherId}`
+                        );
                         return true;
                     }
                 }
@@ -1859,6 +1918,14 @@ export class GameState {
         // 3. Check staged actions
         for (const action of stagedActions) {
             if (String(action.sourceId) === String(sourceHubId)) {
+                // Only deny if the staged action is a structure launch (creates a link)
+                const aStats = ENTITY_STATS[action.itemType];
+                const actionCreatesLink =
+                    ((aStats?.damageFull === undefined && action.itemType !== 'RECLAIMER') ||
+                        aStats?.landAsStructure) &&
+                    aStats?.landAsStructure !== false;
+                if (!actionCreatesLink) continue;
+
                 // Outgoing staged
                 const pullDist = action.distance || 0;
                 const launchDist = GameState.calculateLaunchDistance(pullDist);
@@ -1866,7 +1933,9 @@ export class GameState {
                 const tX = (hub.x + Math.cos(rad) * launchDist + width) % width;
                 const tY = (hub.y + Math.sin(rad) * launchDist + height) % height;
                 if (isAngleTooTight(tX, tY)) {
-                    console.log(`[AngleCheck] Denied: Angle too close to staged action from ${action.sourceId}`);
+                    console.log(
+                        `[AngleCheck] Denied: Angle too close to staged action from ${action.sourceId}`
+                    );
                     return true;
                 }
             }
@@ -1978,7 +2047,9 @@ export class GameState {
             // EMP status application
             if (stats.itemType === 'EMP' && effDist <= FULL_RADIUS) {
                 target.disabledUntilTurn = this.turn + 2;
-                console.log(`[EMP] ${target.id || target.type} DISABLED until Turn ${target.disabledUntilTurn}`);
+                console.log(
+                    `[EMP] ${target.id || target.type} DISABLED until Turn ${target.disabledUntilTurn}`
+                );
             }
 
             let damage = 0;
