@@ -1,47 +1,18 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
-import { GameState } from '../../../shared/GameState.js';
 import { ENTITY_STATS, GLOBAL_STATS } from '../../../shared/constants/EntityStats.js';
-import { VISUAL_STATS } from '../constants/VisualStats.js';
-import { shouldHighlightRing } from '../utils/uiLogic.js';
-import { getGhostColor } from '../utils/RenderingHelpers.js';
-import { drawShape, drawField } from '../utils/ShapeRenderer.js';
-import { SHAPES } from '../constants/ShapeDefinitions.js';
-import { audioManager } from '../utils/AudioManager';
-import * as TorusMath from '../../../shared/utils/TorusMath.js';
 import { useCameraControls } from '../hooks/useCameraControls';
+import { useVisualInterpolation } from '../hooks/useVisualInterpolation';
+import { drawGridFloor } from './canvas/GridFloorRenderer';
+import { drawLinks } from './canvas/LinkRenderer';
+import { drawEntities } from './canvas/EntityRenderer';
+import { drawUIOverlays } from './canvas/UIOverlayRenderer';
 
 /**
  * GameBoard Component
  *
  * Takes the 'gameState' and renders it using HTML5 Canvas.
- * Implements client-side interpolation (Lerp) for smooth movement.
+ * Delegates camera controls, interpolation, and individual visual layers to sub-modules.
  */
-// --- Toroidal Utility Helpers (Defined outside to avoid stale closures) ---
-const getToroidalDist = (x1, y1, x2, y2, w, h) => TorusMath.getToroidalDistance(x1, y1, x2, y2, w, h);
-const getToroidalDistVector = (x1, y1, x2, y2, w, h) => TorusMath.getToroidalVector(x1, y1, x2, y2, w, h);
-
-const drawToroidalLine = (
-    ctx,
-    x1,
-    y1,
-    x2,
-    y2,
-    width,
-    height,
-    forceDx = null,
-    forceDy = null
-) => {
-    const dx = forceDx !== null ? forceDx : x2 - x1;
-    const dy = forceDy !== null ? forceDy : y2 - y1;
-
-    // In a 3x3 tiled renderer, we only need to draw the line once per tile.
-    // The tiling itself handles the wrapping representation.
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x1 + dx, y1 + dy);
-    ctx.stroke();
-};
-
 const GameBoard = forwardRef(({
     gameState,
     myPlayerId,
@@ -64,11 +35,12 @@ const GameBoard = forwardRef(({
     minZoom
 }, ref) => {
     const canvasRef = useRef(null);
+    const fogCanvasRef = useRef(null);
 
     const HUB_RADIUS = ENTITY_STATS.HUB.size;
     const SLING_RING_RADIUS = GLOBAL_STATS.SLING_RING_RADIUS;
-    const RING_INTERACTION_BUFFER = GLOBAL_STATS.RING_INTERACTION_BUFFER;
 
+    // Camera and pointer panning/dragging hook
     const {
         mousePos,
         isPanning,
@@ -96,9 +68,8 @@ const GameBoard = forwardRef(({
         SLING_RING_RADIUS
     });
 
-    const visualEntities = useRef({});
-    const visualLinks = useRef({});
-    const fogCanvasRef = useRef(null); // Reuse for performance
+    // Interpolation and Fog of War/Ghost state management hook
+    const { updateInterpolation, visualEntities, visualLinks } = useVisualInterpolation();
 
     // Use a Ref to provide the animation loop with the latest props without restarting the loop
     const propsRef = useRef({
@@ -143,18 +114,15 @@ const GameBoard = forwardRef(({
         showDebugPreview
     ]);
 
+    // Vector pull arrow helper color gradient
     const getStrengthColor = (ratio) => {
-        // Linear transition: Green (0,255,0) -> Orange (255,165,0) -> Red (255,0,0)
-        let r,
-            g = 0;
+        let r, g = 0;
         const b = 0;
         if (ratio < 0.5) {
-            // Green to Orange
             const segmentRatio = ratio * 2;
             r = Math.floor(255 * segmentRatio);
             g = Math.floor(255 - 90 * segmentRatio);
         } else {
-            // Orange to Red
             const segmentRatio = (ratio - 0.5) * 2;
             r = 255;
             g = Math.floor(165 * (1 - segmentRatio));
@@ -162,10 +130,11 @@ const GameBoard = forwardRef(({
         return `rgb(${r}, ${g}, ${b})`;
     };
 
+    useImperativeHandle(ref, () => ({
+        getScreenCoords
+    }));
 
-
-
-    // --- Main Animation & Draw Loop ---
+    // Main 60fps Animation Draw Loop
     useEffect(() => {
         let animationFrameId;
         const canvas = canvasRef.current;
@@ -174,19 +143,13 @@ const GameBoard = forwardRef(({
 
         const updateAndDraw = () => {
             try {
+                const props = propsRef.current;
                 const {
                     gameState: currentGameState,
-                    myPlayerId,
-                    selectedHubId,
-                    selectedItemType,
-                    launchMode,
-                    isAiming,
-                    committedActions,
-                    mousePos,
+                    myPlayerId: pid,
                     cameraOffset: rawCameraOffset,
-                    maxPullDistance,
-                    showDebugPreview
-                } = propsRef.current;
+                    zoom: activeZoom
+                } = props;
 
                 // Defensive check for NaN camera offset
                 const cameraOffset = {
@@ -204,487 +167,69 @@ const GameBoard = forwardRef(({
 
                 const mapW = currentGameState.map.width;
                 const mapH = currentGameState.map.height;
-
-                // 1. UPDATE VISUAL POSITIONS (Lerp) & GHOST LOGIC
-                // LERP_FACTOR targets how fast we reach the server's state.
                 const LERP_FACTOR = 0.3;
 
-                // 1a. Pre-calculate vision circles and cones for re-scouting/vision check
-                const currentVisionCircles = currentGameState.entities
-                    .filter((e) => e.owner === myPlayerId && (ENTITY_STATS[e.itemType || e.type]?.vision || 0) > 0 && e.itemType !== 'HOMING_MISSILE')
-                    .map((e) => ({
-                        x: e.x,
-                        y: e.y,
-                        radius: ENTITY_STATS[e.itemType || e.type].vision
-                    }));
-
-                const currentVisionCones = currentGameState.entities
-                    .filter((e) => e.owner === myPlayerId && e.itemType === 'HOMING_MISSILE')
-                    .map((e) => {
-                        const stats = ENTITY_STATS[e.itemType];
-                        return {
-                            x: e.x,
-                            y: e.y,
-                            radius: stats.vision || 0,
-                            angle: e.currentAngle || 0,
-                            cone: stats.searchCone || 60
-                        };
-                    })
-                    .filter(c => c.radius > 0);
-
-                const isInVision = (x, y) => {
-                    if (!myPlayerId || myPlayerId === 'spectator') return true;
-
-                    // First check circular vision
-                    if (currentVisionCircles.some((v) => getToroidalDist(v.x, v.y, x, y, mapW, mapH) <= v.radius)) {
-                        return true;
-                    }
-
-                    // Then check specialized cone vision
-                    return currentVisionCones.some((c) => {
-                        const d = getToroidalDist(c.x, c.y, x, y, mapW, mapH);
-                        if (d > c.radius) return false;
-                        if (d < 1) return true; // Always see self
-
-                        const vec = getToroidalDistVector(c.x, c.y, x, y, mapW, mapH);
-                        const angleToPoint = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
-                        let diff = angleToPoint - c.angle;
-                        while (diff > 180) diff -= 360;
-                        while (diff < -180) diff += 360;
-                        return Math.abs(diff) <= c.cone / 2;
-                    });
-                };
-
-                const serverIds = new Set(currentGameState.entities.map((e) => e.id));
-
-                // Update existing entities and handle New ones
-                currentGameState.entities.forEach((serverEnt) => {
-                    if (!visualEntities.current[serverEnt.id]) {
-                        visualEntities.current[serverEnt.id] = {
-                            ...serverEnt,
-                            isGhost: false,
-                            lastSeen: Date.now(),
-                            scouted: serverEnt.scouted // server should provide this
-                        };
-
-                        // Play procedural SFX for newly spawned entities
-                        if (serverEnt.type === 'PROJECTILE') {
-                            if (serverEnt.itemType === 'HOMING_MISSILE') {
-                                audioManager.playHeavyLaunch();
-                            } else if (serverEnt.itemType === 'SAM_MISSILE' || serverEnt.itemType === 'SMART_SAM_MISSILE') {
-                                audioManager.playSamLaunch();
-                            } else {
-                                audioManager.playShoot();
-                            }
-                        } else if (serverEnt.type === 'LASER_BEAM') {
-                            audioManager.playLaser();
-                        } else if (serverEnt.type === 'EXPLOSION') {
-                            if (serverEnt.itemType === 'NUKE') {
-                                audioManager.playNukeDetonation();
-                            } else {
-                                audioManager.playExplosion();
-                            }
-                        } else if (serverEnt.type === 'SHIELD_HIT' || serverEnt.type === 'LINK_COLLISION' || serverEnt.type === 'SPARK') {
-                            audioManager.playShieldHit();
-                        } else if (['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(serverEnt.type)) {
-                            audioManager.playStructureLanding();
-                        }
-                    } else {
-                        const viz = visualEntities.current[serverEnt.id];
-
-                        // Play impact SFX if HP decreases
-                        if (serverEnt.hp < viz.hp) {
-                            audioManager.playShieldHit();
-                        }
-
-                        let dx = serverEnt.x - viz.x;
-                        if (Math.abs(dx) > mapW / 2) dx = dx > 0 ? dx - mapW : dx + mapW;
-                        viz.x = (viz.x + ((dx * LERP_FACTOR) % mapW) + mapW) % mapW;
-
-                        let dy = serverEnt.y - viz.y;
-                        if (Math.abs(dy) > mapH / 2) dy = dy > 0 ? dy - mapH : dy + mapH;
-                        viz.y = (viz.y + ((dy * LERP_FACTOR) % mapH) + mapH) % mapH;
-
-                        viz.type = serverEnt.type;
-                        viz.owner = serverEnt.owner;
-                        viz.hp = serverEnt.hp;
-                        viz.fuel = serverEnt.fuel;
-                        viz.energy = serverEnt.energy;
-                        viz.deployed = serverEnt.deployed;
-                        viz.itemType = serverEnt.itemType;
-                        viz.currentAngle = serverEnt.currentAngle;
-                        viz.angle = serverEnt.angle;
-                        viz.searchMode = serverEnt.searchMode;
-                        const prevLockFound = viz.lockFound;
-                        viz.lockFound = serverEnt.lockFound;
-                        viz.flakActive = serverEnt.flakActive;
-                        
-                        // Play alert lock-on chime upon positive transition
-                        if (viz.lockFound && !prevLockFound) {
-                            if (serverEnt.itemType === 'SAM_MISSILE' || serverEnt.itemType === 'SMART_SAM_MISSILE' || serverEnt.itemType === 'HOMING_MISSILE') {
-                                audioManager.playSamLockOn();
-                            }
-                        }
-                        viz.flakAngle = serverEnt.flakAngle;
-                        viz.flakTriggerTick = serverEnt.flakTriggerTick;
-                        viz.barrierHp = serverEnt.barrierHp;
-                        viz.disabledUntilTurn = serverEnt.disabledUntilTurn;
-                        viz.detonationTurn = serverEnt.detonationTurn;
-                        viz.isCapturing = serverEnt.isCapturing;
-                        viz.capturedNodeId = serverEnt.capturedNodeId;
-                        viz.isGhost = false;
-                        viz.lastSeen = Date.now();
-                        viz.scouted = viz.scouted || serverEnt.scouted; // Once scouted, always scouted for ghosting purposes
-                    }
-                });
-
-                // Handle Ghosts: entities in visualEntities NOT in serverIds
-                Object.keys(visualEntities.current).forEach((id) => {
-                    if (!serverIds.has(id)) {
-                        const viz = visualEntities.current[id];
-
-                        // Play breakdown/destroyed sound for structures before deletion
-                        const STRUCTURE_TYPES = ['HUB', 'EXTRACTOR', 'SHIELD', 'CLOAKING_FIELD', 'TURRET', 'RELAY', 'BARRIER'];
-                        if (STRUCTURE_TYPES.includes(viz.type)) {
-                            // Only play if previously visible/scouted and not a ghost
-                            if (viz.scouted !== false && !viz.isGhost) {
-                                audioManager.playStructureDestroyed();
-                            }
-                        }
-
-                        // If it's a transient effect/projectile OR if it was OUR structure, it disappears immediately
-                        const TRANSIENT_TYPES = [
-                            'PROJECTILE',
-                            'WEAPON',
-                            'SUPER_BOMB',
-                            'EXPLOSION',
-                            'RECLAIM',
-                            'LASER_BEAM',
-                            'LINK_COLLISION',
-                            'SPARK'
-                        ];
-                        if (TRANSIENT_TYPES.includes(viz.type) || viz.owner === myPlayerId) {
-                            delete visualEntities.current[id];
-                            return;
-                        }
-
-                        // For foreign structures, check if we SHOULD see it right now (Re-scouting)
-                        const currentlyInVision = isInVision(viz.x, viz.y);
-
-                        if (currentlyInVision) {
-                            // We are looking right at it and the server says it's not there -> It's gone!
-                            delete visualEntities.current[id];
-                        } else if (viz.scouted) {
-                            // We can't see its last known position, so keep it as a ghost
-                            viz.isGhost = true;
-                        } else {
-                            // It was never properly scouted, just seen via link endpoint
-                            delete visualEntities.current[id];
-                        }
-                    }
-                });
-
-                // Handle Links Ghosts
-                currentGameState.links.forEach((serverLink) => {
-                    const linkId = `${serverLink.from}-${serverLink.to}`;
-                    if (!visualLinks.current[linkId]) {
-                        visualLinks.current[linkId] = { ...serverLink, isGhost: false };
-                    } else {
-                        visualLinks.current[linkId].isGhost = false;
-                    }
-                });
-
-                Object.keys(visualLinks.current).forEach((linkId) => {
-                    const viz = visualLinks.current[linkId];
-                    const inServer = currentGameState.links.some((l) => `${l.from}-${l.to}` === linkId);
-
-                    if (!inServer) {
-                        // Check if either end of the link is currently in vision.
-                        // If an end is in vision but the link is not in the server state, the link is gone.
-                        const from = visualEntities.current[viz.from];
-                        const to = visualEntities.current[viz.to];
-
-                        if (!from || !to) {
-                            delete visualLinks.current[linkId];
-                            return;
-                        }
-
-                        const fromVisible = isInVision(from.x, from.y);
-                        const toVisible = isInVision(to.x, to.y);
-
-                        if (fromVisible || toVisible) {
-                            // Link was severed while visible! Play break sound
-                            if (!viz.isGhost) {
-                                audioManager.playLinkSevered();
-                            }
-                            delete visualLinks.current[linkId];
-                        } else {
-                            viz.isGhost = true;
-                        }
-                    }
-                });
+                // 1. LERP VISUAL SNAPSHOT & PROCESS GHOSTS
+                const { visualEntities: vEntities, visualLinks: vLinks, isInVision } = updateInterpolation(
+                    currentGameState,
+                    pid,
+                    LERP_FACTOR
+                );
 
                 // 2. CLEAR CANVAS
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                // -----------------------------------------------------------------
-                // 3x3 TILED RENDERING LOOP
-                // This ensures objects near edges appear on the opposite side.
-                // -----------------------------------------------------------------
-
                 // Calculate visible viewport bounds in game coordinates for culling
                 const canvasW = canvas.width;
                 const canvasH = canvas.height;
-                const viewportWidth = canvasW / zoom;
-                const viewportHeight = canvasH / zoom;
+                const viewportWidth = canvasW / activeZoom;
+                const viewportHeight = canvasH / activeZoom;
                 const viewL = cameraOffset.x;
                 const viewT = cameraOffset.y;
                 const viewR = viewL + viewportWidth;
                 const viewB = viewT + viewportHeight;
+                const viewBounds = { viewL, viewT, viewR, viewB };
 
                 ctx.save();
-                // Apply zoom and camera offset
-                ctx.scale(zoom, zoom);
+                // Apply camera scaling and transforms
+                ctx.scale(activeZoom, activeZoom);
                 ctx.translate(-cameraOffset.x, -cameraOffset.y);
 
-                // Get player object and their color
-                const player = currentGameState.players[myPlayerId];
+                const player = currentGameState.players[pid];
                 const playerColor = player ? player.color : 'hsl(120, 70%, 50%)';
-                // Dim the player's HSL color to 4% lightness for a gorgeous dark themed floor
-                const floorColor = playerColor.startsWith('hsl')
-                    ? playerColor.replace('50%', '5%')
-                    : '#0c0d12'; // Fallback
-                // 2. BACKGROUND (Drawn once for the entire 3x3 area to avoid seams/overlap artifacts)
+                const floorColor = playerColor.startsWith('hsl') ? playerColor.replace('50%', '5%') : '#0c0d12';
+
+                // Tiled floor paint
                 ctx.fillStyle = floorColor;
                 ctx.fillRect(-mapW, -mapH, mapW * 3, mapH * 3);
 
-                for (let offsetOffsetX = -mapW; offsetOffsetX <= mapW; offsetOffsetX += mapW) {
-                    for (let offsetOffsetY = -mapH; offsetOffsetY <= mapH; offsetOffsetY += mapH) {
-                        // TILE CULLING: Check if this tile instance overlaps the viewport
-                        const tileL = offsetOffsetX;
-                        const tileT = offsetOffsetY;
-                        const tileR = offsetOffsetX + mapW;
-                        const tileB = offsetOffsetY + mapH;
+                // 3. DRAW BACKGROUND LAYERS (Grid floor and Links)
+                for (let ox = -mapW; ox <= mapW; ox += mapW) {
+                    for (let oy = -mapH; oy <= mapH; oy += mapH) {
+                        const tileL = ox;
+                        const tileT = oy;
+                        const tileR = ox + mapW;
+                        const tileB = oy + mapH;
+                        const pad = 800; // Account for large visual effects crossing boundaries
 
-                        const pad = 800; // Account for large visual effects crossing tile boundaries
-                        const isVisible = !(tileR + pad < viewL || tileL - pad > viewR || tileB + pad < viewT || tileT - pad > viewB);
-                        if (!isVisible) continue;
+                        if (tileR + pad < viewL || tileL - pad > viewR || tileB + pad < viewT || tileT - pad > viewB) continue;
 
                         ctx.save();
-                        ctx.translate(offsetOffsetX, offsetOffsetY);
+                        ctx.translate(ox, oy);
 
-                        // 2. BACKGROUND (Moved out of loop to avoid seams)
+                        // Draw background hazards (lakes, mountains, craters, energy nodes)
+                        drawGridFloor(ctx, currentGameState, pid, viewBounds, ox, oy);
 
-                        if (currentGameState.map.lakes) {
-                            currentGameState.map.lakes.forEach((lake) => {
-                                // Entity Culling: Skip if outside viewport
-                                if (lake.x + offsetOffsetX + lake.radius < viewL || 
-                                    lake.x + offsetOffsetX - lake.radius > viewR ||
-                                    lake.y + offsetOffsetY + lake.radius < viewT || 
-                                    lake.y + offsetOffsetY - lake.radius > viewB) return;
-
-                                // Stable rotation based on position
-                                const rotation = ((lake.x * 12.98 + lake.y * 78.23) % 360) * Math.PI / 180;
-                                drawShape(
-                                    ctx, 
-                                    lake.x, 
-                                    lake.y, 
-                                    'LAKE', 
-                                    lake.radius, 
-                                    '#1a3a5a', // Deep water blue
-                                    rotation, 
-                                    false
-                                );
-                            });
-                        }
-
-                        // 2a-2. DRAW MOUNTAINS
-                        if (currentGameState.map.mountains) {
-                            currentGameState.map.mountains.forEach((mtn) => {
-                                // Entity Culling: Skip if outside viewport
-                                if (mtn.x + offsetOffsetX + mtn.radius < viewL || 
-                                    mtn.x + offsetOffsetX - mtn.radius > viewR ||
-                                    mtn.y + offsetOffsetY + mtn.radius < viewT || 
-                                    mtn.y + offsetOffsetY - mtn.radius > viewB) return;
-
-                                // Stable rotation based on position
-                                const rotation = ((mtn.x * 43.21 + mtn.y * 13.57) % 360) * Math.PI / 180;
-                                drawShape(
-                                    ctx, 
-                                    mtn.x, 
-                                    mtn.y, 
-                                    'MOUNTAIN', 
-                                    mtn.radius, 
-                                    '#3d3434', // Dark stone
-                                    rotation, 
-                                    false
-                                );
-                            });
-                        }
-
-                        // 2-c. Craters (Permanent scars)
-                        if (currentGameState.map.craters) {
-                            currentGameState.map.craters.forEach((crater) => {
-                                // Entity Culling: Skip if outside viewport
-                                if (crater.x + offsetOffsetX + crater.radius < viewL || 
-                                    crater.x + offsetOffsetX - crater.radius > viewR ||
-                                    crater.y + offsetOffsetY + crater.radius < viewT || 
-                                    crater.y + offsetOffsetY - crater.radius > viewB) return;
-
-                                drawShape(
-                                    ctx, 
-                                    crater.x, 
-                                    crater.y, 
-                                    'CRATER', 
-                                    crater.radius, 
-                                    '#222', 
-                                    0, 
-                                    false
-                                );
-                            });
-                        }
-
-
-                        // 3. DRAW LINKS (Segmented for partial Fog of War)
-                        Object.values(visualLinks.current).forEach((link) => {
-                            const from = visualEntities.current[link.from];
-                            const to = visualEntities.current[link.to];
-                            if (!from || !to) return;
-
-                            // Link Culling: Check if link bounding box overlaps viewport
-                            const minX = Math.min(from.x, to.x) + offsetOffsetX;
-                            const maxX = Math.max(from.x, to.x) + offsetOffsetX;
-                            const minY = Math.min(from.y, to.y) + offsetOffsetY;
-                            const maxY = Math.max(from.y, to.y) + offsetOffsetY;
-                            if (maxX < viewL || minX > viewR || maxY < viewT || minY > viewB) return;
-
-                            const ownerId = link.owner || from.owner;
-                            const player = currentGameState.players[ownerId];
-                            const baseColor = player ? player.color : '#666';
-
-                            // Calculate desaturated color for ghost segments (Bug 1 fix)
-                            const ghostColor = getGhostColor(baseColor, VISUAL_STATS.FOG_OF_WAR.GHOST_SATURATION);
-
-                            // Determine path
-                            let dx, dy;
-                            if (link.intendedDx !== null && link.intendedDx !== undefined) {
-                                dx = link.intendedDx;
-                                dy = link.intendedDy;
-                            } else {
-                                dx = to.x - from.x;
-                                dy = to.y - from.y;
-                                if (Math.abs(dx) > mapW / 2) dx = dx > 0 ? dx - mapW : dx + mapW;
-                                if (Math.abs(dy) > mapH / 2) dy = dy > 0 ? dy - mapH : dy + mapH;
-                            }
-
-                            const distance = Math.sqrt(dx * dx + dy * dy);
-                            const segmentLen = 20;
-                            const segmentCount = Math.max(1, Math.ceil(distance / segmentLen));
-
-                            for (let i = 0; i < segmentCount; i++) {
-                                const rStart = i / segmentCount;
-                                const rEnd = (i + 1) / segmentCount;
-
-                                const x1 = from.x + dx * rStart;
-                                const y1 = from.y + dy * rStart;
-                                const x2 = from.x + dx * rEnd;
-                                const y2 = from.y + dy * rEnd;
-
-                                // Sample middle of segment for visibility check
-                                const midX =
-                                    (from.x + (((dx * (rStart + rEnd)) / 2) % mapW) + mapW) % mapW;
-                                const midY =
-                                    (from.y + (((dy * (rStart + rEnd)) / 2) % mapH) + mapH) % mapH;
-
-                                const segmentInVision = isInVision(midX, midY);
-
-                                // A segment is a ghost if it's personally out of vision OR if the whole link is a ghost
-                                const isSegmentGhost = !segmentInVision || link.isGhost;
-
-                                ctx.save();
-                                ctx.strokeStyle = isSegmentGhost ? ghostColor : baseColor;
-                                ctx.lineWidth = isSegmentGhost ? 1 : 2;
-                                ctx.globalAlpha = isSegmentGhost ? 0.2 : 1.0;
-                                if (isSegmentGhost) ctx.setLineDash([4, 4]);
-
-                                // Intensive Glow for Links - REMOVED for performance
-                                if (!isSegmentGhost) {
-                                    // Glow removed
-                                }
-
-                                // Base Cable
-                                ctx.beginPath();
-                                ctx.moveTo(x1, y1);
-                                ctx.lineTo(x2, y2);
-                                ctx.stroke();
-
-                                // Simple Pulse Dash
-                                if (!isSegmentGhost) {
-                                    const pulse = (Date.now() / 150) % 20;
-                                    ctx.strokeStyle = '#fff';
-                                    ctx.lineWidth = 1;
-                                    ctx.setLineDash([5, 15]);
-                                    ctx.lineDashOffset = -pulse;
-                                    ctx.stroke();
-                                }
-
-                                // Draw directional arrow pointing back (only once per link at the overall midpoint)
-                                // We check if this segment contains the midpoint (ratio 0.5)
-                                if (!isSegmentGhost && rStart <= 0.5 && rEnd > 0.5) {
-                                    const arrowX = (x1 + x2) / 2;
-                                    const arrowY = (y1 + y2) / 2;
-                                    const angle = Math.atan2(dy, dx) + Math.PI; // Point BACK
-                                    const size = GLOBAL_STATS.LINK_ARROW_SIZE || 10;
-
-                                    ctx.save();
-                                    ctx.translate(arrowX, arrowY);
-                                    ctx.rotate(angle);
-                                    ctx.fillStyle = baseColor;
-                                    ctx.beginPath();
-                                    ctx.moveTo(-size, -size / 2);
-                                    ctx.lineTo(0, 0);
-                                    ctx.lineTo(-size, size / 2);
-                                    ctx.fill();
-                                    ctx.restore();
-                                }
-
-                                ctx.restore();
-                            }
-                        });
-
-                        // 4. DRAW RESOURCES
-                        currentGameState.map.resources.forEach((res) => {
-                            // Entity Culling: Skip if outside viewport
-                            if (res.x + offsetOffsetX + (res.radius || 8) < viewL || 
-                                res.x + offsetOffsetX - (res.radius || 8) > viewR ||
-                                res.y + offsetOffsetY + (res.radius || 8) < viewT || 
-                                res.y + offsetOffsetY - (res.radius || 8) > viewB) return;
-
-                            const isSuper = res.isSuper === true;
-                            const shapeKey = isSuper ? 'SUPER_RESOURCE_NODE' : 'RESOURCE_NODE';
-                            const color = isSuper ? '#a020f0' : '#ffa500';
-
-                            drawShape(
-                                ctx,
-                                res.x,
-                                res.y,
-                                shapeKey,
-                                res.radius || 8,
-                                color,
-                                0,
-                                false
-                            );
-                        });
+                        // Draw cables and link pipelines
+                        drawLinks(ctx, currentGameState, vEntities, vLinks, isInVision, viewBounds, mapW, mapH, ox, oy);
 
                         ctx.restore();
                     }
                 }
                 ctx.restore();
 
-                // -----------------------------------------------------------------
-                // 7. FOG OF WAR OVERLAY
-                // -----------------------------------------------------------------
-                if (myPlayerId && myPlayerId !== 'spectator') {
+                // 4. DRAW SOLID FOG OF WAR MASK
+                if (pid && pid !== 'spectator') {
                     if (!fogCanvasRef.current) {
                         fogCanvasRef.current = document.createElement('canvas');
                     }
@@ -695,40 +240,32 @@ const GameBoard = forwardRef(({
                     }
                     const fctx = fogCanvas.getContext('2d');
 
-                    // 1. Draw solid fog overlay
-                    fctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform to identity
+                    fctx.setTransform(1, 0, 0, 1, 0, 0);
                     fctx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
                     fctx.globalCompositeOperation = 'source-over';
                     fctx.fillStyle = 'rgba(0, 0, 0, 1)';
                     fctx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
 
-                    // 2. Punch holes
+                    // Composite destination-out to punch vision holes
                     fctx.globalCompositeOperation = 'destination-out';
                     fctx.fillStyle = '#ffffff';
-
-                    // We must apply the same world-space transform to the fog context
-                    fctx.scale(zoom, zoom);
+                    fctx.scale(activeZoom, activeZoom);
                     fctx.translate(-cameraOffset.x, -cameraOffset.y);
 
-                    // Tiled loop ensures holes wrap correctly alongside the entities
                     for (let ox = -mapW; ox <= mapW; ox += mapW) {
                         for (let oy = -mapH; oy <= mapH; oy += mapH) {
-                            // TILE CULLING: Skip if this tile instance overlaps the viewport
-                            const tileL = ox;
-                            const tileT = oy;
                             const tileR = ox + mapW;
+                            const tileL = ox;
                             const tileB = oy + mapH;
+                            const tileT = oy;
+                            const pad = 800;
 
-                            const pad = 800; // Account for large visual effects crossing tile boundaries
-                            const isTileVisible = !(tileR + pad < viewL || tileL - pad > viewR || tileB + pad < viewT || tileT - pad > viewB);
-                            if (!isTileVisible) continue;
+                            if (tileR + pad < viewL || tileL - pad > viewR || tileB + pad < viewT || tileT - pad > viewB) continue;
 
                             fctx.save();
                             fctx.translate(ox, oy);
 
-                            // 6. DRAW ENTITIES
                             currentGameState.entities.forEach((entity) => {
-                                // Culling: Skip if the VISION circle is outside the viewport
                                 const stats = ENTITY_STATS[entity.itemType || entity.type];
                                 const cullingRadius = Math.max(stats?.vision || 0, stats?.size || 20);
                                 if (entity.x + ox + cullingRadius < viewL || 
@@ -736,28 +273,16 @@ const GameBoard = forwardRef(({
                                     entity.y + oy + cullingRadius < viewT || 
                                     entity.y + oy - cullingRadius > viewB) return;
 
-                                const isOwnProjectile =
-                                    stats?.damageFull !== undefined && entity.owner === myPlayerId;
-                                const isOwnEntity = entity.owner === myPlayerId;
-
-                                if (isOwnEntity || isOwnProjectile) {
+                                if (entity.owner === pid || (stats?.damageFull !== undefined && entity.owner === pid)) {
                                     const radius = stats?.vision || 0;
                                     if (radius > 0) {
-                                        const viz = visualEntities.current[entity.id] || entity;
+                                        const viz = vEntities[entity.id] || entity;
                                         fctx.beginPath();
-
                                         if (entity.itemType === 'HOMING_MISSILE') {
                                             const rad = ((viz.currentAngle || 0) * Math.PI) / 180;
-                                            const halfCone =
-                                                ((stats.searchCone || 60) * (Math.PI / 180)) / 2;
+                                            const halfCone = ((stats.searchCone || 60) * (Math.PI / 180)) / 2;
                                             fctx.moveTo(viz.x, viz.y);
-                                            fctx.arc(
-                                                viz.x,
-                                                viz.y,
-                                                radius,
-                                                rad - halfCone,
-                                                rad + halfCone
-                                            );
+                                            fctx.arc(viz.x, viz.y, radius, rad - halfCone, rad + halfCone);
                                         } else {
                                             fctx.arc(viz.x, viz.y, radius, 0, Math.PI * 2);
                                         }
@@ -769,7 +294,7 @@ const GameBoard = forwardRef(({
                         }
                     }
 
-                    // 3. Draw the completed fog mask back onto the main canvas
+                    // Composite back onto gameboard canvas
                     ctx.save();
                     ctx.setTransform(1, 0, 0, 1, 0, 0);
                     ctx.globalCompositeOperation = 'source-over';
@@ -777,914 +302,63 @@ const GameBoard = forwardRef(({
                     ctx.restore();
                 }
 
-                // -----------------------------------------------------------------
-                // 8. FOREGROUND & UI (Entities, Highlights, Aiming)
-                // -----------------------------------------------------------------
-                ctx.save(); // Balance with the final restore() at the end of updateAndDraw
-                ctx.scale(zoom, zoom);
+                // 5. DRAW FOREGROUND LAYERS (Entities and UI Overlays)
+                ctx.save();
+                ctx.scale(activeZoom, activeZoom);
                 ctx.translate(-cameraOffset.x, -cameraOffset.y);
 
-                for (let offsetOffsetX = -mapW; offsetOffsetX <= mapW; offsetOffsetX += mapW) {
-                    for (let offsetOffsetY = -mapH; offsetOffsetY <= mapH; offsetOffsetY += mapH) {
-                        // TILE CULLING: Check if this tile instance overlaps the viewport
-                        const tileL = offsetOffsetX;
-                        const tileT = offsetOffsetY;
-                        const tileR = offsetOffsetX + mapW;
-                        const tileB = offsetOffsetY + mapH;
+                for (let ox = -mapW; ox <= mapW; ox += mapW) {
+                    for (let oy = -mapH; oy <= mapH; oy += mapH) {
+                        const tileR = ox + mapW;
+                        const tileL = ox;
+                        const tileB = oy + mapH;
+                        const tileT = oy;
+                        const pad = 800;
 
-                        const pad = 800; // Account for large visual effects crossing tile boundaries
-                        const isTileVisible = !(tileR + pad < viewL || tileL - pad > viewR || tileB + pad < viewT || tileT - pad > viewB);
-                        if (!isTileVisible) continue;
+                        if (tileR + pad < viewL || tileL - pad > viewR || tileB + pad < viewT || tileT - pad > viewB) continue;
 
                         ctx.save();
-                        ctx.translate(offsetOffsetX, offsetOffsetY);
+                        ctx.translate(ox, oy);
 
-                        // 5. DRAW ENTITIES
-                        Object.values(visualEntities.current).forEach((entity) => {
-                            // FRUSTUM CULLING: Skip if entity is outside viewport bounds
-                            const stats = ENTITY_STATS[entity.itemType || entity.type];
-                            const isProjectile =
-                                entity.type === 'PROJECTILE' ||
-                                entity.type === 'NAPALM' ||
-                                (stats?.damageFull !==
-                                    undefined &&
-                                    (entity.type !== 'NUKE' || !entity.detonationTurn));
-                            const radius = stats?.size || (isProjectile ? (GLOBAL_STATS.PROJECTILE_RADIUS || 10) : 20);
-
-                            // Include larger visual effects in the culling check so they don't clip at the screen edges
-                            let cullingRadius = radius;
-                            if (stats) {
-                                if (stats.vision) cullingRadius = Math.max(cullingRadius, stats.vision);
-                                if (stats.range) cullingRadius = Math.max(cullingRadius, stats.range);
-                                if (stats.cloakRange) cullingRadius = Math.max(cullingRadius, stats.cloakRange);
-                                if (stats.homingRange) cullingRadius = Math.max(cullingRadius, stats.homingRange);
-                            }
-                            if (entity.radius) cullingRadius = Math.max(cullingRadius, entity.radius);
-
-                            if (entity.x + offsetOffsetX + cullingRadius < viewL || 
-                                entity.x + offsetOffsetX - cullingRadius > viewR ||
-                                entity.y + offsetOffsetY + cullingRadius < viewT || 
-                                entity.y + offsetOffsetY - cullingRadius > viewB) return;
-
-                            const player = currentGameState.players[entity.owner];
-                            let color = player ? player.color : '#fff';
-
-                            const isDisabled = entity.disabledUntilTurn > currentGameState.turn;
-
-                            // Bug 2 fix: An entity should display as a "ghost" (desaturated) if it's
-                            // NOT in active vision, even if it's still in the server state (e.g. as a link endpoint).
-                            const currentlyInVision = isInVision(entity.x, entity.y);
-                            const displayAsGhost = entity.isGhost || !currentlyInVision;
-
-                            if (displayAsGhost) {
-                                // Desaturate the color for ghosts (Bug 1 fix)
-                                color = getGhostColor(color, VISUAL_STATS.FOG_OF_WAR.GHOST_SATURATION);
-                            }
-
-                            const isSelected = entity.id === selectedHubId && !displayAsGhost;
-                            const isUndeployed = entity.deployed === false;
-
-                            // DRAWING GUARD: Only render the entity if it is scouted (active vision/owned)
-                            // or if it's a ghost (previously scouted).
-                            // This prevents enemy hubs at link endpoints from being visible in the dark.
-                            if (entity.scouted === false && !entity.isGhost) return;
-
-                            ctx.save();
-
-                            // APPLY EMP JITTER (inside save/restore block to prevent cumulative drift)
-                            if (isDisabled && !displayAsGhost) {
-                                const eStats = VISUAL_STATS.EMP;
-                                const tSeed = Math.floor(Date.now() / (eStats.jitterFrequency || 60));
-                                const dx = Math.sin(tSeed * 12.98) * (eStats.jitterMagnitude || 2);
-                                const dy = Math.cos(tSeed * 43.21) * (eStats.jitterMagnitude || 2);
-                                ctx.translate(dx, dy);
-
-                                if (Math.random() > (eStats.flickerRate || 0.7)) {
-                                    color = Math.random() > 0.5 ? eStats.color : eStats.secondaryColor;
-                                }
-                            }
-
-                            ctx.fillStyle = color;
-                            ctx.globalAlpha = displayAsGhost ? 0.4 : isUndeployed ? 0.5 : 1.0;
-
-                            if (isSelected) {
-                                // shadow removed
-                            }
-
-                            if (isUndeployed) {
-                                ctx.setLineDash([2, 2]);
-                                ctx.strokeStyle = '#fff';
-                                ctx.lineWidth = 1;
-                            }
-
-                            if (isProjectile) {
-                                ctx.save();
-
-                                // 1. Draw Search Beam (faint cone)
-                                if (entity.searchMode) {
-                                    drawField(
-                                        ctx, 
-                                        entity.x, 
-                                        entity.y, 
-                                        'VISION_CONE', 
-                                        stats?.homingRange || 400, 
-                                        color, 
-                                        displayAsGhost,
-                                        Date.now(),
-                                        stats?.searchCone || 60,
-                                        entity.currentAngle || 0
-                                    );
-                                }
-
-                                // 2. Draw Vectorized Projectile Trail (Missiles only)
-                                const typeForTrail = entity.itemType || entity.type;
-                                const hasTrail = typeForTrail === 'HOMING_MISSILE' || typeForTrail === 'SAM_MISSILE' || typeForTrail === 'SMART_SAM_MISSILE';
-                                
-                                if (!displayAsGhost && hasTrail) {
-                                    // Periodic flight sound pulse for SAM interceptors
-                                    if (typeForTrail === 'SAM_MISSILE' || typeForTrail === 'SMART_SAM_MISSILE') {
-                                        const now = Date.now();
-                                        if (!entity.lastFlightSoundTime || now - entity.lastFlightSoundTime > 150) {
-                                            audioManager.playSamFlight();
-                                            entity.lastFlightSoundTime = now;
-                                        }
-                                    }
-
-                                    ctx.save();
-                                    const rad = ((entity.angle !== undefined ? entity.angle : entity.currentAngle || 0) * Math.PI) / 180 + Math.PI / 2;
-                                    ctx.translate(entity.x, entity.y);
-                                    ctx.rotate(rad);
-                                    
-                                    ctx.strokeStyle = color;
-                                    ctx.lineWidth = 1;
-                                    
-                                    // Draw 3 fading trail segments
-                                    for (let i = 1; i <= 3; i++) {
-                                        ctx.globalAlpha = 0.8 / i;
-                                        const offset = i * 12;
-                                        ctx.beginPath();
-                                        ctx.moveTo(0, offset);
-                                        ctx.lineTo(0, offset + 8);
-                                        ctx.stroke();
-                                    }
-                                    ctx.restore();
-                                }
-
-                                // 3. Draw Projectile Body
-                                if (entity.itemType === 'HOMING_MISSILE') {
-                                    // Offset by PI/2 because the shape is defined pointing UP [0, -1], 
-                                    // but 0 degrees in rotation is RIGHT [1, 0].
-                                    const rotation = ((entity.angle !== undefined ? entity.angle : entity.currentAngle || 0) * Math.PI) / 180 + Math.PI / 2;
-                                    drawShape(
-                                        ctx, 
-                                        entity.x, 
-                                        entity.y, 
-                                        'MISSILE', 
-                                        radius, 
-                                        color, 
-                                        rotation, 
-                                        displayAsGhost
-                                    );
-                                } else if (entity.type === 'NUKE') {
-                                    drawShape(
-                                        ctx, 
-                                        entity.x, 
-                                        entity.y, 
-                                        'NUKE_FLYING', 
-                                        radius, 
-                                        color, 
-                                        0, 
-                                        displayAsGhost
-                                    );
-                                } else {
-                                    const rotation = ((entity.angle !== undefined ? entity.angle : entity.currentAngle || 0) * Math.PI) / 180 + Math.PI / 2;
-                                    const shapeKey = SHAPES[entity.type] ? entity.type : 'PROJECTILE_SMALL';
-                                    drawShape(
-                                        ctx, 
-                                        entity.x, 
-                                        entity.y, 
-                                        shapeKey, 
-                                        radius, 
-                                        color, 
-                                        rotation, 
-                                        displayAsGhost
-                                    );
-                                }
-                                ctx.restore();
-                            } else if (entity.type === 'LASER_BEAM') {
-                                // Draw Laser Beam
-                                ctx.save();
-                                ctx.beginPath();
-                                ctx.moveTo(entity.x, entity.y);
-                                ctx.lineTo(entity.targetX, entity.targetY);
-                                ctx.strokeStyle = '#f0f'; // Magenta laser
-                                ctx.lineWidth = GLOBAL_STATS.LASER_BEAM_WIDTH;
-                                // shadow removed
-                                ctx.stroke();
-
-                                // Add a glow effect
-                                ctx.globalAlpha = 0.5;
-                                ctx.lineWidth = 6;
-                                ctx.stroke();
-                                ctx.restore();
-                            } else if (entity.type === 'SPARK') {
-                                drawShape(ctx, entity.x, entity.y, 'SPARK', 10, '#fff', 0, displayAsGhost);
-                            } else if (entity.type === 'RECLAIM') {
-                                const radius = entity.radius || 75;
-                                drawField(ctx, entity.x, entity.y, 'SHIELD_DOME', radius, '#00ffff', displayAsGhost);
-                            } else if (entity.type === 'EXPLOSION') {
-                                const explosionRadius = entity.radius || 40;
-                                const vStats = VISUAL_STATS[entity.itemType] || {};
-                                const shapeKey = entity.itemType === 'NUKE' ? 'NUKE_EXPLOSION' : 'EXPLOSION';
-                                drawShape(ctx, entity.x, entity.y, shapeKey, explosionRadius, vStats.color || '#ff9900', 0, displayAsGhost);
-                            } else if (entity.type === 'SHIELD_HIT') {
-                                drawShape(ctx, entity.x, entity.y, 'SHIELD_HIT', entity.radius || 15, '#00ffff', 0, displayAsGhost);
-                            } else if (entity.type === 'EXPLOSION_HAZARD') {
-                                const radius = entity.radius || 200;
-                                drawField(ctx, entity.x, entity.y, 'SHIELD_DOME', radius, '#ff4500', displayAsGhost);
-                            } else if (entity.type === 'NAPALM_FIRE') {
-                                ctx.save();
-                                const stats = ENTITY_STATS.NAPALM_FIRE;
-                                const time = Date.now() / 1000;
-                                const pulse = 1 + Math.sin(time * 10) * 0.03;
-                                const width = stats.width * pulse;
-                                const radius = width / 2;
-
-                                // Calculate shortest toroidal vector to determine orientation
-                                const { dx, dy } = getToroidalDistVector(
-                                    entity.startX,
-                                    entity.startY,
-                                    entity.endX,
-                                    entity.endY,
-                                    mapW,
-                                    mapH
-                                );
-                                const angle = Math.atan2(dy, dx);
-                                const length = Math.sqrt(dx * dx + dy * dy);
-
-                                ctx.translate(entity.startX, entity.startY);
-                                ctx.rotate(angle);
-
-                                // Vectorized Napalm: Draw repeating 'licks' along the hazard length
-                                const lickCount = Math.max(3, Math.floor(length / 20));
-                                const spacing = length / (lickCount - 1);
-                                
-                                ctx.fillStyle = '#ff4500';
-                                for (let i = 0; i < lickCount; i++) {
-                                    const progress = i / (lickCount - 1);
-                                    const flicker = 0.8 + Math.sin(time * 10 + i) * 0.2;
-                                    drawShape(
-                                        ctx, 
-                                        i * spacing, 
-                                        0, 
-                                        'NAPALM_LICK', 
-                                        radius * flicker, 
-                                        `rgba(255, ${69 + progress * 71}, 0, ${0.8 - progress * 0.4})`, 
-                                        Math.PI / 2, // Rotate lick to point perpendicular
-                                        displayAsGhost
-                                    );
-                                }
-                                ctx.restore();
-                            } else if (entity.type === 'LINK_COLLISION') {
-                                drawShape(ctx, entity.x, entity.y, 'SPARK', 25, '#00ffff', 0, displayAsGhost);
-                            } else {
-                                // Non-Projectile Entities (Structures, Hazards, etc.)
-                                if (
-                                    entity.type === 'LASER_POINT_DEFENSE' ||
-                                    entity.type === 'FLAK_DEFENSE'
-                                ) {
-                                    ctx.beginPath();
-                                    ctx.rect(
-                                        entity.x - radius,
-                                        entity.y - radius,
-                                        radius * 2,
-                                        radius * 2
-                                    );
-                                    ctx.fill();
-
-                                    // --- Flak Defense Wall Visuals ---
-                                    if (entity.type === 'FLAK_DEFENSE' && entity.flakActive) {
-                                        ctx.save();
-                                        const stats = ENTITY_STATS.FLAK_DEFENSE;
-                                        const arcRange = stats.range;
-                                        const arcWidth = (stats.arc * Math.PI) / 180;
-                                        const centerAngle = (entity.flakAngle * Math.PI) / 180;
-
-                                        // 1. Draw Sensor Cone (persistent faint arc)
-                                        ctx.save();
-                                        ctx.globalAlpha = 0.1;
-                                        ctx.fillStyle = color;
-                                        ctx.beginPath();
-                                        ctx.moveTo(entity.x, entity.y);
-                                        ctx.arc(
-                                            entity.x,
-                                            entity.y,
-                                            arcRange,
-                                            centerAngle - arcWidth / 2,
-                                            centerAngle + arcWidth / 2
-                                        );
-                                        ctx.fill();
-                                        ctx.restore();
-
-                                        // 2. Draw multiple random small "explosions" in the arc
-                                        ctx.save();
-                                        ctx.globalAlpha = 0.4;
-                                        const timeBucket = Math.floor(Date.now() / 83);
-                                        const getSeededRandom = (seed) => {
-                                            const x = Math.sin(seed) * 10000;
-                                            return x - Math.floor(x);
-                                        };
-                                        let patternSeed =
-                                            entity.id
-                                                .split('')
-                                                .reduce((acc, char) => acc + char.charCodeAt(0), 0) +
-                                            timeBucket;
-
-                                        for (let i = 0; i < 8; i++) {
-                                            const r = getSeededRandom(patternSeed++) * arcRange;
-                                            const theta =
-                                                centerAngle +
-                                                (getSeededRandom(patternSeed++) - 0.5) * arcWidth;
-                                            const ex = entity.x + Math.cos(theta) * r;
-                                            const ey = entity.y + Math.sin(theta) * r;
-                                            const eSize = 4 + getSeededRandom(patternSeed++) * 8;
-
-                                            ctx.beginPath();
-                                            ctx.arc(ex, ey, eSize, 0, Math.PI * 2);
-                                            const colorIdx = Math.floor(
-                                                getSeededRandom(patternSeed++) * 3
-                                            );
-                                            ctx.fillStyle =
-                                                colorIdx === 0
-                                                    ? '#cc6655'
-                                                    : colorIdx === 1
-                                                        ? '#ccaa66'
-                                                        : '#cccc77';
-                                            ctx.shadowBlur = 5;
-                                            ctx.shadowColor = '#884433';
-                                            ctx.fill();
-                                        }
-                                        ctx.restore();
-                                        ctx.restore();
-                                    }
-                                } else if (entity.type === 'HUB' || entity.type === 'EXTRACTOR' || entity.type === 'SHIELD' || entity.type === 'CLOAKING_FIELD' || entity.type === 'TURRET' || entity.type === 'RELAY' || entity.type === 'BARRIER') {
-                                    const shapeKey = entity.type; // Use the entity type directly as the shape key
-                                    
-                                    if (entity.type === 'SHIELD') {
-                                        const structureWarning = entity.hp <= 1;
-                                        const domeWarning = entity.barrierHp !== undefined && entity.barrierHp <= 1;
-
-                                        drawShape(ctx, entity.x, entity.y, shapeKey, radius, color, 0, displayAsGhost, structureWarning);
-
-                                        // Shield Bubble (Standardized Field)
-                                        if (entity.barrierHp > 0 && !isDisabled) {
-                                            drawField(ctx, entity.x, entity.y, 'SHIELD_DOME', ENTITY_STATS.SHIELD.range, '#00ffff', displayAsGhost, Date.now(), 60, 0, domeWarning);
-                                        }
-                                    } else {
-                                        const isWarning = entity.hp <= 1;
-                                        drawShape(ctx, entity.x, entity.y, shapeKey, radius, color, 0, displayAsGhost, isWarning);
-
-                                        // Cloak Field (Standardized Field)
-                                        if (entity.type === 'CLOAKING_FIELD') {
-                                            drawField(ctx, entity.x, entity.y, 'CLOAK_FIELD', ENTITY_STATS.CLOAKING_FIELD.cloakRange || 300, color, displayAsGhost);
-                                        }
-                                    }
-                                } else if (entity.type === 'NUKE') {
-                                    // Enhanced Nuke Icon (Landed)
-                                    ctx.save();
-                                    ctx.translate(entity.x, entity.y);
-                                    const remainingTurns =
-                                        (entity.detonationTurn || 0) - currentGameState.turn;
-                                    const isDetonating = remainingTurns <= 0;
-                                    const isCritical = remainingTurns <= 1;
-
-                                    // Pulse math -> Flash logic
-                                    const pulseSpeed = isDetonating ? 50 : isCritical ? 150 : 300;
-                                    const nukeWarning = Math.sin(Date.now() / pulseSpeed) > 0;
-
-                                    // 1. Aura (flicker via drawField)
-                                    drawField(ctx, 0, 0, 'SHIELD_DOME', radius * 2.2, isDetonating ? '#ff0000' : '#f1c40f', displayAsGhost, Date.now(), 60, 0, nukeWarning);
-
-                                    // 2. Main Body (flicker via drawShape)
-                                    drawShape(ctx, 0, 0, 'NUKE_FLYING', radius, isDetonating ? '#ff0000' : '#f39c12', 0, displayAsGhost, nukeWarning);
-
-                                    // 3. Integrated Countdown / Label
-                                    ctx.save();
-                                    ctx.fillStyle = '#fff';
-                                    ctx.font = `bold ${radius * (isDetonating ? 0.6 : 0.9)}px Orbitron, Arial`;
-                                    ctx.textAlign = 'center';
-                                    ctx.textBaseline = 'middle';
-                                    // shadow removed
-                                    if (isDetonating) {
-                                        ctx.fillText('CRITICAL', 0, 0);
-                                    } else if (remainingTurns > 0) {
-                                        ctx.fillText(remainingTurns.toString(), 0, 0);
-                                    }
-                                    ctx.restore();
-
-                                    // 4. Detonation Radius Preview (Standardized Field)
-                                    if (entity.owner === myPlayerId) {
-                                        drawField(ctx, entity.x - entity.x, entity.y - entity.y, 'SHIELD_DOME', ENTITY_STATS.NUKE.radiusFull, 'rgba(255, 50, 50, 0.4)', displayAsGhost);
-                                    }
-                                    ctx.restore();
-                                } else {
-                                    if (entity.itemType === 'RECLAIMER') {
-                                        drawShape(ctx, entity.x, entity.y, 'RECLAIMER', radius, color, 0, displayAsGhost);
-                                    } else {
-                                        drawShape(ctx, entity.x, entity.y, entity.type, radius, color, 0, displayAsGhost);
-                                    }
-                                }
-                                if (isUndeployed) {
-                                    drawField(ctx, entity.x, entity.y, 'CLOAK_FIELD', radius * 1.5, '#fff', displayAsGhost);
-                                }
-                            }
-
-                            if (isSelected) {
-                                ctx.strokeStyle = '#fff';
-                                ctx.lineWidth = 3;
-                                ctx.stroke();
-
-                                if (
-                                    launchMode &&
-                                    entity.type === 'HUB' &&
-                                    entity.owner === myPlayerId &&
-                                    !displayAsGhost
-                                ) {
-                                    ctx.save();
-                                    ctx.setLineDash([8, 12]);
-                                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-                                    ctx.lineWidth = 2;
-
-                                    // Use toroidal distance for robust highlight detection
-                                    const d = getToroidalDist(
-                                        entity.x,
-                                        entity.y,
-                                        mousePos.x,
-                                        mousePos.y,
-                                        mapW,
-                                        mapH
-                                    );
-                                    const ringHighlight = shouldHighlightRing(
-                                        d,
-                                        SLING_RING_RADIUS,
-                                        isAiming && entity.id === selectedHubId
-                                    );
-
-                                    if (ringHighlight) {
-                                        const isActive = isAiming && entity.id === selectedHubId;
-                                        ctx.strokeStyle = isActive
-                                            ? 'rgba(255, 255, 255, 0.95)'
-                                            : 'rgba(255, 255, 255, 0.7)';
-                                        // shadow removed
-                                    }
-
-                                    ctx.beginPath();
-                                    ctx.arc(entity.x, entity.y, SLING_RING_RADIUS, 0, Math.PI * 2);
-                                    ctx.stroke();
-                                    ctx.restore();
-
-                                    // Task 4: Draw North-offset ghosted icon of selected item
-                                    if (selectedItemType && selectedItemType !== 'HUB') {
-                                        ctx.save();
-                                        ctx.globalAlpha = 0.5;
-                                        ctx.translate(entity.x, entity.y - 60);
-
-                                        // Draw simplified ghost of the structure
-                                        ctx.beginPath();
-                                        ctx.strokeStyle = '#fff';
-                                        ctx.setLineDash([2, 4]);
-                                        ctx.lineWidth = 1;
-
-                                        const iconSize = (ENTITY_STATS[selectedItemType]?.size || 15) * 0.8;
-
-                                        if (selectedItemType.includes('DEFENSE') || selectedItemType === 'SHIELD') {
-                                            ctx.strokeRect(-iconSize, -iconSize, iconSize * 2, iconSize * 2);
-                                        } else {
-                                            ctx.arc(0, 0, iconSize, 0, Math.PI * 2);
-                                            ctx.stroke();
-                                        }
-
-                                        // Label for the ghost
-                                        ctx.fillStyle = '#fff';
-                                        ctx.font = '8px Arial';
-                                        ctx.textAlign = 'center';
-                                        ctx.fillText(selectedItemType, 0, iconSize + 10);
-
-                                        ctx.restore();
-                                    }
-                                }
-                            }
-                            ctx.restore();
-
-                            // Draw label if not a projectile or beam
-                            const isTransEntity =
-                                entity.type === 'PROJECTILE' ||
-                                ENTITY_STATS[entity.itemType || entity.type]?.damageFull !==
-                                undefined ||
-                                entity.type === 'LASER_BEAM';
-                            if (!isTransEntity) {
-                                ctx.save();
-                                ctx.globalAlpha = displayAsGhost ? 0.3 : 0.8;
-                                ctx.fillStyle = '#fff';
-                                ctx.font = displayAsGhost ? 'italic 10px Arial' : '10px Arial';
-                                ctx.textAlign = 'center';
-                                const labelOffset =
-                                    ENTITY_STATS[entity.itemType || entity.type]?.labelOffset || 35;
-                                ctx.fillText(
-                                    displayAsGhost ? `Ghost ${entity.type}` : entity.type,
-                                    entity.x,
-                                    entity.y + labelOffset
-                                );
-                                ctx.restore();
-
-                                if (
-                                    entity.fuel !== undefined &&
-                                    entity.owner === myPlayerId &&
-                                    !displayAsGhost
-                                ) {
-                                    const dotYOffset = entity.type === 'HUB' ? -15 : -10;
-                                    const dotXOffset = entity.type === 'HUB' ? 18 : 12;
-                                    for (let i = 0; i < entity.maxFuel; i++) {
-                                        ctx.beginPath();
-                                        const dotY = entity.y + dotYOffset + i * 8;
-                                        ctx.arc(entity.x + dotXOffset, dotY, 3, 0, Math.PI * 2);
-                                        ctx.fillStyle = i < entity.fuel ? '#2ecc71' : '#444';
-                                        ctx.fill();
-                                    }
-                                }
-
-                                // Nuke Countdown logic moved to main rendering block
-                            }
-                        });
-
-                        // 6. DRAW AIMING OVERLAY & UI previews
-                        if (isAiming && selectedHubId) {
-                            const hub = visualEntities.current[selectedHubId];
-                            if (hub) {
-                                // Calculate shortest vector once for world-wrap aware aiming
-                                const { dx: shortestDx, dy: shortestDy } = getToroidalDistVector(
-                                    hub.x,
-                                    hub.y,
-                                    mousePos.x,
-                                    mousePos.y,
-                                    mapW,
-                                    mapH
-                                );
-
-                                let dx = shortestDx;
-                                let dy = shortestDy;
-                                let distance = Math.sqrt(dx * dx + dy * dy);
-                                if (distance > maxPullDistance) {
-                                    const angle = Math.atan2(dy, dx);
-                                    dx = Math.cos(angle) * maxPullDistance;
-                                    dy = Math.sin(angle) * maxPullDistance;
-                                    distance = maxPullDistance;
-                                }
-                                const ratio = distance / maxPullDistance;
-                                const strengthColor = getStrengthColor(ratio);
-                                const launchAngle = Math.atan2(-dy, -dx);
-
-                                ctx.setLineDash([5, 5]);
-                                ctx.strokeStyle = '#fff';
-                                ctx.beginPath();
-                                ctx.moveTo(hub.x, hub.y);
-                                ctx.lineTo(hub.x + dx, hub.y + dy);
-                                ctx.stroke();
-                                ctx.setLineDash([]);
-
-                                const arrowLen = HUB_RADIUS * (1 + ratio * 0.5);
-                                const arrowX = hub.x + Math.cos(launchAngle) * arrowLen;
-                                const arrowY = hub.y + Math.sin(launchAngle) * arrowLen;
-
-                                ctx.strokeStyle = strengthColor;
-                                ctx.lineWidth = 4;
-                                ctx.beginPath();
-                                ctx.moveTo(hub.x, hub.y);
-                                ctx.lineTo(arrowX, arrowY);
-                                ctx.stroke();
-
-                                ctx.save();
-                                ctx.translate(arrowX, arrowY);
-                                ctx.rotate(launchAngle);
-                                ctx.fillStyle = strengthColor;
-                                ctx.beginPath();
-                                ctx.moveTo(0, 0);
-                                ctx.lineTo(-12, -7);
-                                ctx.lineTo(-12, 7);
-                                ctx.closePath();
-                                ctx.fill();
-                                ctx.restore();
-
-                                // Calculate projected target for all previews (Safety, Debug, Weapon Range)
-                                let launchDistance = GameState.calculateLaunchDistance(distance);
-                                const stats = ENTITY_STATS[selectedItemType];
-                                if (stats?.minRange) {
-                                    launchDistance = Math.max(stats.minRange, launchDistance);
-                                }
-                                const ldx = Math.cos(launchAngle) * launchDistance;
-                                const ldy = Math.sin(launchAngle) * launchDistance;
-                                const targetX = (hub.x + (ldx % mapW) + mapW) % mapW;
-                                const targetY = (hub.y + (ldy % mapH) + mapH) % mapH;
-                                
-                                
-                                // Slingshot Safety: Check for link angle separation from the same hub
-                                const isInvalidAngle = GameState.checkLinkAngleSeparation(
-                                    selectedItemType,
-                                    selectedHubId,
-                                    targetX,
-                                    targetY,
-                                    gameState.links,
-                                    committedActions,
-                                    Object.values(visualEntities.current),
-                                    gameState.map
-                                );
-                                
-                                if (isInvalidAngle) {
-                                    ctx.save();
-                                    ctx.fillStyle = '#ff3333';
-                                    ctx.font = 'bold 12px "Courier New"';
-                                    ctx.textAlign = 'left';
-                                    
-                                    // Random jitter/glitch for the text
-                                    const glitchX = (Math.random() - 0.5) * 2;
-                                    const glitchY = (Math.random() - 0.5) * 2;
-                                    
-                                    const labelX = hub.x + ENTITY_STATS.HUB.size + 15;
-                                    const labelY = hub.y + 5;
-                                    
-                                    ctx.fillText('INVALID ANGLE', labelX + glitchX, labelY + glitchY);
-                                    
-                                    // Indicator dot at hub
-                                    ctx.beginPath();
-                                    ctx.arc(hub.x, hub.y, 5, 0, Math.PI * 2);
-                                    ctx.fill();
-                                    ctx.restore();
-                                }
-                                
-                                if (showDebugPreview) {
-                                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-                                    ctx.setLineDash([2, 5]);
-                                    drawToroidalLine(
-                                        ctx,
-                                        hub.x,
-                                        hub.y,
-                                        targetX,
-                                        targetY,
-                                        mapW,
-                                        mapH,
-                                        ldx,
-                                        ldy
-                                    );
-                                    ctx.setLineDash([]);
-                                
-                                    const previewSize = stats?.size || 12;
-
-                                    if (selectedItemType === 'CLUSTER_BOMB') {
-                                        const count = stats.subBombCount;
-                                        const totalSpread = stats.spreadDistance;
-                                        const step = totalSpread / (count - 1 || 1);
-
-                                        // Perpendicular unit vector
-                                        const px = -ldy / launchDistance;
-                                        const py = ldx / launchDistance;
-
-                                        for (let i = 0; i < count; i++) {
-                                            const offset = i * step - totalSpread / 2;
-                                            const subTargetX = (targetX + offset * px + mapW) % mapW;
-                                            const subTargetY = (targetY + offset * py + mapH) % mapH;
-
-                                            ctx.beginPath();
-                                            ctx.arc(subTargetX, subTargetY, previewSize, 0, Math.PI * 2);
-                                            ctx.stroke();
-                                        }
-                                    } else {
-                                        ctx.beginPath();
-                                        if (selectedItemType === 'HUB' || selectedItemType === 'NUKE') {
-                                            // Hexagon Preview
-                                            for (let i = 0; i < 6; i++) {
-                                                const a = (i * 2 * Math.PI) / 6;
-                                                ctx.lineTo(
-                                                    targetX + previewSize * Math.cos(a),
-                                                    targetY + previewSize * Math.sin(a)
-                                                );
-                                            }
-                                            ctx.closePath();
-                                        } else if (selectedItemType === 'EXTRACTOR') {
-                                            // Triangle Preview
-                                            ctx.moveTo(targetX, targetY - previewSize);
-                                            ctx.lineTo(targetX + previewSize, targetY + previewSize / 2);
-                                            ctx.lineTo(targetX - previewSize, targetY + previewSize / 2);
-                                            ctx.closePath();
-
-                                            // Capture Radius Preview
-                                            ctx.save();
-                                            ctx.strokeStyle = VISUAL_STATS.EXTRACTOR.captureRadiusColor;
-                                            ctx.setLineDash([5, 5]);
-                                            ctx.beginPath();
-                                            ctx.arc(targetX, targetY, GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS, 0, Math.PI * 2);
-                                            ctx.stroke();
-                                            ctx.restore();
-                                        } else if (
-                                            selectedItemType === 'SHIELD' ||
-                                            selectedItemType === 'LASER_POINT_DEFENSE' ||
-                                            selectedItemType === 'FLAK_DEFENSE'
-                                        ) {
-                                            // Square Preview
-                                            ctx.rect(targetX - previewSize, targetY - previewSize, previewSize * 2, previewSize * 2);
-                                        } else {
-                                            // Default Circle for projectiles
-                                            ctx.arc(targetX, targetY, previewSize, 0, Math.PI * 2);
-                                        }
-                                        ctx.stroke();
-
-                                        // AOE Preview for explosive weapons (Nuke, Weapon, Super Bomb, OVERLOAD) or SHIELD
-                                        const explosionRadius = stats?.radiusFull || stats?.detectionRadius || stats?.range;
-                                        if (explosionRadius) {
-                                            ctx.save();
-
-                                            const vStats = VISUAL_STATS[selectedItemType];
-                                            const previewColor =
-                                                selectedItemType === 'NUKE'
-                                                    ? 'rgba(255, 0, 0, 0.7)'
-                                                    : selectedItemType === 'RECLAIMER'
-                                                        ? 'rgba(0, 255, 255, 0.7)'
-                                                        : selectedItemType === 'SHIELD'
-                                                            ? 'rgba(0, 255, 255, 0.5)'
-                                                            : vStats?.color
-                                                                ? `${vStats.color}b3`
-                                                                : 'rgba(255, 255, 255, 0.5)';
-
-                                            // 1. Full Damage Inner Ring (Solid-ish) / Shield Barrier
-                                            ctx.strokeStyle = previewColor;
-                                            ctx.lineWidth =
-                                                selectedItemType === 'NUKE' ||
-                                                    selectedItemType === 'RECLAIMER' ||
-                                                    selectedItemType === 'OVERLOAD' ||
-                                                    selectedItemType === 'SHIELD'
-                                                    ? 3
-                                                    : 2;
-                                            ctx.setLineDash([10, 5]);
-                                            ctx.beginPath();
-
-                                            // Boundary is always circular for Shield now
-                                            ctx.arc(targetX, targetY, explosionRadius, 0, Math.PI * 2);
-                                            ctx.stroke();
-
-                                            // Add subtle boundary preview for Shield
-                                            if (selectedItemType === "SHIELD") {
-                                                // Just the boundary ring, no internal hexes for the preview
-                                            }
-                                            // 2. Splash Damage Outer Ring (Dashed/Subtle)
-                                            if (stats.radiusHalf && stats.radiusHalf > stats.radiusFull) {
-                                                ctx.strokeStyle =
-                                                    selectedItemType === 'NUKE'
-                                                        ? 'rgba(255, 140, 0, 0.5)'
-                                                        : 'rgba(255, 255, 255, 0.3)';
-                                                ctx.lineWidth = 1.5;
-                                                ctx.setLineDash([5, 15]);
-                                                ctx.beginPath();
-                                                ctx.arc(targetX, targetY, stats.radiusHalf, 0, Math.PI * 2);
-                                                ctx.stroke();
-                                            }
-
-                                            ctx.restore();
-                                        }
-
-                                        // Napalm AOE Preview during aiming
-                                        if (selectedItemType === 'NAPALM') {
-                                            ctx.save();
-                                            const nStats = ENTITY_STATS.NAPALM_FIRE;
-                                            const { dx, dy } = getToroidalDistVector(
-                                                hub.x,
-                                                hub.y,
-                                                targetX,
-                                                targetY,
-                                                mapW,
-                                                mapH
-                                            );
-                                            const angle = Math.atan2(dy, dx);
-                                            const radius = nStats.width / 2;
-
-                                            ctx.translate(targetX, targetY);
-                                            ctx.rotate(angle);
-                                            ctx.strokeStyle = 'rgba(255, 140, 0, 0.6)';
-                                            ctx.lineWidth = 2;
-                                            ctx.setLineDash([5, 5]);
-
-                                            ctx.beginPath();
-                                            // Remember: TargetX is the TIP, so we draw BACKWARDS (negative length)
-                                            ctx.arc(0, 0, radius, -Math.PI / 2, Math.PI / 2);
-                                            ctx.lineTo(-nStats.length, radius);
-                                            ctx.arc(-nStats.length, 0, radius, Math.PI / 2, -Math.PI / 2);
-                                            ctx.closePath();
-                                            ctx.stroke();
-                                            ctx.restore();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // committed actions preview - moved out of isAiming block to stay visible
-                        committedActions.forEach((action, index) => {
-                            const hub = visualEntities.current[action.sourceId];
-                            if (hub) {
-                                const angleRad = (action.angle * Math.PI) / 180;
-                                const ratio = action.distance / maxPullDistance;
-                                const strengthColor = getStrengthColor(ratio);
-                                const arrowLen = HUB_RADIUS * (1 + ratio * 0.5);
-                                const ax = hub.x + Math.cos(angleRad) * arrowLen;
-                                const ay = hub.y + Math.sin(angleRad) * arrowLen;
-
-                                ctx.strokeStyle = strengthColor;
-                                ctx.lineWidth = 4;
-                                ctx.globalAlpha = 0.6;
-                                ctx.beginPath();
-                                ctx.moveTo(hub.x, hub.y);
-                                ctx.lineTo(ax, ay);
-                                ctx.stroke();
-                                ctx.globalAlpha = 1.0;
-
-                                ctx.fillStyle = strengthColor;
-                                ctx.beginPath();
-                                ctx.arc(
-                                    ax + Math.cos(angleRad) * 15,
-                                    ay + Math.sin(angleRad) * 15,
-                                    10,
-                                    0,
-                                    Math.PI * 2
-                                );
-                                ctx.fill();
-                                ctx.fillStyle = '#fff';
-                                ctx.font = 'bold 10px Arial';
-                                ctx.textAlign = 'center';
-                                ctx.fillText(
-                                    (index + 1).toString(),
-                                    ax + Math.cos(angleRad) * 15,
-                                    ay + Math.sin(angleRad) * 15 + 4
-                                );
-                            }
-                        });
+                        // Draw active nodes and weapon entities
+                        drawEntities(ctx, currentGameState, vEntities, pid, viewBounds, ox, oy);
 
                         ctx.restore();
                     }
                 }
+
+                // Draw aiming pulling overlays and locked slingshot lines
+                const activeHub = props.selectedHubId ? currentGameState.entities.find((e) => e.id === props.selectedHubId) : null;
+                const state = { activeHub, HUB_RADIUS, SLING_RING_RADIUS };
+                drawUIOverlays(ctx, props, state, getStrengthColor, getScreenCoords);
+
                 ctx.restore();
 
-
+                animationFrameId = requestAnimationFrame(updateAndDraw);
             } catch (err) {
-                console.error("Rendering Error:", err);
+                console.error('Error rendering GameBoard:', err);
+                animationFrameId = requestAnimationFrame(updateAndDraw);
             }
-            animationFrameId = requestAnimationFrame(updateAndDraw);
         };
 
         animationFrameId = requestAnimationFrame(updateAndDraw);
-        return () => cancelAnimationFrame(animationFrameId);
-    }, [
-        gameState,
-        launchMode,
-        isAiming,
-        selectedHubId,
-        selectedItemType,
-        mousePos,
-        committedActions,
-        showDebugPreview,
-        maxPullDistance,
-        myPlayerId,
-        cameraOffset,
-        setCameraOffset,
-        zoom,
-        HUB_RADIUS,
-        SLING_RING_RADIUS
-    ]);
 
-    useImperativeHandle(ref, () => ({
-        getScreenCoords,
-        getGameCoords
-    }));
+        return () => {
+            cancelAnimationFrame(animationFrameId);
+        };
+    }, [updateInterpolation]);
 
     return (
-        <div
-            className="game-container"
-            style={{
-                overflow: 'hidden'
-            }}
-        >
-            <canvas
-                ref={canvasRef}
-                width={gameState.map.width}
-                height={gameState.map.height}
-                onPointerDown={handlePointerDown}
-                style={{
-                    display: 'block',
-                    cursor: isAiming ? 'crosshair' : isPanning ? 'grabbing' : 'grab',
-                    width: '100%',
-                    maxHeight: '100%',
-                    objectFit: 'fill'
-                }}
-            />
-        </div>
+        <canvas
+            ref={canvasRef}
+            width={800}
+            height={600}
+            style={{ display: 'block', width: '100%', height: '100%', cursor: isAiming ? 'crosshair' : isPanning ? 'grabbing' : 'default' }}
+            onPointerDown={handlePointerDown}
+        />
     );
 });
+
+GameBoard.displayName = 'GameBoard';
 
 export default GameBoard;
