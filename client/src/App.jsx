@@ -11,6 +11,8 @@ import CRTEffect from 'vault66-crt-effect';
 import "vault66-crt-effect/dist/vault66-crt-effect.css";
 import AssetGallery from './components/AssetGallery';
 import { audioManager, TRACKS } from './utils/AudioManager';
+import SidebarLeft from './components/HUD/SidebarLeft';
+import SidebarRight from './components/HUD/SidebarRight';
 
 const socket = io('/', {
     transports: ['polling', 'websocket'],
@@ -509,193 +511,44 @@ function App() {
     const interactionBlocked = isLocked || isResolvingUI || isSpectator || isUnassigned;
 
     const sidebarLeft = (
-        <aside className="sidebar-left">
-            <div className="player-info" style={{ color: pCurrent.color }}>
-                <h1>Titan: Nexus</h1>
-                <div className="stats-blocks">
-                    <div className="stat-group">
-                        <span className="label">You:</span>
-                        <span className="badge">{myPlayerId || 'Pending'}</span>
-                    </div>
-                    <div className="stat-group energy-group">
-                        <span className="label">Energy:</span>
-                        <span className="value energy">{pCurrent.energy}</span>
-                        {(() => {
-                            let projectedIncome = GLOBAL_STATS.ENERGY_INCOME_PER_TURN;
-                            if (playerState?.entities && myPlayerId && !isSpectator) {
-                                playerState.entities.forEach((entity) => {
-                                    if (entity.owner === myPlayerId) {
-                                        if (entity.disabledUntilTurn > playerState.turn) return;
-
-                                        const stats = ENTITY_STATS[entity.type];
-                                        if (stats && stats.energyGen) {
-                                            projectedIncome += stats.energyGen;
-                                            if (entity.type === 'EXTRACTOR') {
-                                                const node = playerState.map.resources.find((res) => {
-                                                    let dx = Math.abs(res.x - entity.x);
-                                                    let dy = Math.abs(res.y - entity.y);
-                                                    if (dx > playerState.map.width / 2)
-                                                        dx = playerState.map.width - dx;
-                                                    if (dy > playerState.map.height / 2)
-                                                        dy = playerState.map.height - dy;
-                                                    const dist = Math.sqrt(dx * dx + dy * dy);
-                                                    return dist <= GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS;
-                                                });
-                                                if (node) projectedIncome += node.value;
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-                            return (
-                                <span className="income" title="Projected income next turn">
-                                    (+{projectedIncome})
-                                </span>
-                            );
-                        })()}
-                    </div>
-                </div>
-            </div>
-
-            <div className="audio-panel">
-                <div className="panel-title">COMM AUDIO</div>
-                <div className="audio-controls">
-                    <button 
-                        className={`mute-btn ${audioMuted ? 'muted' : ''}`} 
-                        onClick={handleMuteToggle}
-                        title={audioMuted ? "Unmute Audio" : "Mute Audio"}
-                    >
-                        {audioMuted ? "OFF" : "ON"}
-                    </button>
-                    <div className="slider-container">
-                        <span className="slider-label">VOL:</span>
-                        <input 
-                            type="range" 
-                            min="0" 
-                            max="1" 
-                            step="0.05" 
-                            value={audioVolume} 
-                            onChange={handleVolumeChange}
-                            className="retro-slider"
-                            disabled={audioMuted}
-                        />
-                    </div>
-                </div>
-                <div className="track-selector-container">
-                    <span className="slider-label" style={{ fontSize: '0.55rem', color: '#666', letterSpacing: '1px' }}>TRACK:</span>
-                    <select 
-                        value={currentTrackPath} 
-                        onChange={(e) => handleTrackChange(e.target.value)}
-                        className="retro-select"
-                    >
-                        {TRACKS.map(t => (
-                            <option key={t.id} value={t.path}>{t.name}</option>
-                        ))}
-                    </select>
-                    
-                    <div className="media-controls-grid">
-                        <button className="media-btn" onClick={handlePrevTrack} title="Previous Track">
-                            PREV
-                        </button>
-                        <button 
-                            className={`media-btn ${audioPlaying ? 'active' : ''}`} 
-                            onClick={handlePlayPauseToggle} 
-                            title={audioPlaying ? "Pause" : "Play"}
-                        >
-                            {audioPlaying ? "PAUS" : "PLAY"}
-                        </button>
-                        <button className="media-btn" onClick={handleNextTrack} title="Next Track">
-                            NEXT
-                        </button>
-                        <button 
-                            className={`media-btn ${audioShuffle ? 'active' : ''}`} 
-                            onClick={handleShuffleToggle} 
-                            title="Toggle Shuffle"
-                        >
-                            SHUF
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div className="footer-hint">
-                {isSpectator
-                    ? "Observing match."
-                    : selectedHubId
-                        ? `Hub ${selectedHubId} Selected.`
-                        : 'Select Hub.'}
-            </div>
-        </aside>
+        <SidebarLeft
+            myPlayerId={myPlayerId}
+            pCurrent={pCurrent}
+            playerState={playerState}
+            isSpectator={isSpectator}
+            selectedHubId={selectedHubId}
+            audioVolume={audioVolume}
+            audioMuted={audioMuted}
+            currentTrackPath={currentTrackPath}
+            audioPlaying={audioPlaying}
+            audioShuffle={audioShuffle}
+            handleVolumeChange={handleVolumeChange}
+            handleMuteToggle={handleMuteToggle}
+            handlePlayPauseToggle={handlePlayPauseToggle}
+            handlePrevTrack={handlePrevTrack}
+            handleNextTrack={handleNextTrack}
+            handleShuffleToggle={handleShuffleToggle}
+            handleTrackChange={handleTrackChange}
+        />
     );
 
     const sidebarRight = (
-        <aside className="sidebar-right">
-            <div className="sync-monitor">
-                <div
-                    className={`player-dot ${syncStatus?.lockedIn?.player1 ? 'ready' : ''}`}
-                    title="Player 1"
-                >
-                    P1
-                </div>
-                <div
-                    className={`player-dot ${syncStatus?.lockedIn?.player2 ? 'ready' : ''}`}
-                    title="Player 2"
-                >
-                    P2
-                </div>
-            </div>
-
-            <div className="controls-stack">
-                <div className="stats-blocks">
-                    <div className="stat-group">
-                        <span className="label">Turn:</span>
-                        <span className="value turn">{playerState?.turn || 1}</span>
-                    </div>
-                    <div className="stat-group timer-group">
-                        <span className="label">Time:</span>
-                        <span className={`value timer ${timeRemaining <= 10 ? 'low' : ''}`}>
-                            {timeRemaining}s
-                        </span>
-                    </div>
-                    {showDebugPreview && playerState?.map && (
-                        <>
-                            <div className="stat-group" style={{ color: '#0f0', fontSize: '0.8em', marginTop: '10px' }}>
-                                <span className="label">Center:</span>
-                                <span className="value">
-                                    {(cameraOffset.x + (playerState.map.width / zoom) / 2).toFixed(0)}, {(cameraOffset.y + (playerState.map.height / zoom) / 2).toFixed(0)}
-                                </span>
-                            </div>
-                        </>
-                    )}
-                </div>
-
-                {committedActions.length > 0 && !interactionBlocked && (
-                    <button className="clear-btn" onClick={handleClearActions}>
-                        Clear ({committedActions.length})
-                    </button>
-                )}
-
-                <div className="spacer" style={{ flex: 1 }} />
-
-                <button
-                    className={`execute-btn ${isLocked ? 'waiting' : ''}`}
-                    onClick={handleExecuteTurn}
-                    disabled={interactionBlocked}
-                >
-                    {isResolvingUI
-                        ? 'Simulating'
-                        : isLocked
-                            ? 'Waiting'
-                            : isSpectator
-                                ? 'Spectating'
-                                : isUnassigned
-                                    ? '...'
-                                    : committedActions.length > 0
-                                        ? `Ready (${committedActions.length})`
-                                        : 'Ready'}
-                </button>
-            </div>
-        </aside>
+        <SidebarRight
+            syncStatus={syncStatus}
+            playerState={playerState}
+            timeRemaining={timeRemaining}
+            showDebugPreview={showDebugPreview}
+            cameraOffset={cameraOffset}
+            zoom={zoom}
+            committedActions={committedActions}
+            interactionBlocked={interactionBlocked}
+            handleClearActions={handleClearActions}
+            handleExecuteTurn={handleExecuteTurn}
+            isLocked={isLocked}
+            isResolvingUI={isResolvingUI}
+            isSpectator={isSpectator}
+            isUnassigned={isUnassigned}
+        />
     );
 
     const playerColor = pBase?.color || '#00ff44';
