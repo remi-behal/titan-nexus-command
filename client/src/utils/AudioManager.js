@@ -242,8 +242,8 @@ class AudioManager {
     }
 
     playHeavyLaunch() {
-        // Deep rocket rumble/thrust for Homing Missiles and Nukes
-        return this.playSfx([0.4, undefined, 80, .1, .2, .3, undefined, 1.5, undefined, -5]);
+        // Deep rocket rumble/thrust
+        return this.playSfx([1.3,0,82,.03,.06,.14,4,.3,-4,7,0,0,0,1.6,0,.8,0,.5,.2,0,221]); // Explosion 31));
     }
 
     playLaser() {
@@ -313,7 +313,7 @@ class AudioManager {
 
     playSamLaunch() {
         // Pneumatic eject noise pop + rising frequency sweep whistle
-        return this.playSfx([0.35, undefined, 180, 0.05, 0.05, 0.2, undefined, 1.2, undefined, 10, undefined, undefined, undefined, 200, 0.02]);
+        return this.playSfx([1,0,528,.01,0,.48,0,.3,-9,0,0,0,.32,4.2,0,0,0,1,0,0,0]); // Sam launch
     }
 
     playSamFlight() {
@@ -400,6 +400,16 @@ class AudioManager {
         // upgrade musical
         return this.playSfx([0.8, undefined, 866, 0, .09, .41, 3, 2.6, undefined, undefined, 165, .09, .12, undefined, undefined, undefined, .03, .98, .11, .47, 241]);
     }
+    // Inside AudioManager class
+    async playHeavyErrorCombo() {
+        // Plays both sounds in parallel and returns their sources in an array
+        const sources = await Promise.all([
+            this.playHeavyLaunch(),
+            this.playLongError()
+        ]);
+    return sources; // Can be routed or handled together
+}
+
 }
 
 export const audioManager = new AudioManager();

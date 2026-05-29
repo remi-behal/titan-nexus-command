@@ -1446,6 +1446,7 @@ export class GameState {
                                     ...tempVisuals.map((v) => ({
                                         id: `viz-${Math.random()}`,
                                         type: v.type,
+                                        itemType: v.itemType,
                                         x: v.x,
                                         y: v.y,
                                         radius: v.radius,
