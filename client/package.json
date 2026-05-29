@@ -13,8 +13,7 @@
         "chiptune3": "^0.8.7",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
-        "socket.io-client": "^4.8.3",
-        "vault66-crt-effect": "^2.0.1"
+        "socket.io-client": "^4.8.3"
     },
     "devDependencies": {
         "@eslint/js": "^9.39.1",
