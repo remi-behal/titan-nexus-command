@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
 import { GameState } from '../../shared/GameState.js';
 import { ENTITY_STATS, GLOBAL_STATS } from '../../shared/constants/EntityStats.js';
@@ -7,8 +7,6 @@ import RadialMenu from './components/RadialMenu';
 import { LobbyOverlay } from './components/LobbyOverlay';
 import MapDesigner from './components/MapDesigner';
 import { io } from 'socket.io-client';
-import CRTEffect from 'vault66-crt-effect';
-import "vault66-crt-effect/dist/vault66-crt-effect.css";
 import AssetGallery from './components/AssetGallery';
 import { audioManager, TRACKS } from './utils/AudioManager';
 import SidebarLeft from './components/HUD/SidebarLeft';
@@ -403,7 +401,9 @@ function App() {
         setZoom(prev => Math.max(1.0, Math.min(3.0, prev)));
     }, [playerState?.map]);
 
-    const handleWheel = (e) => {
+    const handleWheel = useCallback((e) => {
+        e.preventDefault();
+
         if (!viewportRef.current || isResolvingUI) return;
 
         const zoomSpeed = 0.001;
@@ -426,7 +426,30 @@ function App() {
         }));
 
         setZoom(newZoom);
-    };
+    }, [zoom, isResolvingUI, playerState, setCameraOffset, setZoom]);
+
+    // Use a Ref to ensure the non-passive native event listener always gets
+    // the freshest state closure without needing constant event re-binding.
+    const handleWheelRef = useRef(handleWheel);
+    useEffect(() => {
+        handleWheelRef.current = handleWheel;
+    }, [handleWheel]);
+
+    useEffect(() => {
+        const viewport = viewportRef.current;
+        if (!viewport) return;
+
+        const onWheelNative = (e) => {
+            if (handleWheelRef.current) {
+                handleWheelRef.current(e);
+            }
+        };
+
+        viewport.addEventListener('wheel', onWheelNative, { passive: false });
+        return () => {
+            viewport.removeEventListener('wheel', onWheelNative);
+        };
+    }, [matchStarted, playerState, myPlayerId, currentView]);
 
     useEffect(() => {
         if (!matchStarted && currentView === 'LOBBY') {
@@ -673,24 +696,8 @@ function App() {
             <>
                 {sidebarLeft}
 
-                <div className="viewport-crt-container" ref={viewportRef} onWheel={handleWheel}>
+                <div className="viewport-crt-container" ref={viewportRef}>
                     <div className="crt-scanlines-pixel-perfect" />
-                    <CRTEffect
-                        key={playerColor}
-                        theme="custom"
-                        scanlineColor={crtColor}
-                        edgeGlowColor={crtColor}
-                        glowColor={crtColor}
-                        enableEdgeGlow={false}
-                        enableScanlines={false}
-                        enableGlow={false}
-                        enableSweep={false}
-                        scanlineOpacity={0.2}
-                        scanlineThickness={1}
-                        scanlineGap={4}
-                        enableVignette={true}
-                        vignetteIntensity={0.2}
-                    >
                         <main className={`game-world ${isResolvingUI ? 'locked-out' : ''} ${glitchActive ? 'glitch-rejection' : ''}`}>
                             {!isResolvingUI && !committedActions.length && selectedHubId && launchMode && (
                                 <div className="hint-overlay">Drag from your selected Hub to launch</div>
@@ -768,7 +775,6 @@ function App() {
                                 </div>
                             </div>
                         )}
-                    </CRTEffect>
                 </div>
 
                 {sidebarRight}
@@ -779,9 +785,13 @@ function App() {
 
     const isGalleryMode = new URLSearchParams(window.location.search).get('gallery') === 'true';
 
+    if (isGalleryMode) {
+        return <AssetGallery />;
+    }
+
     return (
         <div className="App">
-            {isGalleryMode ? <AssetGallery /> : renderContent()}
+            {renderContent()}
         </div>
     );
 }

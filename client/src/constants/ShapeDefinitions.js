@@ -221,5 +221,56 @@ export const SHAPES = {
         type: SHAPE_TYPES.BURST,
         points: 6,
         jaggedness: 0.8
+    },
+    ECHO_ARTILLERY: {
+        type: SHAPE_TYPES.PATH,
+        points: [[-0.4, 1], [0.4, 1], [0.6, 0.4], [0.2, 0], [0.8, -0.6], [0, -1], [-0.8, -0.6], [-0.2, 0], [-0.6, 0.4]],
+        layers: 2,
+        bracing: true,
+        closed: true
+    },
+    WEAPON: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0,-1], [0.4,-0.4], [0.4,0.4], [0.7,0.7], [0,0.4], [-0.7,0.7], [-0.4,0.4], [-0.4,-0.4]],
+        layers: 1,
+        closed: true
+    },
+    SAM_MISSILE: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0,-1.2], [0.2,-0.4], [0.2,0.4], [0.5,0.8], [0,0.5], [-0.5,0.8], [-0.2,0.4], [-0.2,-0.4]],
+        layers: 1,
+        closed: true
+    },
+    SMART_SAM_MISSILE: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0,-1.3], [0.15,-0.7], [0.3,-0.5], [0.15,-0.4], [0.15,0.4], [0.6,0.8], [0,0.5], [-0.6,0.8], [-0.15,0.4], [-0.15,-0.4], [-0.3,-0.5], [-0.15,-0.7]],
+        layers: 1,
+        closed: true
+    },
+    EMP: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0,-1], [0.3,-0.6], [0.7,-0.7], [0.4,-0.2], [1,0], [0.4,0.2], [0.7,0.7], [0.3,0.6], [0,1], [-0.3,0.6], [-0.7,0.7], [-0.4,0.2], [-1,0], [-0.4,-0.2], [-0.7,-0.7], [-0.3,-0.6]],
+        layers: 2,
+        closed: true
+    },
+    OVERLOAD: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0,-1.1], [0.96,0.55], [-0.96,0.55]],
+        layers: 3,
+        bracing: true,
+        closed: true
+    },
+    NAPALM: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0,-1], [0.4,-0.7], [0.4,0.7], [0.2,1], [-0.2,1], [-0.4,0.7], [-0.4,-0.7]],
+        layers: 1,
+        closed: true
+    },
+    SUPER_BOMB: {
+        type: SHAPE_TYPES.PATH,
+        points: [[0,-1], [0.5,-0.8], [0.5,-0.3], [1,-0.2], [0.5,0.2], [0.5,0.8], [0,1], [-0.5,0.8], [-0.5,0.2], [-1,-0.2], [-0.5,-0.3], [-0.5,-0.8]],
+        layers: 2,
+        bracing: true,
+        closed: true
     }
 };

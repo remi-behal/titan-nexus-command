@@ -208,7 +208,7 @@ export function drawEntities(
                                         rotation, 
                                         displayAsGhost
                                     );
-                                } else if (entity.type === 'NUKE') {
+                                } else if (entity.type === 'NUKE' || entity.itemType === 'NUKE') {
                                     drawShape(
                                         ctx, 
                                         entity.x, 
@@ -221,7 +221,8 @@ export function drawEntities(
                                     );
                                 } else {
                                     const rotation = ((entity.angle !== undefined ? entity.angle : entity.currentAngle || 0) * Math.PI) / 180 + Math.PI / 2;
-                                    const shapeKey = SHAPES[entity.type] ? entity.type : 'PROJECTILE_SMALL';
+                                    const typeKey = entity.itemType || entity.type;
+                                    const shapeKey = SHAPES[typeKey] ? typeKey : 'PROJECTILE_SMALL';
                                     drawShape(
                                         ctx, 
                                         entity.x, 
@@ -390,7 +391,18 @@ export function drawEntities(
                                         ctx.restore();
                                         ctx.restore();
                                     }
-                                } else if (entity.type === 'HUB' || entity.type === 'EXTRACTOR' || entity.type === 'SHIELD' || entity.type === 'CLOAKING_FIELD' || entity.type === 'TURRET' || entity.type === 'RELAY' || entity.type === 'BARRIER') {
+                                } else if (
+                                    entity.type === 'HUB' ||
+                                    entity.type === 'EXTRACTOR' ||
+                                    entity.type === 'SHIELD' ||
+                                    entity.type === 'CLOAKING_FIELD' ||
+                                    entity.type === 'TURRET' ||
+                                    entity.type === 'RELAY' ||
+                                    entity.type === 'BARRIER' ||
+                                    entity.type === 'LIGHT_SAM_DEFENSE' ||
+                                    entity.type === 'SMART_SAM_DEFENSE' ||
+                                    entity.type === 'ECHO_ARTILLERY'
+                                ) {
                                     const shapeKey = entity.type; // Use the entity type directly as the shape key
                                     
                                     if (entity.type === 'SHIELD') {
