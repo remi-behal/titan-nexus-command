@@ -2,7 +2,10 @@ import { zzfx, setZzfxContext } from './ZzFX';
 
 export const TRACKS = [
     { id: 'twimble', name: 'TWIMBLE.MOD', path: '/audio/tracks/twimble.mod' },
-    { id: 'banana', name: 'BANANA.XM', path: '/audio/tracks/hackurr_-_banana.xm' }
+    { id: 'banana', name: 'BANANA.XM', path: '/audio/tracks/hackurr_-_banana.xm' },
+    { id: 'entrance', name: 'ENTRANCE.MOD', path: '/audio/tracks/_entrance_.mod' },
+    { id: 'motional', name: 'ROZ - MOTIONAL.XM', path: '/audio/tracks/roz_-_motional.xm' },
+    { id: 'showstopper', name: 'SHOWSTOPPER.MOD', path: '/audio/tracks/showstopper.mod' }
 ];
 
 class AudioManager {
@@ -15,6 +18,34 @@ class AudioManager {
         this.isPlaying = false;
         this.isPaused = false;
         this.shuffle = false;
+        this.listeners = [];
+    }
+
+    subscribe(listener) {
+        this.listeners.push(listener);
+        // Instantly notify current state on subscription
+        listener({
+            currentTrack: this.currentTrack,
+            isPlaying: this.isPlaying,
+            isPaused: this.isPaused,
+            isMuted: this.isMuted,
+            volume: this.volume,
+            shuffle: this.shuffle
+        });
+        return () => {
+            this.listeners = this.listeners.filter(l => l !== listener);
+        };
+    }
+
+    notify() {
+        this.listeners.forEach(l => l({
+            currentTrack: this.currentTrack,
+            isPlaying: this.isPlaying,
+            isPaused: this.isPaused,
+            isMuted: this.isMuted,
+            volume: this.volume,
+            shuffle: this.shuffle
+        }));
     }
 
     init() {
@@ -29,12 +60,17 @@ class AudioManager {
             const { ChiptuneJsPlayer } = await import('chiptune3/chiptune3.js');
             this.player = new ChiptuneJsPlayer({
                 context: this.ctx,
-                repeatCount: -1
+                repeatCount: 0
             });
             
             // Explicitly connect gain node output to context destination
             this.player.gain.connect(this.ctx.destination);
             
+            // Register ended event to auto play the next track
+            this.player.onEnded(() => {
+                this.nextTrack();
+            });
+
             // Wait for worklet module to load and compile before resolving
             return new Promise((resolve) => {
                 this.player.onInitialized(() => {
@@ -70,6 +106,7 @@ class AudioManager {
             this.player.load(trackPath);
             this.player.setVol(this.isMuted ? 0 : this.volume);
         }
+        this.notify();
     }
 
     stopMusic() {
@@ -82,6 +119,7 @@ class AudioManager {
                 // Ignore silent stop failures
             }
         }
+        this.notify();
     }
 
     pauseMusic() {
@@ -89,6 +127,7 @@ class AudioManager {
             this.player.pause();
             this.isPaused = true;
             this.isPlaying = false;
+            this.notify();
         }
     }
 
@@ -97,6 +136,7 @@ class AudioManager {
             this.player.unpause();
             this.isPaused = false;
             this.isPlaying = true;
+            this.notify();
         } else if (this.currentTrack) {
             this.playMusic(this.currentTrack);
         } else {
@@ -132,6 +172,7 @@ class AudioManager {
 
     toggleShuffle() {
         this.shuffle = !this.shuffle;
+        this.notify();
         return this.shuffle;
     }
 
@@ -140,6 +181,7 @@ class AudioManager {
         if (this.player) {
             this.player.setVol(this.isMuted ? 0 : this.volume);
         }
+        this.notify();
     }
 
     toggleMute() {
@@ -147,6 +189,7 @@ class AudioManager {
         if (this.player) {
             this.player.setVol(this.isMuted ? 0 : this.volume);
         }
+        this.notify();
     }
 
     playSfx(params) {

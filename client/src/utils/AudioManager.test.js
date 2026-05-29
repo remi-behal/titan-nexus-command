@@ -19,6 +19,9 @@ vi.mock('chiptune3/chiptune3.js', () => {
         onInitialized(callback) {
             callback();
         }
+        onEnded(callback) {
+            this.endedCallback = callback;
+        }
     }
     return { ChiptuneJsPlayer: MockPlayer };
 });
@@ -34,6 +37,8 @@ describe('AudioManager', () => {
         audioManager.volume = 0.5;
         audioManager.isMuted = false;
         audioManager.isPlaying = false;
+        audioManager.shuffle = false;
+        audioManager.listeners = [];
     });
 
     it('initializes context and player successfully', async () => {
@@ -160,9 +165,12 @@ describe('AudioManager', () => {
 
     it('defines and exports a valid TRACKS playlist', () => {
         expect(TRACKS).toBeDefined();
-        expect(TRACKS.length).toBe(2);
+        expect(TRACKS.length).toBe(5);
         expect(TRACKS[0].id).toBe('twimble');
         expect(TRACKS[1].id).toBe('banana');
+        expect(TRACKS[2].id).toBe('entrance');
+        expect(TRACKS[3].id).toBe('motional');
+        expect(TRACKS[4].id).toBe('showstopper');
     });
 
     it('plays different tracks from the playlist via playMusic', async () => {
@@ -226,6 +234,51 @@ describe('AudioManager', () => {
 
         audioManager.toggleShuffle();
         expect(audioManager.shuffle).toBe(true);
+    });
+
+    it('automatically plays the next track when the current one ends', async () => {
+        const mockContext = {
+            state: 'running',
+            resume: vi.fn().mockResolvedValue()
+        };
+        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+
+        await audioManager.init();
+        audioManager.currentTrack = TRACKS[0].path;
+        audioManager.isPlaying = true;
+
+        // Trigger the end of the song
+        await audioManager.player.endedCallback();
+
+        // It should automatically advance to index 1 (banana)
+        expect(audioManager.currentTrack).toBe(TRACKS[1].path);
+        expect(audioManager.isPlaying).toBe(true);
+    });
+
+    it('notifies subscribers of state changes', async () => {
+        const mockContext = {
+            state: 'running',
+            resume: vi.fn().mockResolvedValue()
+        };
+        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+
+        await audioManager.init();
+
+        const stateChanges = [];
+        const unsubscribe = audioManager.subscribe((state) => {
+            stateChanges.push({ ...state });
+        });
+
+        // Initial subscription notification
+        expect(stateChanges.length).toBe(1);
+
+        // Change state
+        audioManager.toggleShuffle();
+
+        expect(stateChanges.length).toBe(2);
+        expect(stateChanges[1].shuffle).toBe(true);
+
+        unsubscribe();
     });
 });
 

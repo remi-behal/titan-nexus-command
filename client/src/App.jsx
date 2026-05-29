@@ -40,16 +40,26 @@ function App() {
     const [currentTrackPath, setCurrentTrackPath] = useState('/audio/tracks/twimble.mod');
     const [audioPlaying, setAudioPlaying] = useState(false);
     const [audioShuffle, setAudioShuffle] = useState(false);
+
+    // Subscribe to AudioManager's real-time changes to keep React UI in absolute sync
+    useEffect(() => {
+        const unsubscribe = audioManager.subscribe((state) => {
+            setCurrentTrackPath(state.currentTrack || '/audio/tracks/twimble.mod');
+            setAudioPlaying(state.isPlaying);
+            setAudioMuted(state.isMuted);
+            setAudioVolume(state.volume);
+            setAudioShuffle(state.shuffle);
+        });
+        return unsubscribe;
+    }, []);
  
     const handleVolumeChange = (e) => {
         const val = parseFloat(e.target.value);
-        setAudioVolume(val);
         audioManager.setVolume(val);
     };
  
     const handleMuteToggle = () => {
         audioManager.toggleMute();
-        setAudioMuted(audioManager.isMuted);
     };
  
     const handlePlayPauseToggle = () => {
@@ -58,30 +68,22 @@ function App() {
         } else {
             audioManager.resumeMusic();
         }
-        setAudioPlaying(audioManager.isPlaying);
     };
  
     const handleNextTrack = async () => {
-        const nextPath = await audioManager.nextTrack();
-        setCurrentTrackPath(nextPath);
-        setAudioPlaying(true);
+        await audioManager.nextTrack();
     };
  
     const handlePrevTrack = async () => {
-        const prevPath = await audioManager.prevTrack();
-        setCurrentTrackPath(prevPath);
-        setAudioPlaying(true);
+        await audioManager.prevTrack();
     };
  
     const handleShuffleToggle = () => {
-        const nextShuffle = audioManager.toggleShuffle();
-        setAudioShuffle(nextShuffle);
+        audioManager.toggleShuffle();
     };
  
     const handleTrackChange = (path) => {
-        setCurrentTrackPath(path);
         audioManager.playMusic(path);
-        setAudioPlaying(true);
     };
     const [syncStatus, setSyncStatus] = useState({ lockedIn: { player1: false, player2: false } });
     const [lastError, setLastError] = useState(null);
