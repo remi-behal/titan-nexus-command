@@ -179,7 +179,6 @@ Processed in sequential **Simultaneous Rounds**. The number of rounds is determi
 - **Defensive Overkill**: Defenses fire immediately. If a weapon is destroyed, subsequent interceptions may reacquire targets if they have homing capabilities.
 - **Link Decay**: Orphaned structures (lost link to Starter Hub) are destroyed at the end of the round. Scheduled launches from these structures still occur within that round.
 - **Target Ambiguity**: If a guided missile's target is destroyed by another player before arrival, it attempts to reacquire a target in range; otherwise, it flies straight until it impacts.
-- **Homing Commitment**: Close-range homing projectiles cannot reacquire targets once committed. (**TODO**: Define "Smart" vs. "Dumb" homing).
 
 ## Terminology
 

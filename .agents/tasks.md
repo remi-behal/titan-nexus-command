@@ -31,10 +31,10 @@
 - [ ] **Conflict Resolution & Pathing**: <!-- id: 74 -->
     - [x] **Structure Overlap**: Both destroyed if landing same spot. <!-- id: 59 -->
     - [x] **Autonomous Projectiles**: Persist if source hub destroyed. <!-- id: 60 -->
-    - [ ] **Post-Mortem Revenge**: Finish paths before elimination. <!-- id: 61 -->
-    - [ ] **Defensive Overkill**: Defenses reacquire if target gone. <!-- id: 62 -->
-    - [ ] **Target Ambiguity**: Guided missiles reacquire or fly straight. <!-- id: 63 -->
-    - [ ] **Homing Commitment**: Define "Smart" vs "Dumb" homing. <!-- id: 64 -->
+    - [x] **Post-Mortem Revenge**: Finish paths before elimination. <!-- id: 61 -->
+    - [x] **Defensive Overkill**: Defenses don't reacquire if target gone. <!-- id: 62 -->
+    - [x] **Target Ambiguity**: Guided missiles reacquire or fly straight. <!-- id: 63 -->
+    - [x] **Homing Commitment**: Define "Smart" vs "Dumb" homing. <!-- id: 64 -->
 - [x] **Link Enhancement**: Add direction arrows to links indicating the source Hub. <!-- id: 53 -->
 - [x] **Link Collision**: Destroy structures if their link crosses an existing link. <!-- id: 54 -->
 - [ ] **Resolution Polish**: <!-- id: 58 -->
