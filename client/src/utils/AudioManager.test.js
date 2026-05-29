@@ -163,6 +163,42 @@ describe('AudioManager', () => {
         );
     });
 
+    it('verifies all custom exported ZzFX sound playback methods', async () => {
+        const mockContext = {
+            state: 'running',
+            resume: vi.fn().mockResolvedValue()
+        };
+        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
+
+        await audioManager.init();
+
+        const customMethods = [
+            'playRibbit',
+            'playCrackle',
+            'playBwow',
+            'playDrop',
+            'playPong',
+            'playHumm',
+            'playError',
+            'playDeepHumm',
+            'playPowerOn',
+            'playSmallBombDrop',
+            'playRobotBirdChirp',
+            'playCheepCheepCheep',
+            'playDeathRay',
+            'playLongError',
+            'playUpgradeMusical'
+        ];
+
+        for (const method of customMethods) {
+            audioManager[method]();
+            await new Promise(resolve => setTimeout(resolve, 1));
+            expect(zzfxSpy).toHaveBeenCalled();
+            zzfxSpy.mockClear();
+        }
+    });
+
     it('defines and exports a valid TRACKS playlist', () => {
         expect(TRACKS).toBeDefined();
         expect(TRACKS.length).toBe(5);
