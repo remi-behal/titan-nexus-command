@@ -659,10 +659,3 @@ canvas {
     border-color: var(--player-accent-color, #00ff44);
     color: var(--player-accent-color, #00ff44);
 }
-
-.media-btn.active {
-    border-color: var(--player-accent-color, #00ff44);
-    color: var(--player-accent-color, #00ff44);
-    background: rgba(0, 255, 68, 0.1);
-    box-shadow: 0 0 4px var(--player-accent-glow, rgba(0, 255, 68, 0.3));
-}

@@ -99,7 +99,18 @@ export default function SidebarLeft({
                     </div>
                 </div>
                 <div className="track-selector-container">
-                    <span className="slider-label" style={{ fontSize: '0.55rem', color: '#666', letterSpacing: '1px' }}>TRACK:</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                        <span className="slider-label" style={{ fontSize: '0.55rem', color: '#666', letterSpacing: '1px' }}>TRACK:</span>
+                        <span className="status-label" style={{ 
+                            fontSize: '0.55rem', 
+                            color: audioPlaying ? 'var(--player-accent-color, #00ff44)' : '#666', 
+                            fontFamily: 'monospace',
+                            fontWeight: 'bold',
+                            letterSpacing: '1px'
+                        }}>
+                            {audioPlaying ? '[PLAYING]' : '[PAUSED]'}
+                        </span>
+                    </div>
                     <select 
                         value={currentTrackPath} 
                         onChange={(e) => handleTrackChange(e.target.value)}
