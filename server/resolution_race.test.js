@@ -58,8 +58,59 @@ describe('Server - Resolution Race Guard', () => {
         serverProcess.kill('SIGKILL');
     });
 
-    it.skip('should ignore submissions sent DURING resolution', async () => {
-        // This test is skipped because it requires complex timing during resolveTurn
-        // but the goal is to verify the server process is healthy.
+    it('should ignore submissions sent DURING resolution', async () => {
+        let newTurnStarted = false;
+        let lastReceivedState = null;
+
+        const stateListener = (state) => {
+            lastReceivedState = state;
+            if (state.turn > 0 && state.phase === 'PLANNING') {
+                newTurnStarted = true;
+            }
+        };
+        client1.on('gameStateUpdate', stateListener);
+
+        // Retrieve initial state to get player 1's HUB id
+        client1.emit('requestState');
+        await new Promise(r => setTimeout(r, 200));
+
+        const p1Hub = lastReceivedState?.entities?.find(e => e.owner === 'player1' && e.type === 'HUB');
+        expect(p1Hub).toBeDefined();
+
+        // Trigger turn resolution by passing both turns
+        client1.emit('passTurn');
+        client2.emit('passTurn');
+
+        // Wait 200ms to ensure server's async resolveTurn loop is active and phase is RESOLVING
+        await new Promise(r => setTimeout(r, 200));
+
+        // Submit a late action during the resolution phase
+        const lateAction = [{
+            sourceId: p1Hub.id,
+            itemType: 'WEAPON',
+            angle: 0,
+            distance: 200
+        }];
+        client1.emit('submitActions', lateAction);
+
+        // Wait for next turn to start
+        await new Promise((resolve, reject) => {
+            const check = () => {
+                if (newTurnStarted) {
+                    client1.off('gameStateUpdate', stateListener);
+                    resolve();
+                } else {
+                    setTimeout(check, 100);
+                }
+            };
+            setTimeout(() => {
+                client1.off('gameStateUpdate', stateListener);
+                reject(new Error('Timeout waiting for next turn to start'));
+            }, 6000);
+            check();
+        });
+
+        // Assert player 1's energy did not deduct the 15 cost of the late weapon (starts at 50, gains 10 income = 60)
+        expect(lastReceivedState.players.player1.energy).toBe(60);
     });
 });
