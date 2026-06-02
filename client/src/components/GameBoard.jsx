@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react
 import { GameState } from '../../../shared/GameState.js';
 import { ENTITY_STATS, GLOBAL_STATS } from '../../../shared/constants/EntityStats.js';
 import { VISUAL_STATS } from '../constants/VisualStats.js';
+import { audioManager } from '../utils/AudioManager';
 
 
 
@@ -172,6 +173,16 @@ const GameBoard = forwardRef(({
 
                 const mapW = currentGameState.map.width;
                 const mapH = currentGameState.map.height;
+
+                // Sync latest camera context to AudioManager
+                audioManager.updateCameraContext(
+                    cameraOffset,
+                    zoom,
+                    canvas.width,
+                    canvas.height,
+                    mapW,
+                    mapH
+                );
 
                 // 1. UPDATE VISUAL POSITIONS (Lerp) & GHOST LOGIC
                 const { isInVision } = updateInterpolation(currentGameState, myPlayerId);

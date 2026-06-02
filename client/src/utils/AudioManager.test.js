@@ -490,7 +490,7 @@ describe('AudioManager', () => {
         const p3 = audioManager.playShoot();
         
         // Only the first one should be scheduled, others coalesce (resolve to null)
-        const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
+        const [, r2, r3] = await Promise.all([p1, p2, p3]);
         expect(zzfxSpy).toHaveBeenCalledTimes(1);
         expect(r2).toBeNull();
         expect(r3).toBeNull();
