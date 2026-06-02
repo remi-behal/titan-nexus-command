@@ -78,30 +78,30 @@ export function useVisualInterpolation() {
                 // Play procedural SFX for newly spawned entities
                 if (serverEnt.type === 'PROJECTILE') {
                     if (serverEnt.itemType === 'HOMING_MISSILE') {
-                        audioManager.playHeavyLaunch();
+                        audioManager.playHeavyLaunch(serverEnt.x, serverEnt.y);
                     } else if (serverEnt.itemType === 'SAM_MISSILE' || serverEnt.itemType === 'SMART_SAM_MISSILE') {
-                        audioManager.playSamLaunch();
+                        audioManager.playSamLaunch(serverEnt.x, serverEnt.y);
                     } else {
-                        audioManager.playShoot();
+                        audioManager.playShoot(serverEnt.x, serverEnt.y);
                     }
                 } else if (serverEnt.type === 'LASER_BEAM') {
-                    audioManager.playLaser();
+                    audioManager.playLaser(serverEnt.x, serverEnt.y);
                 } else if (serverEnt.type === 'EXPLOSION') {
                     if (serverEnt.itemType === 'NUKE') {
-                        audioManager.playNukeDetonation();
+                        audioManager.playNukeDetonation(serverEnt.x, serverEnt.y);
                     } else {
-                        audioManager.playExplosion();
+                        audioManager.playExplosion(serverEnt.x, serverEnt.y);
                     }
                 } else if (serverEnt.type === 'SHIELD_HIT' || serverEnt.type === 'LINK_COLLISION' || serverEnt.type === 'SPARK') {
-                    audioManager.playShieldHit();
+                    audioManager.playShieldHit(serverEnt.x, serverEnt.y);
                 } else if (['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(serverEnt.type)) {
-                    audioManager.playStructureLanding();
+                    audioManager.playStructureLanding(serverEnt.x, serverEnt.y);
                 }
             } else {
                 const viz = visualEntities.current[serverEnt.id];
 
                 if (serverEnt.hp < viz.hp) {
-                    audioManager.playShieldHit();
+                    audioManager.playShieldHit(serverEnt.x, serverEnt.y);
                 }
 
                 let dx = serverEnt.x - viz.x;
@@ -128,7 +128,7 @@ export function useVisualInterpolation() {
                 
                 if (viz.lockFound && !prevLockFound) {
                     if (serverEnt.itemType === 'SAM_MISSILE' || serverEnt.itemType === 'SMART_SAM_MISSILE' || serverEnt.itemType === 'HOMING_MISSILE') {
-                        audioManager.playSamLockOn();
+                        audioManager.playSamLockOn(serverEnt.x, serverEnt.y);
                     }
                 }
                 viz.flakAngle = serverEnt.flakAngle;
@@ -152,7 +152,7 @@ export function useVisualInterpolation() {
                 
                 if (STRUCTURE_TYPES.includes(viz.type)) {
                     if (viz.scouted !== false && !viz.isGhost) {
-                        audioManager.playStructureDestroyed();
+                        audioManager.playStructureDestroyed(viz.x, viz.y);
                     }
                 }
 
@@ -212,7 +212,7 @@ export function useVisualInterpolation() {
 
                 if (fromVisible || toVisible) {
                     if (!viz.isGhost) {
-                        audioManager.playLinkSevered();
+                        audioManager.playLinkSevered(from.x, from.y);
                     }
                     delete visualLinks.current[linkId];
                 } else {
