@@ -503,5 +503,61 @@ describe('AudioManager', () => {
         await audioManager.playShoot();
         expect(zzfxSpy).toHaveBeenCalledTimes(1);
     });
+
+    describe('Spatial Volume calculations', () => {
+        it('returns 1.0 when no camera context is registered', () => {
+            expect(audioManager.calculateSpatialVolume(100, 100)).toBe(1.0);
+        });
+
+        it('returns 1.0 when sound is inside the viewport box', () => {
+            audioManager.updateCameraContext(
+                { x: 100, y: 100 }, // cameraOffset
+                1.5,                 // zoom
+                600,                // canvasWidth
+                400,                // canvasHeight
+                2000,               // mapWidth
+                2000                // mapHeight
+            );
+            // viewportWidth = 600/1.5 = 400. viewportHeight = 400/1.5 = 266.6.
+            // Viewport rect in game space: x in [100, 500], y in [100, 366.6]
+            // Center: (300, 233.3)
+            // Check sound inside viewport:
+            expect(audioManager.calculateSpatialVolume(200, 200)).toBe(1.0);
+        });
+
+        it('returns 0.15 when sound is extremely far away', () => {
+            audioManager.updateCameraContext(
+                { x: 100, y: 100 },
+                1.0,
+                200,
+                200,
+                2000,
+                2000
+            );
+            // viewportWidth = 200, viewportHeight = 200
+            // Viewport rect: x in [100, 300], y in [100, 300]
+            // Center: (200, 200)
+            // Sound extremely far away (e.g. opposite side of torus map):
+            expect(audioManager.calculateSpatialVolume(1200, 1200)).toBe(0.15);
+        });
+
+        it('returns between 0.15 and 1.0 when sound is just outside the viewport edge', () => {
+            audioManager.updateCameraContext(
+                { x: 100, y: 100 },
+                1.0,
+                200,
+                200,
+                2000,
+                2000
+            );
+            // viewportWidth = 200, viewportHeight = 200
+            // Viewport rect: x in [100, 300], y in [100, 300]
+            // Center: (200, 200)
+            // Sound at x = 400, y = 200 (distance from edge distX = 100, distY = 0 -> distFromEdge = 100)
+            // falloffFactor = 1 - 100/1000 = 0.9
+            // volumeMultiplier = 0.15 + 0.85 * 0.9 = 0.915
+            expect(audioManager.calculateSpatialVolume(400, 200)).toBeCloseTo(0.915);
+        });
+    });
 });
 

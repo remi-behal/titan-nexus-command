@@ -21,6 +21,47 @@ class AudioManager {
         this.listeners = [];
         this.compressor = null;
         this.frameSounds = new Set();
+        this.cameraContext = null;
+    }
+
+    updateCameraContext(cameraOffset, zoom, canvasW, canvasH, mapW, mapH) {
+        this.cameraContext = { cameraOffset, zoom, canvasW, canvasH, mapW, mapH };
+    }
+
+    calculateSpatialVolume(soundX, soundY) {
+        if (!this.cameraContext || soundX === undefined || soundY === undefined) {
+            return 1.0;
+        }
+
+        const { cameraOffset, zoom, canvasW, canvasH, mapW, mapH } = this.cameraContext;
+        
+        const viewportWidth = canvasW / zoom;
+        const viewportHeight = canvasH / zoom;
+
+        const cx = cameraOffset.x + viewportWidth / 2;
+        const cy = cameraOffset.y + viewportHeight / 2;
+
+        let dx = soundX - cx;
+        let dy = soundY - cy;
+        if (dx > mapW / 2) dx -= mapW;
+        if (dx < -mapW / 2) dx += mapW;
+        if (dy > mapH / 2) dy -= mapH;
+        if (dy < -mapH / 2) dy += mapH;
+
+        const inViewport = Math.abs(dx) <= viewportWidth / 2 && Math.abs(dy) <= viewportHeight / 2;
+        if (inViewport) {
+            return 1.0;
+        }
+
+        const distX = Math.max(0, Math.abs(dx) - viewportWidth / 2);
+        const distY = Math.max(0, Math.abs(dy) - viewportHeight / 2);
+        const distFromEdge = Math.sqrt(distX * distX + distY * distY);
+
+        const maxFalloffDistance = 1000;
+        const minFloor = 0.15;
+        
+        const falloffFactor = Math.max(0, 1 - distFromEdge / maxFalloffDistance);
+        return minFloor + (1.0 - minFloor) * falloffFactor;
     }
 
     subscribe(listener) {
