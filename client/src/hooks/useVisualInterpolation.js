@@ -6,6 +6,7 @@ import { audioManager } from '../utils/AudioManager';
 export function useVisualInterpolation() {
     const visualEntities = useRef({});
     const visualLinks = useRef({});
+    const playedAudioEventIds = useRef(new Set());
 
     const updateInterpolation = (currentGameState, myPlayerId) => {
         if (!currentGameState) {
@@ -14,6 +15,41 @@ export function useVisualInterpolation() {
                 visualLinks: visualLinks.current,
                 isInVision: () => true
             };
+        }
+
+        // Reset tracking on game restart or turn planning phase 1
+        if (currentGameState.turn === 1 && currentGameState.phase === 'PLANNING') {
+            playedAudioEventIds.current.clear();
+        }
+
+        // Process Fog of War secure audio events
+        if (currentGameState.audibleEvents) {
+            currentGameState.audibleEvents.forEach((evt) => {
+                if (!playedAudioEventIds.current.has(evt.id)) {
+                    playedAudioEventIds.current.add(evt.id);
+                    if (evt.type === 'PROJECTILE') {
+                        if (evt.itemType === 'HOMING_MISSILE') {
+                            audioManager.playHeavyLaunch(evt.x, evt.y);
+                        } else if (evt.itemType === 'SAM_MISSILE' || evt.itemType === 'SMART_SAM_MISSILE') {
+                            audioManager.playSamLaunch(evt.x, evt.y);
+                        } else {
+                            audioManager.playShoot(evt.x, evt.y);
+                        }
+                    } else if (evt.type === 'LASER_BEAM') {
+                        audioManager.playLaser(evt.x, evt.y);
+                    } else if (evt.type === 'EXPLOSION') {
+                        if (evt.itemType === 'NUKE') {
+                            audioManager.playNukeDetonation(evt.x, evt.y);
+                        } else {
+                            audioManager.playExplosion(evt.x, evt.y);
+                        }
+                    } else if (evt.type === 'SHIELD_HIT' || evt.type === 'LINK_COLLISION' || evt.type === 'SPARK') {
+                        audioManager.playShieldHit(evt.x, evt.y);
+                    } else if (['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(evt.type)) {
+                        audioManager.playStructureLanding(evt.x, evt.y);
+                    }
+                }
+            });
         }
 
         const mapW = currentGameState.map.width;
