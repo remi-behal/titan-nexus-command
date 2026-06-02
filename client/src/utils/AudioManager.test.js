@@ -39,6 +39,7 @@ describe('AudioManager', () => {
         audioManager.isPlaying = false;
         audioManager.shuffle = false;
         audioManager.listeners = [];
+        audioManager.frameSounds = new Set();
     });
 
     it('initializes context and player successfully', async () => {
@@ -557,6 +558,51 @@ describe('AudioManager', () => {
             // falloffFactor = 1 - 100/1000 = 0.9
             // volumeMultiplier = 0.15 + 0.85 * 0.9 = 0.915
             expect(audioManager.calculateSpatialVolume(400, 200)).toBeCloseTo(0.915);
+        });
+
+        it('applies spatial volume multiplier to zzfx playback parameters', async () => {
+            const mockCompressor = {
+                threshold: { setValueAtTime: vi.fn() },
+                knee: { setValueAtTime: vi.fn() },
+                ratio: { setValueAtTime: vi.fn() },
+                attack: { setValueAtTime: vi.fn() },
+                release: { setValueAtTime: vi.fn() },
+                connect: vi.fn()
+            };
+            const mockContext = {
+                state: 'running',
+                currentTime: 0,
+                resume: vi.fn().mockResolvedValue(),
+                createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+                destination: {}
+            };
+            vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+            const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
+
+            await audioManager.init();
+
+            // Set camera context and make the sound far away so volume multiplier is 0.15
+            audioManager.updateCameraContext(
+                { x: 100, y: 100 },
+                1.0,
+                200,
+                200,
+                2000,
+                2000
+            );
+
+            // Default sfx volume in playShoot is 0.2. Global audioManager.volume is 0.5.
+            // Far away spatial volume multiplier is 0.15.
+            // Final volume = 0.2 * 0.5 * 0.15 = 0.015.
+            await audioManager.playShoot(1200, 1200);
+            
+            // Wait for tick
+            await new Promise(resolve => setTimeout(resolve, 5));
+
+            expect(zzfxSpy).toHaveBeenCalledWith(
+                expect.closeTo(0.015), // final volume parameter
+                0.05, 400, .05, undefined, .1, undefined, undefined, 50, -500
+            );
         });
     });
 });
