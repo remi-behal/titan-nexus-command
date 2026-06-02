@@ -36,17 +36,21 @@ describe('Shield Defense Logic', () => {
         const snapshots = game.resolveTurn(actions);
 
         let blocked = false;
+        let shieldHitFound = false;
         snapshots.forEach(s => {
             if (s.type === 'ROUND_SUB') {
                 const proj = s.state.entities.find(e => e.itemType === 'WEAPON' && e.owner === 'player2');
-                const spark = s.state.entities.find(e => e.type === 'SPARK');
-                // The projectile might exist in one sub-tick and then be gone from the list in the next if it's inactive
-                if (spark) blocked = true;
+                const shieldHit = s.state.entities.find(e => e.type === 'SHIELD_HIT');
+                if (shieldHit) {
+                    blocked = true;
+                    shieldHitFound = true;
+                }
                 if (proj && !proj.active) blocked = true;
             }
         });
 
         expect(blocked).toBe(true);
+        expect(shieldHitFound).toBe(true);
         // WEAPON damage is 2.
         expect(shield.barrierHp).toBe(ENTITY_STATS.SHIELD.barrierHpMax - 2);
     });
