@@ -42,9 +42,20 @@ describe('AudioManager', () => {
     });
 
     it('initializes context and player successfully', async () => {
+        const mockCompressor = {
+            threshold: { setValueAtTime: vi.fn() },
+            knee: { setValueAtTime: vi.fn() },
+            ratio: { setValueAtTime: vi.fn() },
+            attack: { setValueAtTime: vi.fn() },
+            release: { setValueAtTime: vi.fn() },
+            connect: vi.fn()
+        };
         const mockContext = {
             state: 'running',
-            resume: vi.fn().mockResolvedValue()
+            currentTime: 0,
+            resume: vi.fn().mockResolvedValue(),
+            createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+            destination: {}
         };
         vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
 
@@ -54,9 +65,20 @@ describe('AudioManager', () => {
     });
 
     it('plays round start sound effect using ZzFX', async () => {
+        const mockCompressor = {
+            threshold: { setValueAtTime: vi.fn() },
+            knee: { setValueAtTime: vi.fn() },
+            ratio: { setValueAtTime: vi.fn() },
+            attack: { setValueAtTime: vi.fn() },
+            release: { setValueAtTime: vi.fn() },
+            connect: vi.fn()
+        };
         const mockContext = {
             state: 'running',
-            resume: vi.fn().mockResolvedValue()
+            currentTime: 0,
+            resume: vi.fn().mockResolvedValue(),
+            createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+            destination: {}
         };
         vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
         const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
@@ -70,9 +92,20 @@ describe('AudioManager', () => {
     });
 
     it('verifies all procedural sound playback methods', async () => {
+        const mockCompressor = {
+            threshold: { setValueAtTime: vi.fn() },
+            knee: { setValueAtTime: vi.fn() },
+            ratio: { setValueAtTime: vi.fn() },
+            attack: { setValueAtTime: vi.fn() },
+            release: { setValueAtTime: vi.fn() },
+            connect: vi.fn()
+        };
         const mockContext = {
             state: 'running',
-            resume: vi.fn().mockResolvedValue()
+            currentTime: 0,
+            resume: vi.fn().mockResolvedValue(),
+            createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+            destination: {}
         };
         vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
         const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
@@ -100,9 +133,20 @@ describe('AudioManager', () => {
     });
 
     it('verifies new interactive and planning sound playback methods', async () => {
+        const mockCompressor = {
+            threshold: { setValueAtTime: vi.fn() },
+            knee: { setValueAtTime: vi.fn() },
+            ratio: { setValueAtTime: vi.fn() },
+            attack: { setValueAtTime: vi.fn() },
+            release: { setValueAtTime: vi.fn() },
+            connect: vi.fn()
+        };
         const mockContext = {
             state: 'running',
-            resume: vi.fn().mockResolvedValue()
+            currentTime: 0,
+            resume: vi.fn().mockResolvedValue(),
+            createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+            destination: {}
         };
         vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
         const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
@@ -132,9 +176,20 @@ describe('AudioManager', () => {
     });
 
     it('verifies exact ZzFX parameters for SAM missile audio features', async () => {
+        const mockCompressor = {
+            threshold: { setValueAtTime: vi.fn() },
+            knee: { setValueAtTime: vi.fn() },
+            ratio: { setValueAtTime: vi.fn() },
+            attack: { setValueAtTime: vi.fn() },
+            release: { setValueAtTime: vi.fn() },
+            connect: vi.fn()
+        };
         const mockContext = {
             state: 'running',
-            resume: vi.fn().mockResolvedValue()
+            currentTime: 0,
+            resume: vi.fn().mockResolvedValue(),
+            createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+            destination: {}
         };
         vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
         const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
@@ -145,28 +200,39 @@ describe('AudioManager', () => {
         audioManager.playSamLaunch();
         await new Promise(resolve => setTimeout(resolve, 10));
         expect(zzfxSpy).toHaveBeenLastCalledWith(
-            0.175, undefined, 180, 0.05, 0.05, 0.2, undefined, 1.2, undefined, 10, undefined, undefined, undefined, 200, 0.02
+            0.5, 0.05, 528, 0.01, 0, 0.48, 0, 0.3, -9, 0, 0, 0, 0.32, 4.2, 0, 0, 0, 1, 0, 0, 0
         );
 
         // 2. Flight
         audioManager.playSamFlight();
         await new Promise(resolve => setTimeout(resolve, 10));
         expect(zzfxSpy).toHaveBeenLastCalledWith(
-            0.04, undefined, 75, 0.04, undefined, 0.08, undefined, 0.5, undefined, -15
+            0.04, 0.05, 75, 0.04, undefined, 0.08, undefined, 0.5, undefined, -15
         );
 
         // 3. Lock On
         audioManager.playSamLockOn();
         await new Promise(resolve => setTimeout(resolve, 10));
         expect(zzfxSpy).toHaveBeenLastCalledWith(
-            0.11, undefined, 950, 0.01, 0.03, 0.08, 1, 1.8, undefined, 10, 300, 0.02, 0.05
+            0.11, 0.05, 950, 0.01, 0.03, 0.08, 1, 1.8, undefined, 10, 300, 0.02, 0.05
         );
     });
 
     it('verifies all custom exported ZzFX sound playback methods', async () => {
+        const mockCompressor = {
+            threshold: { setValueAtTime: vi.fn() },
+            knee: { setValueAtTime: vi.fn() },
+            ratio: { setValueAtTime: vi.fn() },
+            attack: { setValueAtTime: vi.fn() },
+            release: { setValueAtTime: vi.fn() },
+            connect: vi.fn()
+        };
         const mockContext = {
             state: 'running',
-            resume: vi.fn().mockResolvedValue()
+            currentTime: 0,
+            resume: vi.fn().mockResolvedValue(),
+            createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+            destination: {}
         };
         vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
         const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
@@ -210,9 +276,20 @@ describe('AudioManager', () => {
     });
 
     it('plays different tracks from the playlist via playMusic', async () => {
+        const mockCompressor = {
+            threshold: { setValueAtTime: vi.fn() },
+            knee: { setValueAtTime: vi.fn() },
+            ratio: { setValueAtTime: vi.fn() },
+            attack: { setValueAtTime: vi.fn() },
+            release: { setValueAtTime: vi.fn() },
+            connect: vi.fn()
+        };
         const mockContext = {
             state: 'running',
-            resume: vi.fn().mockResolvedValue()
+            currentTime: 0,
+            resume: vi.fn().mockResolvedValue(),
+            createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+            destination: {}
         };
         vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
 
@@ -228,9 +305,20 @@ describe('AudioManager', () => {
     });
 
     it('handles pause and resume correctly', async () => {
+        const mockCompressor = {
+            threshold: { setValueAtTime: vi.fn() },
+            knee: { setValueAtTime: vi.fn() },
+            ratio: { setValueAtTime: vi.fn() },
+            attack: { setValueAtTime: vi.fn() },
+            release: { setValueAtTime: vi.fn() },
+            connect: vi.fn()
+        };
         const mockContext = {
             state: 'running',
-            resume: vi.fn().mockResolvedValue()
+            currentTime: 0,
+            resume: vi.fn().mockResolvedValue(),
+            createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+            destination: {}
         };
         vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
 
@@ -251,9 +339,20 @@ describe('AudioManager', () => {
     });
 
     it('handles next, previous, and shuffle toggling', async () => {
+        const mockCompressor = {
+            threshold: { setValueAtTime: vi.fn() },
+            knee: { setValueAtTime: vi.fn() },
+            ratio: { setValueAtTime: vi.fn() },
+            attack: { setValueAtTime: vi.fn() },
+            release: { setValueAtTime: vi.fn() },
+            connect: vi.fn()
+        };
         const mockContext = {
             state: 'running',
-            resume: vi.fn().mockResolvedValue()
+            currentTime: 0,
+            resume: vi.fn().mockResolvedValue(),
+            createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+            destination: {}
         };
         vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
 
@@ -273,9 +372,20 @@ describe('AudioManager', () => {
     });
 
     it('automatically plays the next track when the current one ends', async () => {
+        const mockCompressor = {
+            threshold: { setValueAtTime: vi.fn() },
+            knee: { setValueAtTime: vi.fn() },
+            ratio: { setValueAtTime: vi.fn() },
+            attack: { setValueAtTime: vi.fn() },
+            release: { setValueAtTime: vi.fn() },
+            connect: vi.fn()
+        };
         const mockContext = {
             state: 'running',
-            resume: vi.fn().mockResolvedValue()
+            currentTime: 0,
+            resume: vi.fn().mockResolvedValue(),
+            createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+            destination: {}
         };
         vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
 
@@ -292,9 +402,20 @@ describe('AudioManager', () => {
     });
 
     it('notifies subscribers of state changes', async () => {
+        const mockCompressor = {
+            threshold: { setValueAtTime: vi.fn() },
+            knee: { setValueAtTime: vi.fn() },
+            ratio: { setValueAtTime: vi.fn() },
+            attack: { setValueAtTime: vi.fn() },
+            release: { setValueAtTime: vi.fn() },
+            connect: vi.fn()
+        };
         const mockContext = {
             state: 'running',
-            resume: vi.fn().mockResolvedValue()
+            currentTime: 0,
+            resume: vi.fn().mockResolvedValue(),
+            createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+            destination: {}
         };
         vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
 
@@ -315,6 +436,72 @@ describe('AudioManager', () => {
         expect(stateChanges[1].shuffle).toBe(true);
 
         unsubscribe();
+    });
+
+    it('creates and configures dynamics compressor during initialization', async () => {
+        const mockCompressor = {
+            threshold: { setValueAtTime: vi.fn() },
+            knee: { setValueAtTime: vi.fn() },
+            ratio: { setValueAtTime: vi.fn() },
+            attack: { setValueAtTime: vi.fn() },
+            release: { setValueAtTime: vi.fn() },
+            connect: vi.fn()
+        };
+        const mockContext = {
+            state: 'running',
+            currentTime: 0,
+            resume: vi.fn().mockResolvedValue(),
+            createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+            destination: {}
+        };
+        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+
+        await audioManager.init();
+        expect(mockContext.createDynamicsCompressor).toHaveBeenCalled();
+        expect(audioManager.compressor).toBe(mockCompressor);
+        expect(mockCompressor.connect).toHaveBeenCalledWith(mockContext.destination);
+    });
+
+    it('coalesces identical sound effects triggered synchronously', async () => {
+        const mockCompressor = {
+            threshold: { setValueAtTime: vi.fn() },
+            knee: { setValueAtTime: vi.fn() },
+            ratio: { setValueAtTime: vi.fn() },
+            attack: { setValueAtTime: vi.fn() },
+            release: { setValueAtTime: vi.fn() },
+            connect: vi.fn()
+        };
+        const mockContext = {
+            state: 'running',
+            currentTime: 0,
+            resume: vi.fn().mockResolvedValue(),
+            createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+            destination: {}
+        };
+        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
+
+        await audioManager.init();
+        
+        // Trigger same sound multiple times synchronously
+        const p1 = audioManager.playShoot();
+        const p2 = audioManager.playShoot();
+        const p3 = audioManager.playShoot();
+        
+        // Only the first one should be scheduled, others coalesce (resolve to null)
+        const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
+        expect(zzfxSpy).toHaveBeenCalledTimes(1);
+        expect(r2).toBeNull();
+        expect(r3).toBeNull();
+
+        zzfxSpy.mockClear();
+
+        // Wait for the end of the tick / setTimeout to clear coalescing map
+        await new Promise(resolve => setTimeout(resolve, 5));
+
+        // Triggering again in a new tick should play successfully
+        await audioManager.playShoot();
+        expect(zzfxSpy).toHaveBeenCalledTimes(1);
     });
 });
 

@@ -46,14 +46,17 @@ ZzFX Features
 // Remi Behal - updates for Titan: Nexus Command
 // - Added export of `zzfxX` and `setZzfxContext` for lazy-loaded AudioContext sharing from AudioManager.
 // - Prevented automatic browser AudioContext initialization to resolve autoplay blocks and Vitest test reference failures.
+// - Supported routing synthesized sounds through a custom destination node (e.g. global DynamicsCompressorNode).
 
 
 'use strict';
 
 export let zzfxX = null; // Share AudioContext from AudioManager
-export const setZzfxContext = (ctx) => { 
+export let zzfxDestination = null; // Share custom destination node (like compressor)
+export const setZzfxContext = (ctx, destination = null) => { 
     zzfxX = ctx; 
     ZZFX.audioContext = ctx; 
+    zzfxDestination = destination;
 };
 
 // play a zzfx sound
@@ -99,7 +102,7 @@ export const ZZFX =
         // create and connect gain node
         const gainNode = this.audioContext.createGain();
         gainNode.gain.value = this.volume*volumeScale;
-        gainNode.connect(this.audioContext.destination);
+        gainNode.connect(zzfxDestination || this.audioContext.destination);
 
         // connect source to stereo panner and gain
         const pannerNode = new StereoPannerNode(this.audioContext, {'pan':pan});

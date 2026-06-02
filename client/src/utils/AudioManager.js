@@ -19,6 +19,8 @@ class AudioManager {
         this.isPaused = false;
         this.shuffle = false;
         this.listeners = [];
+        this.compressor = null;
+        this.frameSounds = new Set();
     }
 
     subscribe(listener) {
@@ -54,7 +56,17 @@ class AudioManager {
         this.initPromise = (async () => {
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
             this.ctx = new AudioCtx();
-            setZzfxContext(this.ctx);
+            
+            // Create DynamicsCompressor to prevent digital clipping
+            this.compressor = this.ctx.createDynamicsCompressor();
+            this.compressor.threshold.setValueAtTime(-12, this.ctx.currentTime);
+            this.compressor.knee.setValueAtTime(30, this.ctx.currentTime);
+            this.compressor.ratio.setValueAtTime(12, this.ctx.currentTime);
+            this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
+            this.compressor.release.setValueAtTime(0.25, this.ctx.currentTime);
+            this.compressor.connect(this.ctx.destination);
+            
+            setZzfxContext(this.ctx, this.compressor);
             
             // Dynamic import of chiptune3 only in browser context
             const { ChiptuneJsPlayer } = await import('chiptune3/chiptune3.js');
@@ -194,6 +206,19 @@ class AudioManager {
 
     playSfx(params) {
         if (this.isMuted) return null;
+
+        // Sound Coalescing: coalesce identical sounds triggered synchronously
+        const soundKey = params.join(',');
+        if (this.frameSounds.has(soundKey)) {
+            return Promise.resolve(null);
+        }
+        this.frameSounds.add(soundKey);
+        if (this.frameSounds.size === 1) {
+            setTimeout(() => {
+                this.frameSounds.clear();
+            }, 0);
+        }
+
         return this.init().then(() => {
             if (this.ctx && this.ctx.state === 'suspended') {
                 this.ctx.resume();
@@ -232,173 +257,173 @@ class AudioManager {
 
     playRoundStart() {
         // High fidelity retro ping/chime sound array for Round Start
-        const roundStartParams = [0.5, undefined, 150, .4, .1, .2, 1, 1.5, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, .1, .8, .1];
+        const roundStartParams = [0.5, 0.05, 150, .4, .1, .2, 1, 1.5, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, .1, .8, .1];
         return this.playSfx(roundStartParams);
     }
 
     playShoot() {
         // Snappy pitch-sliding blip for standard projectiles
-        return this.playSfx([0.2, undefined, 400, .05, undefined, .1, undefined, undefined, 50, -500]);
+        return this.playSfx([0.2, 0.05, 400, .05, undefined, .1, undefined, undefined, 50, -500]);
     }
 
     playHeavyLaunch() {
         // Deep rocket rumble/thrust
-        return this.playSfx([1.3,0,82,.03,.06,.14,4,.3,-4,7,0,0,0,1.6,0,.8,0,.5,.2,0,221]); // Explosion 31));
+        return this.playSfx([1.3,0.05,82,.03,.06,.14,4,.3,-4,7,0,0,0,1.6,0,.8,0,.5,.2,0,221]); // Explosion 31));
     }
 
     playLaser() {
          // Fast, low-frequency laser sweep with metallic pitch jump and delay
-        return this.playSfx([0.5, undefined, 14, .36, .5, .03, 4, 2.9, undefined, -22, 35, .18, undefined, undefined, 11, undefined, .01, .82, .08, undefined, -1334]);
+        return this.playSfx([0.5, 0.05, 14, .36, .5, .03, 4, 2.9, undefined, -22, 35, .18, undefined, undefined, 11, undefined, .01, .82, .08, undefined, -1334]);
     }
 
     playExplosion() {
         // Classic white-noise crunchy explosion for normal weapon impacts
-        return this.playSfx([0.35, undefined, 100, .05, .1, .3, undefined, 2.5, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, .2, .5]);
+        return this.playSfx([0.35, 0.05, 100, .05, .1, .3, undefined, 2.5, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, .2, .5]);
     }
 
     playShieldHit() {
         // Metallic "ping/deflect" sound when shield takes damage or spark occurs
-        return this.playSfx([0.25, undefined, 800, .02, undefined, .08, 1, undefined, undefined, undefined, undefined, undefined, undefined, 200, .02]);
+        return this.playSfx([0.25, 0.05, 800, .02, undefined, .08, 1, undefined, undefined, undefined, undefined, undefined, undefined, 200, .02]);
     }
 
     playNukeDetonation() {
         // Massive, earth-shaking low-frequency sweep with long release
-        return this.playSfx([0.65, undefined, 45, .2, .4, 1.2, undefined, 3.8, undefined, -1, undefined, undefined, undefined, undefined, undefined, undefined, .3, .2, .5]);
+        return this.playSfx([0.65, 0.05, 45, .2, .4, 1.2, undefined, 3.8, undefined, -1, undefined, undefined, undefined, undefined, undefined, undefined, .3, .2, .5]);
     }
 
     playLinkSevered() {
         // Snappy descending energy snap when connection is severed
-        return this.playSfx([0.25, undefined, 600, .01, undefined, .15, undefined, 1.2, undefined, -30, 200]);
+        return this.playSfx([0.25, 0.05, 600, .01, undefined, .15, undefined, 1.2, undefined, -30, 200]);
     }
 
     playStructureDestroyed() {
         // Descending breakdown chime when a structure collapses
-        return this.playSfx([0.35, undefined, 120, .05, .15, .4, undefined, 1.8, undefined, -8]);
+        return this.playSfx([0.35, 0.05, 120, .05, .15, .4, undefined, 1.8, undefined, -8]);
     }
 
     playClick() {
         // Short high-pass pop for menu clicks
-        return this.playSfx([0.1, undefined, 1000, .01, undefined, .04, 1, undefined, undefined, undefined, undefined, undefined, undefined, 100, .05]);
+        return this.playSfx([0.1, 0.05, 1000, .01, undefined, .04, 1, undefined, undefined, undefined, undefined, undefined, undefined, 100, .05]);
     }
 
     playSeatClaim() {
         // Mechanical lock-in sound for joining seats
-        return this.playSfx([0.3, undefined, 200, .05, .05, .15, 1, .8, undefined, undefined, undefined, undefined, undefined, 300, .02]);
+        return this.playSfx([0.3, 0.05, 200, .05, .05, .15, 1, .8, undefined, undefined, undefined, undefined, undefined, 300, .02]);
     }
 
     playUplink() {
         // Telemetry sweep for turn submission
-        return this.playSfx([0.25, undefined, 300, .08, .1, .2, 1, 1.2, undefined, 25]);
+        return this.playSfx([0.25, 0.05, 300, .08, .1, .2, 1, 1.2, undefined, 25]);
     }
 
     playTerminalSelect() {
         // Rapid terminal scan chirp for selecting outposts
-        return this.playSfx([0.12, undefined, 600, .01, .03, .05, undefined, undefined, undefined, 15]);
+        return this.playSfx([0.12, 0.05, 600, .01, .03, .05, undefined, undefined, undefined, 15]);
     }
 
     playLinkStage() {
         // Cyber stretching ping for link staging
-        return this.playSfx([0.18, undefined, 350, .03, .05, .06, undefined, 0.5, undefined, 5]);
+        return this.playSfx([0.18, 0.05, 350, .03, .05, .06, undefined, 0.5, undefined, 5]);
     }
 
     playActionReset() {
         // Low-frequency buzz when clearing actions
-        return this.playSfx([0.2, undefined, 150, .02, .05, .12, undefined, undefined, undefined, -15]);
+        return this.playSfx([0.2, 0.05, 150, .02, .05, .12, undefined, undefined, undefined, -15]);
     }
 
     playStructureLanding() {
         // Pneumatic hydraulic impact slam when structures land
-        return this.playSfx([0.55, undefined, 65, .08, .12, .35, undefined, 2.2, undefined, -3]);
+        return this.playSfx([0.55, 0.05, 65, .08, .12, .35, undefined, 2.2, undefined, -3]);
     }
 
     playSamLaunch() {
         // Pneumatic eject noise pop + rising frequency sweep whistle
-        return this.playSfx([1,0,528,.01,0,.48,0,.3,-9,0,0,0,.32,4.2,0,0,0,1,0,0,0]); // Sam launch
+        return this.playSfx([1,0.05,528,.01,0,.48,0,.3,-9,0,0,0,.32,4.2,0,0,0,1,0,0,0]); // Sam launch
     }
 
     playSamFlight() {
         // Soft low-frequency rocket engine thruster rumble
-        return this.playSfx([0.08, undefined, 75, 0.04, undefined, 0.08, undefined, 0.5, undefined, -15]);
+        return this.playSfx([0.08, 0.05, 75, 0.04, undefined, 0.08, undefined, 0.5, undefined, -15]);
     }
 
     playSamLockOn() {
         // Snappy high-frequency dual-tone cybernetic lock alarm chime
-        return this.playSfx([0.22, undefined, 950, 0.01, 0.03, 0.08, 1, 1.8, undefined, 10, 300, 0.02, 0.05]);
+        return this.playSfx([0.22, 0.05, 950, 0.01, 0.03, 0.08, 1, 1.8, undefined, 10, 300, 0.02, 0.05]);
     }
 
     playRibbit() {
         // ribbit
-        return this.playSfx([0.8, undefined, 91, .39, .3, .01, 5, .38, undefined, -22, 39, .68, undefined, undefined, undefined, .2, undefined, .6, undefined, undefined, -1468]);
+        return this.playSfx([0.8, 0.05, 91, .39, .3, .01, 5, .38, undefined, -22, 39, .68, undefined, undefined, undefined, .2, undefined, .6, undefined, undefined, -1468]);
     }
 
     playCrackle() {
         // crackle
-        return this.playSfx([2, undefined, 104, .7, .11, .003, 0, 30, undefined, 2, undefined, undefined, 10, undefined, 6, .4, undefined, .67, .2, undefined, 1]);
+        return this.playSfx([2, 0.05, 104, .7, .11, .003, 0, 30, undefined, 2, undefined, undefined, 10, undefined, 6, .4, undefined, .67, .2, undefined, 1]);
     }
 
     playBwow() {
         // bwow
-        return this.playSfx([0.8, undefined, 180, .11, .24, .3, 4, 1.2, 3, undefined, undefined, undefined, undefined, .1, 242, undefined, undefined, .51, .12, undefined, -1453]);
+        return this.playSfx([0.8, 0.05, 180, .11, .24, .3, 4, 1.2, 3, undefined, undefined, undefined, undefined, .1, 242, undefined, undefined, .51, .12, undefined, -1453]);
     }
 
     playDrop() {
         // drop
-        return this.playSfx([4.2, undefined, 697, .05, .04, .009, 1, .7, undefined, -2, -184, .04, undefined, .9, undefined, .1, .04, .6, undefined, .14, -1486]);
+        return this.playSfx([4.2, 0.05, 697, .05, .04, .009, 1, .7, undefined, -2, -184, .04, undefined, .9, undefined, .1, .04, .6, undefined, .14, -1486]);
     }
 
     playPong() {
         // pong
-        return this.playSfx([1, undefined, 170, .01, 0, .15, 3, .5, undefined, undefined, -123, .09, undefined, undefined, 129, undefined, undefined, .87]);
+        return this.playSfx([1, 0.05, 170, .01, 0, .15, 3, .5, undefined, undefined, -123, .09, undefined, undefined, 129, undefined, undefined, .87]);
     }
 
     playHumm() {
         // humm
-        return this.playSfx([1, undefined, 101, .43, .02, .21, 3, 2.7, undefined, undefined, undefined, undefined, undefined, undefined, 66, .2, undefined, .97]);
+        return this.playSfx([1, 0.05, 101, .43, .02, .21, 3, 2.7, undefined, undefined, undefined, undefined, undefined, undefined, 66, .2, undefined, .97]);
     }
 
     playError() {
         // error
-        return this.playSfx([5, undefined, 10, .04, 0, .41, 4, 2.7, undefined, undefined, 102, .18, undefined, undefined, 66, undefined, .27, .53, undefined, .01, 896]);
+        return this.playSfx([5, 0.05, 10, .04, 0, .41, 4, 2.7, undefined, undefined, 102, .18, undefined, undefined, 66, undefined, .27, .53, undefined, .01, 896]);
     }
 
     playDeepHumm() {
         // deep humm
-        return this.playSfx([1, undefined, 9, 1, .1, .4, 1, 3.6, undefined, undefined, 37, .05, undefined, undefined, 37, undefined, undefined, .82, .41, .12]);
+        return this.playSfx([1, 0.05, 9, 1, .1, .4, 1, 3.6, undefined, undefined, 37, .05, undefined, undefined, 37, undefined, undefined, .82, .41, .12]);
     }
 
     playPowerOn() {
         // power on
-        return this.playSfx([1, undefined, 9, .4, .1, .4, 1, 3.6, 1, undefined, 37, .02, undefined, undefined, 37, undefined, undefined, 1, .41, .12]);
+        return this.playSfx([1, 0.05, 9, .4, .1, .4, 1, 3.6, 1, undefined, 37, .02, undefined, undefined, 37, undefined, undefined, 1, .41, .12]);
     }
 
     playSmallBombDrop() {
         // small bomb drop
-        return this.playSfx([2.6, undefined, 692, .29, 0, .32, 2, 1.2, undefined, undefined, -16, .05, .01, undefined, undefined, .1, undefined, .79, .15, undefined, -1455]);
+        return this.playSfx([2.6, 0.05, 692, .29, 0, .32, 2, 1.2, undefined, undefined, -16, .05, .01, undefined, undefined, .1, undefined, .79, .15, undefined, -1455]);
     }
 
     playRobotBirdChirp() {
         // robot bird chirp
-        return this.playSfx([4, undefined, 67, .02, .06, .03, 4, 3.2, 24, -5, undefined, undefined, .02, undefined, 377, undefined, undefined, .89]);
+        return this.playSfx([4, 0.05, 67, .02, .06, .03, 4, 3.2, 24, -5, undefined, undefined, .02, undefined, 377, undefined, undefined, .89]);
     }
 
     playCheepCheepCheep() {
         // cheep cheep cheep
-        return this.playSfx([1.2, undefined, 513, 0, .09, .06, 1, 1.3, -87, 9, undefined, undefined, .13, undefined, undefined, undefined, .03, .98, .45, .02]);
+        return this.playSfx([1.2, 0.05, 513, 0, .09, .06, 1, 1.3, -87, 9, undefined, undefined, .13, undefined, undefined, undefined, .03, .98, .45, .02]);
     }
 
     playDeathRay() {
         // death ray
-        return this.playSfx([1, undefined, 209, .1, .15, .22, 3, 3, 50, undefined, undefined, undefined, .05, undefined, 154, undefined, undefined, .63, .44, .13]);
+        return this.playSfx([1, 0.05, 209, .1, .15, .22, 3, 3, 50, undefined, undefined, undefined, .05, undefined, 154, undefined, undefined, .63, .44, .13]);
     }
 
     playLongError() {
         // long error
-        return this.playSfx([1, 0, 106, .45, .01, .02, 2, 2.7, undefined, undefined, -178, .4, undefined, undefined, undefined, undefined, undefined, .71, .27]);
+        return this.playSfx([1, 0.05, 106, .45, .01, .02, 2, 2.7, undefined, undefined, -178, .4, undefined, undefined, undefined, undefined, undefined, .71, .27]);
     }
 
     playUpgradeMusical() {
         // upgrade musical
-        return this.playSfx([0.8, undefined, 866, 0, .09, .41, 3, 2.6, undefined, undefined, 165, .09, .12, undefined, undefined, undefined, .03, .98, .11, .47, 241]);
+        return this.playSfx([0.8, 0.05, 866, 0, .09, .41, 3, 2.6, undefined, undefined, 165, .09, .12, undefined, undefined, undefined, .03, .98, .11, .47, 241]);
     }
     // Inside AudioManager class
     async playHeavyErrorCombo() {
