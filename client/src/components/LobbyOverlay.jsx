@@ -17,7 +17,7 @@ export const LobbyOverlay = ({ lobbyUpdate, availableMaps, onClaimSeat, onReadyT
                     {lobbyUpdate.slots.map((slot, index) => (
                         <button
                             key={index}
-                            className={`slot-button ${slot ? 'occupied' : ''} ${mySeatIndex === index ? 'my-seat' : ''}`}
+                            className={`slot-button slot-p${index + 1} ${slot ? 'occupied' : ''} ${mySeatIndex === index ? 'my-seat' : ''} ${slot?.ready ? 'is-ready' : ''}`}
                             onClick={() => !slot && onClaimSeat(index)}
                             disabled={!!slot && slot.socketId !== socketId}
                         >
