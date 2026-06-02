@@ -337,6 +337,44 @@ export class GameState {
             })
             .filter((e) => e !== null);
 
+        state.audibleEvents = [];
+        if (playerId && playerId !== 'spectator') {
+            const isAudible = (x, y) => {
+                return sourceEntities.some((playerEnt) => {
+                    if (playerEnt.owner !== playerId) return false;
+                    const isStructure = ['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(playerEnt.type);
+                    if (!isStructure) return false;
+                    
+                    const dist = this.getToroidalDistance(playerEnt.x, playerEnt.y, x, y);
+                    return dist <= 1000;
+                });
+            };
+
+            sourceEntities.forEach((e) => {
+                const isSoundEvent = 
+                    e.type === 'PROJECTILE' ||
+                    e.type === 'LASER_BEAM' ||
+                    e.type === 'EXPLOSION' ||
+                    e.type === 'SHIELD_HIT' ||
+                    e.type === 'LINK_COLLISION' ||
+                    e.type === 'SPARK' ||
+                    (e.deployed === false && ['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(e.type));
+                
+                if (isSoundEvent) {
+                    const inVision = isVisible(e.x, e.y, e.owner);
+                    if (!inVision && isAudible(e.x, e.y)) {
+                        state.audibleEvents.push({
+                            id: e.id,
+                            type: e.type,
+                            itemType: e.itemType,
+                            x: e.x,
+                            y: e.y
+                        });
+                    }
+                }
+            });
+        }
+
         return state;
     }
 

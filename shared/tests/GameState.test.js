@@ -582,6 +582,39 @@ describe('GameState - Fog of War', () => {
         const specState = game.getVisibleState('spectator');
         expect(specState.entities[0].scouted).toBe(true);
     });
+
+    it('should include out-of-vision sound-producing entities in audibleEvents if close to player structures', () => {
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
+        p1Hub.x = 250;
+        p1Hub.y = 500; // Vision is 400. Covers [0-650] on X.
+
+        // Place an out-of-vision explosion close to player 1's hub (dist = 500px, which is >400 vision but <1000 hearing range)
+        const closeExplosion = game.addEntity({
+            id: 'expl-close',
+            type: 'EXPLOSION',
+            x: 750,
+            y: 500
+        });
+
+        // Place an out-of-vision explosion far away from player 1's hub (dist = 1250px, which is >1000 hearing range)
+        const farExplosion = game.addEntity({
+            id: 'expl-far',
+            type: 'EXPLOSION',
+            x: 1250,
+            y: 1250
+        });
+
+        const visibleState = game.getVisibleState('player1');
+
+        // Close explosion should be in audibleEvents
+        const closeEvt = visibleState.audibleEvents.find(e => e.id === 'expl-close');
+        expect(closeEvt).toBeDefined();
+        expect(closeEvt.type).toBe('EXPLOSION');
+
+        // Far explosion should NOT be in audibleEvents
+        const farEvt = visibleState.audibleEvents.find(e => e.id === 'expl-far');
+        expect(farEvt).toBeUndefined();
+    });
 });
 
 describe('GameState - Multi-Action Turns', () => {
