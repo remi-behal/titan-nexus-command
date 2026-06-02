@@ -75,7 +75,7 @@ export const CollisionSystem = {
 
                 // Visual effect
                 tempVisuals.push({
-                    type: 'SPARK',
+                    type: 'SHIELD_HIT',
                     x: proj.currX,
                     y: proj.currY,
                     duration: 15
