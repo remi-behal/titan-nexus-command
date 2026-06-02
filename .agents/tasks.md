@@ -96,7 +96,7 @@
     - [ ] **Refinements & Bugfixes**:
         - [ ] Nuke hazard needs refinement. Revisit later <!-- id: 98 -->
         - [x] Nuke structure should not expand/contract, just flash maybe. <!-- id: 99 -->
-        - [ ] Shield needs a hit effect (spark is for projectile, shield needs some visual feedback too). Revisit later <!-- id: 100 -->
+        - [x] Shield needs a hit effect (spark is for projectile, shield needs some visual feedback too). Revisit later <!-- id: 100 -->
         - [x] Shield dome needs to have low health visual flickering instead of shield structure. <!-- id: 101 -->
         - [x] **Bug**: Slingshot deny on angle should only affect launched structures. It currently affects launched projectiles too. <!-- id: 102 -->
         - [x] Allow moving the map during execution phase. <!-- id: 103 -->
