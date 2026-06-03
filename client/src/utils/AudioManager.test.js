@@ -208,14 +208,14 @@ describe('AudioManager', () => {
         audioManager.playSamFlight();
         await new Promise(resolve => setTimeout(resolve, 10));
         expect(zzfxSpy).toHaveBeenLastCalledWith(
-            0.04, 0.05, 75, 0.04, undefined, 0.08, undefined, 0.5, undefined, -15
+            0.04, 0.05, 75, 0.04, 0, 0.08, 0, 0.5, 0, -15, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0
         );
 
         // 3. Lock On
         audioManager.playSamLockOn();
         await new Promise(resolve => setTimeout(resolve, 10));
         expect(zzfxSpy).toHaveBeenLastCalledWith(
-            0.11, 0.05, 950, 0.01, 0.03, 0.08, 1, 1.8, undefined, 10, 300, 0.02, 0.05
+            0.11, 0.05, 950, 0.01, 0.03, 0.08, 1, 1.8, 0, 10, 300, 0.02, 0.05, 0, 0, 0, 0, 1, 0, 0, 0
         );
     });
 
@@ -240,31 +240,17 @@ describe('AudioManager', () => {
 
         await audioManager.init();
 
-        const customMethods = [
-            'playRibbit',
-            'playCrackle',
-            'playBwow',
-            'playDrop',
-            'playPong',
-            'playHumm',
-            'playError',
-            'playDeepHumm',
-            'playPowerOn',
-            'playSmallBombDrop',
-            'playRobotBirdChirp',
-            'playCheepCheepCheep',
-            'playDeathRay',
-            'playLongError',
-            'playUpgradeMusical'
-        ];
+        const registered = audioManager.getRegisteredSounds();
+        expect(registered.length).toBeGreaterThan(0);
 
-        for (const method of customMethods) {
-            audioManager[method]();
+        for (const sound of registered) {
+            audioManager[sound.methodName]();
             await new Promise(resolve => setTimeout(resolve, 1));
             expect(zzfxSpy).toHaveBeenCalled();
             zzfxSpy.mockClear();
         }
     });
+
 
     it('defines and exports a valid TRACKS playlist', () => {
         expect(TRACKS).toBeDefined();
@@ -601,7 +587,7 @@ describe('AudioManager', () => {
 
             expect(zzfxSpy).toHaveBeenCalledWith(
                 expect.closeTo(0.015), // final volume parameter
-                0.05, 400, .05, undefined, .1, undefined, undefined, 50, -500
+                0.05, 400, .05, 0, .1, 0, 1, 50, -500, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0
             );
         });
     });
