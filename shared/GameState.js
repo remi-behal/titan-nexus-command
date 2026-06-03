@@ -358,6 +358,7 @@ export class GameState {
                     e.type === 'SHIELD_HIT' ||
                     e.type === 'LINK_COLLISION' ||
                     e.type === 'SPARK' ||
+                    e.type === 'STRUCTURE_LANDING' ||
                     (e.deployed === false && ['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(e.type));
                 
                 if (isSoundEvent) {
@@ -1461,9 +1462,17 @@ export class GameState {
                         // Update scouting for all entities (permanent persistence)
                         this.updateScouting(tempProjectiles);
 
-                        if (t % snapshotStep === 0 || t === subTicks) {
+                        // Force snapshot on structural landing tick to ensure secure Fog of War audio propagates instantly
+                        let forceSnapshot = false;
+                        tempProjectiles.forEach((p) => {
+                            if (t === p.arrivalTick && ['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(p.type)) {
+                                forceSnapshot = true;
+                            }
+                        });
+
+                        if (t % snapshotStep === 0 || t === subTicks || forceSnapshot) {
                             // OPTIMIZATION: Only push sub-tick snapshot if something is actually happening (visuals or active missiles)
-                            if (tempProjectiles.some((p) => p.active) || tempVisuals.length > 0) {
+                            if (tempProjectiles.some((p) => p.active) || tempVisuals.length > 0 || forceSnapshot) {
                                 const snapshotState = this.getState();
                                 snapshotState.entities = [
                                     ...snapshotState.entities,

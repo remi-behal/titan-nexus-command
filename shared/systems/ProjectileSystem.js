@@ -353,6 +353,18 @@ export const ProjectileSystem = {
                     hp: GLOBAL_STATS.UNDEPLOYED_HP
                 };
                 const newEnt = gameState.addEntity(data);
+                
+                // Spawn a transient visual structure landing event for audio and visual replication
+                tempVisuals.push({
+                    id: `land-${Math.random()}`,
+                    type: 'STRUCTURE_LANDING',
+                    itemType: proj.type,
+                    owner: proj.owner,
+                    x: proj.currX,
+                    y: proj.currY,
+                    duration: 3
+                });
+
                 if (
                     data.sourceId &&
                     data.intendedDx !== undefined &&

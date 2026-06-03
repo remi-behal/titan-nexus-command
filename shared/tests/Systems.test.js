@@ -77,4 +77,62 @@ describe('Modular Systems Verification', () => {
         expect(proj.active).toBe(false);
         expect(proj.hitThisTick).toBe(false); // Detonates on arrival
     });
+
+    it('should spawn STRUCTURE_LANDING visual effect when a structure projectile lands', () => {
+        const gameState = new GameState();
+        gameState.map.width = 2000;
+        gameState.map.height = 2000;
+
+        const proj = {
+            id: 'test-hub-proj',
+            type: 'HUB',
+            owner: 'player1',
+            startX: 100,
+            startY: 100,
+            currX: 100,
+            currY: 100,
+            intendedDx: 400,
+            intendedDy: 300,
+            arrivalTick: 100,
+            active: true,
+            hitThisTick: false,
+            scheduledEffects: []
+        };
+
+        const tempProjectiles = [proj];
+        const tempVisuals = [];
+        const impacts = [];
+        const overloadedThisRound = new Set();
+        const snapshots = [];
+
+        // Tick 100 (arrival)
+        ProjectileSystem.updateStandardProjectile(
+            gameState,
+            proj,
+            100,
+            1,
+            tempProjectiles,
+            tempVisuals,
+            impacts,
+            overloadedThisRound,
+            snapshots
+        );
+
+        expect(proj.active).toBe(false);
+        expect(proj.hitThisTick).toBe(true);
+
+        // Check that a new entity was created on gameState.entities
+        expect(gameState.entities.length).toBe(1);
+        const addedEntity = gameState.entities[0];
+        expect(addedEntity.type).toBe('HUB');
+        expect(addedEntity.deployed).toBe(false);
+
+        // Check that a STRUCTURE_LANDING visual effect was spawned
+        expect(tempVisuals.length).toBe(1);
+        expect(tempVisuals[0].type).toBe('STRUCTURE_LANDING');
+        expect(tempVisuals[0].itemType).toBe('HUB');
+        expect(tempVisuals[0].x).toBe(500);
+        expect(tempVisuals[0].y).toBe(400);
+        expect(tempVisuals[0].owner).toBe('player1');
+    });
 });
