@@ -3,10 +3,36 @@ import { ENTITY_STATS } from '../../../shared/constants/EntityStats.js';
 import * as TorusMath from '../../../shared/utils/TorusMath.js';
 import { audioManager } from '../utils/AudioManager';
 
+const triggerSpawnSfx = (type, itemType, x, y) => {
+    if (type === 'PROJECTILE') {
+        if (itemType === 'HOMING_MISSILE') {
+            audioManager.playHeavyLaunch(x, y);
+        } else if (itemType === 'SAM_MISSILE' || itemType === 'SMART_SAM_MISSILE') {
+            audioManager.playSamLaunch(x, y);
+        } else if (!['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(itemType)) {
+            audioManager.playShoot(x, y);
+        }
+    } else if (type === 'LASER_BEAM') {
+        audioManager.playLaser(x, y);
+    } else if (type === 'EXPLOSION') {
+        if (itemType === 'NUKE') {
+            audioManager.playNukeDetonation(x, y);
+        } else {
+            audioManager.playExplosion(x, y);
+        }
+    } else if (type === 'SHIELD_HIT' || type === 'LINK_COLLISION' || type === 'SPARK') {
+        audioManager.playShieldHit(x, y);
+    } else if (type === 'STRUCTURE_LANDING' || ['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(type)) {
+        audioManager.playStructureLanding(x, y);
+    }
+};
+
 export function useVisualInterpolation() {
     const visualEntities = useRef({});
     const visualLinks = useRef({});
     const playedAudioEventIds = useRef(new Set());
+    const isFirstUpdate = useRef(true);
+    const lastFlightSoundTimes = useRef({});
 
     const updateInterpolation = (currentGameState, myPlayerId) => {
         if (!currentGameState) {
@@ -20,6 +46,10 @@ export function useVisualInterpolation() {
         // Reset tracking on game restart or turn planning phase 1
         if (currentGameState.turn === 1 && currentGameState.phase === 'PLANNING') {
             playedAudioEventIds.current.clear();
+            visualEntities.current = {};
+            visualLinks.current = {};
+            isFirstUpdate.current = true;
+            lastFlightSoundTimes.current = {};
         }
 
         // Process Fog of War secure audio events
@@ -27,26 +57,8 @@ export function useVisualInterpolation() {
             currentGameState.audibleEvents.forEach((evt) => {
                 if (!playedAudioEventIds.current.has(evt.id)) {
                     playedAudioEventIds.current.add(evt.id);
-                    if (evt.type === 'PROJECTILE') {
-                        if (evt.itemType === 'HOMING_MISSILE') {
-                            audioManager.playHeavyLaunch(evt.x, evt.y);
-                        } else if (evt.itemType === 'SAM_MISSILE' || evt.itemType === 'SMART_SAM_MISSILE') {
-                            audioManager.playSamLaunch(evt.x, evt.y);
-                        } else if (!['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(evt.itemType)) {
-                            audioManager.playShoot(evt.x, evt.y);
-                        }
-                    } else if (evt.type === 'LASER_BEAM') {
-                        audioManager.playLaser(evt.x, evt.y);
-                    } else if (evt.type === 'EXPLOSION') {
-                        if (evt.itemType === 'NUKE') {
-                            audioManager.playNukeDetonation(evt.x, evt.y);
-                        } else {
-                            audioManager.playExplosion(evt.x, evt.y);
-                        }
-                    } else if (evt.type === 'SHIELD_HIT' || evt.type === 'LINK_COLLISION' || evt.type === 'SPARK') {
-                        audioManager.playShieldHit(evt.x, evt.y);
-                    } else if (evt.type === 'STRUCTURE_LANDING' || ['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(evt.type)) {
-                        audioManager.playStructureLanding(evt.x, evt.y);
+                    if (!isFirstUpdate.current) {
+                        triggerSpawnSfx(evt.type, evt.itemType, evt.x, evt.y);
                     }
                 }
             });
@@ -112,26 +124,8 @@ export function useVisualInterpolation() {
                 };
 
                 // Play procedural SFX for newly spawned entities
-                if (serverEnt.type === 'PROJECTILE') {
-                    if (serverEnt.itemType === 'HOMING_MISSILE') {
-                        audioManager.playHeavyLaunch(serverEnt.x, serverEnt.y);
-                    } else if (serverEnt.itemType === 'SAM_MISSILE' || serverEnt.itemType === 'SMART_SAM_MISSILE') {
-                        audioManager.playSamLaunch(serverEnt.x, serverEnt.y);
-                    } else if (!['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(serverEnt.itemType)) {
-                        audioManager.playShoot(serverEnt.x, serverEnt.y);
-                    }
-                } else if (serverEnt.type === 'LASER_BEAM') {
-                    audioManager.playLaser(serverEnt.x, serverEnt.y);
-                } else if (serverEnt.type === 'EXPLOSION') {
-                    if (serverEnt.itemType === 'NUKE') {
-                        audioManager.playNukeDetonation(serverEnt.x, serverEnt.y);
-                    } else {
-                        audioManager.playExplosion(serverEnt.x, serverEnt.y);
-                    }
-                } else if (serverEnt.type === 'SHIELD_HIT' || serverEnt.type === 'LINK_COLLISION' || serverEnt.type === 'SPARK') {
-                    audioManager.playShieldHit(serverEnt.x, serverEnt.y);
-                } else if (serverEnt.type === 'STRUCTURE_LANDING' || ['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(serverEnt.type)) {
-                    audioManager.playStructureLanding(serverEnt.x, serverEnt.y);
+                if (!isFirstUpdate.current) {
+                    triggerSpawnSfx(serverEnt.type, serverEnt.itemType, serverEnt.x, serverEnt.y);
                 }
             } else {
                 const viz = visualEntities.current[serverEnt.id];
@@ -256,6 +250,51 @@ export function useVisualInterpolation() {
                 }
             }
         });
+
+        // Periodic flight sound pulse for missiles (in vision and FoW)
+        const activeProjectiles = [];
+
+        currentGameState.entities.forEach((serverEnt) => {
+            if (serverEnt.type === 'PROJECTILE' && (serverEnt.itemType === 'SAM_MISSILE' || serverEnt.itemType === 'SMART_SAM_MISSILE' || serverEnt.itemType === 'HOMING_MISSILE')) {
+                activeProjectiles.push({
+                    id: serverEnt.id,
+                    x: serverEnt.x,
+                    y: serverEnt.y
+                });
+            }
+        });
+
+        if (currentGameState.audibleEvents) {
+            currentGameState.audibleEvents.forEach((evt) => {
+                if (evt.type === 'PROJECTILE' && (evt.itemType === 'SAM_MISSILE' || evt.itemType === 'SMART_SAM_MISSILE' || evt.itemType === 'HOMING_MISSILE')) {
+                    activeProjectiles.push({
+                        id: evt.id,
+                        x: evt.x,
+                        y: evt.y
+                    });
+                }
+            });
+        }
+
+        if (!isFirstUpdate.current) {
+            const now = Date.now();
+            activeProjectiles.forEach((proj) => {
+                const lastPlay = lastFlightSoundTimes.current[proj.id] || 0;
+                if (now - lastPlay > 150) {
+                    const res = audioManager.playLowBuzz(proj.x, proj.y);
+                    lastFlightSoundTimes.current[proj.id] = now;
+                }
+            });
+        }
+
+        const activeIds = new Set(activeProjectiles.map((p) => p.id));
+        Object.keys(lastFlightSoundTimes.current).forEach((id) => {
+            if (!activeIds.has(id)) {
+                delete lastFlightSoundTimes.current[id];
+            }
+        });
+
+        isFirstUpdate.current = false;
 
         return {
             visualEntities: visualEntities.current,

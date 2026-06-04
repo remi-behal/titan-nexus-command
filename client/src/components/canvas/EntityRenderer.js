@@ -164,15 +164,6 @@ export function drawEntities(
                                 const hasTrail = typeForTrail === 'HOMING_MISSILE' || typeForTrail === 'SAM_MISSILE' || typeForTrail === 'SMART_SAM_MISSILE';
                                 
                                 if (!displayAsGhost && hasTrail) {
-                                    // Periodic flight sound pulse for SAM interceptors
-                                    if (typeForTrail === 'SAM_MISSILE' || typeForTrail === 'SMART_SAM_MISSILE') {
-                                        const now = Date.now();
-                                        if (!entity.lastFlightSoundTime || now - entity.lastFlightSoundTime > 150) {
-                                            audioManager.playSamFlight();
-                                            entity.lastFlightSoundTime = now;
-                                        }
-                                    }
-
                                     ctx.save();
                                     const rad = ((entity.angle !== undefined ? entity.angle : entity.currentAngle || 0) * Math.PI) / 180 + Math.PI / 2;
                                     ctx.translate(entity.x, entity.y);

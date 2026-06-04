@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { audioManager, TRACKS } from './AudioManager';
+import { audioManager, TRACKS, MAX_FALLOFF_DISTANCE, MIN_FLOOR } from './AudioManager';
 import * as ZzFXModule from './ZzFX';
 
 vi.mock('chiptune3/chiptune3.js', () => {
@@ -512,7 +512,7 @@ describe('AudioManager', () => {
             expect(audioManager.calculateSpatialVolume(200, 200)).toBe(1.0);
         });
 
-        it('returns 0.15 when sound is extremely far away', () => {
+        it('returns MIN_FLOOR when sound is extremely far away', () => {
             audioManager.updateCameraContext(
                 { x: 100, y: 100 },
                 1.0,
@@ -525,10 +525,10 @@ describe('AudioManager', () => {
             // Viewport rect: x in [100, 300], y in [100, 300]
             // Center: (200, 200)
             // Sound extremely far away (e.g. opposite side of torus map):
-            expect(audioManager.calculateSpatialVolume(1200, 1200)).toBe(0.15);
+            expect(audioManager.calculateSpatialVolume(1200, 1200)).toBe(MIN_FLOOR);
         });
 
-        it('returns between 0.15 and 1.0 when sound is just outside the viewport edge', () => {
+        it('returns between MIN_FLOOR and 1.0 when sound is just outside the viewport edge', () => {
             audioManager.updateCameraContext(
                 { x: 100, y: 100 },
                 1.0,
@@ -541,9 +541,9 @@ describe('AudioManager', () => {
             // Viewport rect: x in [100, 300], y in [100, 300]
             // Center: (200, 200)
             // Sound at x = 400, y = 200 (distance from edge distX = 100, distY = 0 -> distFromEdge = 100)
-            // falloffFactor = 1 - 100/1000 = 0.9
-            // volumeMultiplier = 0.15 + 0.85 * 0.9 = 0.915
-            expect(audioManager.calculateSpatialVolume(400, 200)).toBeCloseTo(0.915);
+            const expectedFactor = Math.max(0, 1 - 100 / MAX_FALLOFF_DISTANCE);
+            const expectedVolume = MIN_FLOOR + (1.0 - MIN_FLOOR) * expectedFactor;
+            expect(audioManager.calculateSpatialVolume(400, 200)).toBeCloseTo(expectedVolume);
         });
 
         it('applies spatial volume multiplier to zzfx playback parameters', async () => {
@@ -567,7 +567,7 @@ describe('AudioManager', () => {
 
             await audioManager.init();
 
-            // Set camera context and make the sound far away so volume multiplier is 0.15
+            // Set camera context and make the sound far away so volume multiplier is MIN_FLOOR
             audioManager.updateCameraContext(
                 { x: 100, y: 100 },
                 1.0,
@@ -578,15 +578,15 @@ describe('AudioManager', () => {
             );
 
             // Default sfx volume in playShoot is 0.2. Global audioManager.volume is 0.5.
-            // Far away spatial volume multiplier is 0.15.
-            // Final volume = 0.2 * 0.5 * 0.15 = 0.015.
+            // Far away spatial volume multiplier is MIN_FLOOR.
+            // Final volume = 0.2 * 0.5 * MIN_FLOOR.
             await audioManager.playShoot(1200, 1200);
             
             // Wait for tick
             await new Promise(resolve => setTimeout(resolve, 5));
 
             expect(zzfxSpy).toHaveBeenCalledWith(
-                expect.closeTo(0.015), // final volume parameter
+                expect.closeTo(0.2 * 0.5 * MIN_FLOOR), // final volume parameter
                 0.05, 400, .05, 0, .1, 0, 1, 50, -500, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0
             );
         });

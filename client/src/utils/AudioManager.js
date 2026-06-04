@@ -1,6 +1,9 @@
 import { zzfx, setZzfxContext } from './ZzFX';
 import zzfxSounds from './zzfx_sounds.json';
 
+export const MAX_FALLOFF_DISTANCE = 800;
+export const MIN_FLOOR = 0.05;
+
 export const TRACKS = [
     { id: 'twimble', name: 'TWIMBLE.MOD', path: '/audio/tracks/twimble.mod' },
     { id: 'banana', name: 'BANANA.XM', path: '/audio/tracks/hackurr_-_banana.xm' },
@@ -61,11 +64,8 @@ class AudioManager {
         const distY = Math.max(0, Math.abs(dy) - viewportHeight / 2);
         const distFromEdge = Math.sqrt(distX * distX + distY * distY);
 
-        const maxFalloffDistance = 1000;
-        const minFloor = 0.15;
-        
-        const falloffFactor = Math.max(0, 1 - distFromEdge / maxFalloffDistance);
-        return minFloor + (1.0 - minFloor) * falloffFactor;
+        const falloffFactor = Math.max(0, 1 - distFromEdge / MAX_FALLOFF_DISTANCE);
+        return MIN_FLOOR + (1.0 - MIN_FLOOR) * falloffFactor;
     }
 
     subscribe(listener) {
