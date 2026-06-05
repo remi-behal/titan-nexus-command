@@ -6,7 +6,7 @@
  * or UI. This makes it easy to move to the server later!
  */
 
-import { ENTITY_STATS, GLOBAL_STATS, RESOURCE_NODE_STATS } from './constants/EntityStats.js';
+import { ENTITY_STATS, GLOBAL_STATS, RESOURCE_NODE_STATS, ENTITY_TYPES } from './constants/EntityStats.js';
 import * as TorusMath from './utils/TorusMath.js';
 import { CollisionSystem } from './systems/CollisionSystem.js';
 import { ProjectileSystem } from './systems/ProjectileSystem.js';
@@ -342,7 +342,7 @@ export class GameState {
             const isAudible = (x, y) => {
                 return sourceEntities.some((playerEnt) => {
                     if (playerEnt.owner !== playerId) return false;
-                    const isStructure = ['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(playerEnt.type);
+                    const isStructure = ENTITY_STATS[playerEnt.type]?.type === ENTITY_TYPES.STRUCTURE;
                     if (!isStructure) return false;
                     
                     const dist = this.getToroidalDistance(playerEnt.x, playerEnt.y, x, y);
@@ -359,7 +359,7 @@ export class GameState {
                     e.type === 'LINK_COLLISION' ||
                     e.type === 'SPARK' ||
                     e.type === 'STRUCTURE_LANDING' ||
-                    (e.deployed === false && ['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(e.type));
+                    (e.deployed === false && ENTITY_STATS[e.type]?.type === ENTITY_TYPES.STRUCTURE);
                 
                 if (isSoundEvent) {
                     const inVision = isVisible(e.x, e.y, e.owner);
@@ -1465,7 +1465,7 @@ export class GameState {
                         // Force snapshot on structural landing tick to ensure secure Fog of War audio propagates instantly
                         let forceSnapshot = false;
                         tempProjectiles.forEach((p) => {
-                            if (t === p.arrivalTick && ['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(p.type)) {
+                            if (t === p.arrivalTick && ENTITY_STATS[p.type]?.type === ENTITY_TYPES.STRUCTURE) {
                                 forceSnapshot = true;
                             }
                         });
