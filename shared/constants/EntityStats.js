@@ -222,7 +222,7 @@ export const ENTITY_STATS = {
     },
     /** @see [weapons.md#nuke](../../.agents/weapons.md#nuke) */
     NUKE: {
-        type: ENTITY_TYPES.PROJECTILE,
+        type: ENTITY_TYPES.STRUCTURE,
         hp: 5,
         cost: 100,
         damageFull: 10,
