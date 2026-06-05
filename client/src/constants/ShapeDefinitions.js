@@ -27,19 +27,6 @@ export const SHAPES = {
         bracing: true,
         closed: true
     },
-    TURRET: {
-        type: SHAPE_TYPES.PATH,
-        points: [[-0.5,-1], [0.5,-1], [1,0.5], [-1,0.5]], // Trapezoidal base
-        layers: 2,
-        closed: true
-    },
-    BARRIER: {
-        type: SHAPE_TYPES.PATH,
-        points: [[-1,-0.2], [-0.8,-0.4], [0.8,-0.4], [1,-0.2], [1,0.2], [0.8,0.4], [-0.8,0.4], [-1,0.2]], // Chamfered slab
-        layers: 2,
-        bracing: true,
-        closed: true
-    },
     RECLAIMER: {
         type: SHAPE_TYPES.PATH,
         points: [[-0.7,-0.7], [0.7,-0.7], [0.7,0.7], [-0.7,0.7]], // Square
@@ -79,13 +66,6 @@ export const SHAPES = {
         type: SHAPE_TYPES.PATH,
         points: [[-0.4, -1], [0.4, -1], [1, -0.4], [1, 0.4], [0.4, 1], [-0.4, 1], [-1, 0.4], [-1, -0.4]], // Octagon
         layers: 2,
-        closed: true
-    },
-    RELAY: {
-        type: SHAPE_TYPES.PATH,
-        points: [[0,-1], [0.2,-0.4], [0.8,-0.2], [0.2,0], [0.5,1], [-0.5,1], [-0.2,0], [-0.8,-0.2], [-0.2,-0.4]], // Comms array
-        layers: 2,
-        bracing: true,
         closed: true
     },
     SHIELD: {

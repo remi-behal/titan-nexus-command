@@ -1,4 +1,4 @@
-import { ENTITY_STATS, GLOBAL_STATS } from '../../../../shared/constants/EntityStats.js';
+import { ENTITY_STATS, GLOBAL_STATS, ENTITY_TYPES } from '../../../../shared/constants/EntityStats.js';
 import { GameState } from '../../../../shared/GameState.js';
 import { VISUAL_STATS } from '../../constants/VisualStats.js';
 import { getGhostColor } from '../../utils/RenderingHelpers.js';
@@ -381,18 +381,7 @@ export function drawEntities(
                                         ctx.restore();
                                         ctx.restore();
                                     }
-                                } else if (
-                                    entity.type === 'HUB' ||
-                                    entity.type === 'EXTRACTOR' ||
-                                    entity.type === 'SHIELD' ||
-                                    entity.type === 'CLOAKING_FIELD' ||
-                                    entity.type === 'TURRET' ||
-                                    entity.type === 'RELAY' ||
-                                    entity.type === 'BARRIER' ||
-                                    entity.type === 'LIGHT_SAM_DEFENSE' ||
-                                    entity.type === 'SMART_SAM_DEFENSE' ||
-                                    entity.type === 'ECHO_ARTILLERY'
-                                ) {
+                                } else if (ENTITY_STATS[entity.type]?.type === ENTITY_TYPES.STRUCTURE) {
                                     const shapeKey = entity.type; // Use the entity type directly as the shape key
                                     
                                     if (entity.type === 'SHIELD') {
