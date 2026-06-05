@@ -589,7 +589,7 @@ describe('GameState - Fog of War', () => {
         p1Hub.y = 500; // Vision is 400. Covers [0-650] on X.
 
         // Place an out-of-vision explosion close to player 1's hub (dist = 500px, which is >400 vision but <1000 hearing range)
-        const closeExplosion = game.addEntity({
+        game.addEntity({
             id: 'expl-close',
             type: 'EXPLOSION',
             x: 750,
@@ -597,7 +597,7 @@ describe('GameState - Fog of War', () => {
         });
 
         // Place an out-of-vision explosion far away from player 1's hub (dist = 1250px, which is >1000 hearing range)
-        const farExplosion = game.addEntity({
+        game.addEntity({
             id: 'expl-far',
             type: 'EXPLOSION',
             x: 1250,

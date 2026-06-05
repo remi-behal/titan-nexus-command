@@ -281,7 +281,7 @@ export function useVisualInterpolation() {
             activeProjectiles.forEach((proj) => {
                 const lastPlay = lastFlightSoundTimes.current[proj.id] || 0;
                 if (now - lastPlay > 150) {
-                    const res = audioManager.playLowBuzz(proj.x, proj.y);
+                    audioManager.playLowBuzz(proj.x, proj.y);
                     lastFlightSoundTimes.current[proj.id] = now;
                 }
             });

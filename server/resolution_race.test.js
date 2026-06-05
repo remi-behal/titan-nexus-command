@@ -1,4 +1,4 @@
-import { describe, it, beforeAll, afterAll } from 'vitest';
+import { describe, it, beforeAll, afterAll, expect } from 'vitest';
 import { io as Client } from 'socket.io-client';
 import { spawn } from 'child_process';
 import path from 'path';

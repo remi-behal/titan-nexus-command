@@ -8,10 +8,17 @@
 import { SPEED_TIERS } from './LaunchSpeeds.js';
 import { EXPERIMENTAL_STATS } from './ExperimentalStats.js';
 
+export const ENTITY_TYPES = {
+    STRUCTURE: 'STRUCTURE',
+    PROJECTILE: 'PROJECTILE',
+    EFFECT: 'EFFECT'
+};
+
 export const ENTITY_STATS = {
     ...EXPERIMENTAL_STATS,
     /** @see [structures.md#hubs](../../.agents/structures.md#hubs) */
     HUB: {
+        type: ENTITY_TYPES.STRUCTURE,
         hp: 5,
         fuel: 3,
         fuelRegen: 3,
@@ -26,6 +33,7 @@ export const ENTITY_STATS = {
     },
     /** @see [defenses.md#laser-point-defense](../../.agents/defenses.md#laser-point-defense) */
     LASER_POINT_DEFENSE: {
+        type: ENTITY_TYPES.STRUCTURE,
         hp: 2,
         fuel: 1,
         fuelRegen: 1,
@@ -40,6 +48,7 @@ export const ENTITY_STATS = {
     },
     /** @see [structures.md#extractors](../../.agents/structures.md#extractors) */
     EXTRACTOR: {
+        type: ENTITY_TYPES.STRUCTURE,
         hp: 2,
         vision: 200,
         energyGen: 5,
@@ -52,6 +61,7 @@ export const ENTITY_STATS = {
     },
     /** @see [weapons.md#dumb-bomb](../../.agents/weapons.md#dumb-bomb) */
     WEAPON: {
+        type: ENTITY_TYPES.PROJECTILE,
         hp: 1,
         cost: 15,
         damageFull: 2,
@@ -67,6 +77,7 @@ export const ENTITY_STATS = {
     },
     /** @see [weapons.md#cluster-bomb](../../.agents/weapons.md#cluster-bomb) */
     CLUSTER_BOMB: {
+        type: ENTITY_TYPES.PROJECTILE,
         hp: 1,
         cost: 30,
         damageFull: 1,
@@ -83,6 +94,7 @@ export const ENTITY_STATS = {
         category: 'OFFENSE'
     },
     CLUSTER_FRAGMENT: {
+        type: ENTITY_TYPES.PROJECTILE,
         hp: 1,
         cost: 0,
         damageFull: 1,
@@ -96,6 +108,7 @@ export const ENTITY_STATS = {
     },
     /** @see [weapons.md#homing-missile](../../.agents/weapons.md#homing-missile) */
     HOMING_MISSILE: {
+        type: ENTITY_TYPES.PROJECTILE,
         hp: 2,
         cost: 20,
         damageFull: 2,
@@ -117,6 +130,7 @@ export const ENTITY_STATS = {
     },
     /** @see [defenses.md#light-sam-defense](../../.agents/defenses.md#light-sam-defense) */
     LIGHT_SAM_DEFENSE: {
+        type: ENTITY_TYPES.STRUCTURE,
         hp: 2,
         fuel: 1,
         fuelRegen: 1,
@@ -131,6 +145,7 @@ export const ENTITY_STATS = {
     },
     /** @see [defenses.md#sam-missile](../../.agents/defenses.md#sam-missile) */
     SAM_MISSILE: {
+        type: ENTITY_TYPES.PROJECTILE,
         hp: 1,
         cost: 0,
         damageFull: 2,
@@ -151,6 +166,7 @@ export const ENTITY_STATS = {
         deathEffect: 'DETONATE'
     },
     SMART_SAM_DEFENSE: {
+        type: ENTITY_TYPES.STRUCTURE,
         hp: 3,
         fuel: 2,
         fuelRegen: 1,
@@ -165,6 +181,7 @@ export const ENTITY_STATS = {
         category: 'DEFENSE'
     },
     SMART_SAM_MISSILE: {
+        type: ENTITY_TYPES.PROJECTILE,
         hp: 2,
         cost: 0,
         damageFull: 3,
@@ -188,6 +205,7 @@ export const ENTITY_STATS = {
     },
     /** @see [defenses.md#flak-defense](../../.agents/defenses.md#flak-defense) */
     FLAK_DEFENSE: {
+        type: ENTITY_TYPES.STRUCTURE,
         hp: 2,
         fuel: 1,
         fuelRegen: 1,
@@ -204,6 +222,7 @@ export const ENTITY_STATS = {
     },
     /** @see [weapons.md#nuke](../../.agents/weapons.md#nuke) */
     NUKE: {
+        type: ENTITY_TYPES.PROJECTILE,
         hp: 5,
         cost: 100,
         damageFull: 10,
@@ -218,6 +237,7 @@ export const ENTITY_STATS = {
         category: 'OFFENSE'
     },
     NAPALM: {
+        type: ENTITY_TYPES.PROJECTILE,
         hp: 1,
         cost: 35,
         vision: 100,
@@ -229,6 +249,7 @@ export const ENTITY_STATS = {
         category: 'OFFENSE'
     },
     NAPALM_FIRE: {
+        type: ENTITY_TYPES.EFFECT,
         hp: 9999,
         duration: 2,
         damageTick: 1,
@@ -238,6 +259,7 @@ export const ENTITY_STATS = {
         vision: 0
     },
     EXPLOSION_HAZARD: {
+        type: ENTITY_TYPES.EFFECT,
         radius: 200,
         damageTick: 1, // Damage taken by structures each round
         hp: 9999, // Immune to accidental deletion
@@ -245,6 +267,7 @@ export const ENTITY_STATS = {
         vision: 210
     },
     RECLAIMER: {
+        type: ENTITY_TYPES.PROJECTILE,
         hp: 1,
         cost: 0,
         vision: 100,
@@ -258,6 +281,7 @@ export const ENTITY_STATS = {
         category: 'UTILITY'
     },
     OVERLOAD: {
+        type: ENTITY_TYPES.PROJECTILE,
         hp: 1,
         cost: 40,
         vision: 100,
@@ -270,6 +294,7 @@ export const ENTITY_STATS = {
         category: 'SPECIAL'
     },
     ECHO_ARTILLERY: {
+        type: ENTITY_TYPES.STRUCTURE,
         hp: 2,
         cost: 30,
         vision: 200,
@@ -281,6 +306,7 @@ export const ENTITY_STATS = {
         category: 'SPECIAL'
     },
     SHIELD: {
+        type: ENTITY_TYPES.STRUCTURE,
         hp: 2,
         barrierHpMax: 3,
         rechargeRate: 1,
@@ -293,6 +319,7 @@ export const ENTITY_STATS = {
         category: 'DEFENSE'
     },
     EMP: {
+        type: ENTITY_TYPES.PROJECTILE,
         hp: 1,
         itemType: 'EMP',
         cost: 50,
@@ -306,6 +333,7 @@ export const ENTITY_STATS = {
         category: 'SPECIAL'
     },
     CLOAKING_FIELD: {
+        type: ENTITY_TYPES.STRUCTURE,
         hp: 2,
         cost: 60,
         vision: 150,

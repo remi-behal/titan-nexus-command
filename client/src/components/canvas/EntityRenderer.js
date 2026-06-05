@@ -4,7 +4,6 @@ import { VISUAL_STATS } from '../../constants/VisualStats.js';
 import { getGhostColor } from '../../utils/RenderingHelpers.js';
 import { drawShape, drawField } from '../../utils/ShapeRenderer.js';
 import { SHAPES } from '../../constants/ShapeDefinitions.js';
-import { audioManager } from '../../utils/AudioManager.js';
 import * as TorusMath from '../../../../shared/utils/TorusMath.js';
 import { shouldHighlightRing } from '../../utils/uiLogic.js';
 
