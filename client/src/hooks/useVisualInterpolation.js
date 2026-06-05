@@ -1,28 +1,50 @@
 import { useRef } from 'react';
-import { ENTITY_STATS } from '../../../shared/constants/EntityStats.js';
+import { ENTITY_STATS, ENTITY_TYPES } from '../../../shared/constants/EntityStats.js';
 import * as TorusMath from '../../../shared/utils/TorusMath.js';
 import { audioManager } from '../utils/AudioManager';
 
-const triggerSpawnSfx = (type, itemType, x, y) => {
-    if (type === 'PROJECTILE') {
+export const GAME_EVENT_TYPES = {
+    PROJECTILE: 'PROJECTILE',
+    LASER_BEAM: 'LASER_BEAM',
+    EXPLOSION: 'EXPLOSION',
+    SHIELD_HIT: 'SHIELD_HIT',
+    LINK_COLLISION: 'LINK_COLLISION',
+    SPARK: 'SPARK',
+    STRUCTURE_LANDING: 'STRUCTURE_LANDING'
+};
+
+const SPAWN_SFX_MAP = {
+    [GAME_EVENT_TYPES.PROJECTILE]: (itemType, x, y) => {
         if (itemType === 'HOMING_MISSILE') {
             audioManager.playHeavyLaunch(x, y);
         } else if (itemType === 'SAM_MISSILE' || itemType === 'SMART_SAM_MISSILE') {
             audioManager.playSamLaunch(x, y);
-        } else if (!['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(itemType)) {
-            audioManager.playShoot(x, y);
+        } else {
+            const isStructure = ENTITY_STATS[itemType]?.type === ENTITY_TYPES.STRUCTURE;
+            if (!isStructure) {
+                audioManager.playShoot(x, y);
+            }
         }
-    } else if (type === 'LASER_BEAM') {
-        audioManager.playLaser(x, y);
-    } else if (type === 'EXPLOSION') {
+    },
+    [GAME_EVENT_TYPES.LASER_BEAM]: (itemType, x, y) => audioManager.playLaser(x, y),
+    [GAME_EVENT_TYPES.EXPLOSION]: (itemType, x, y) => {
         if (itemType === 'NUKE') {
             audioManager.playNukeDetonation(x, y);
         } else {
             audioManager.playExplosion(x, y);
         }
-    } else if (type === 'SHIELD_HIT' || type === 'LINK_COLLISION' || type === 'SPARK') {
-        audioManager.playShieldHit(x, y);
-    } else if (type === 'STRUCTURE_LANDING' || ['HUB', 'EXTRACTOR', 'TURRET', 'SHIELD_GENERATOR', 'SHIELD', 'CLOAKING_FIELD', 'RELAY', 'BARRIER', 'WALL'].includes(type)) {
+    },
+    [GAME_EVENT_TYPES.SHIELD_HIT]: (itemType, x, y) => audioManager.playShieldHit(x, y),
+    [GAME_EVENT_TYPES.LINK_COLLISION]: (itemType, x, y) => audioManager.playShieldHit(x, y),
+    [GAME_EVENT_TYPES.SPARK]: (itemType, x, y) => audioManager.playShieldHit(x, y),
+    [GAME_EVENT_TYPES.STRUCTURE_LANDING]: (itemType, x, y) => audioManager.playStructureLanding(x, y),
+};
+
+const triggerSpawnSfx = (type, itemType, x, y) => {
+    const playSfx = SPAWN_SFX_MAP[type];
+    if (playSfx) {
+        playSfx(itemType, x, y);
+    } else if (ENTITY_STATS[type]?.type === ENTITY_TYPES.STRUCTURE) {
         audioManager.playStructureLanding(x, y);
     }
 };
@@ -178,9 +200,9 @@ export function useVisualInterpolation() {
         Object.keys(visualEntities.current).forEach((id) => {
             if (!serverIds.has(id)) {
                 const viz = visualEntities.current[id];
-                const STRUCTURE_TYPES = ['HUB', 'EXTRACTOR', 'SHIELD', 'CLOAKING_FIELD', 'TURRET', 'RELAY', 'BARRIER'];
+                const isStructure = ENTITY_STATS[viz.type]?.type === ENTITY_TYPES.STRUCTURE;
                 
-                if (STRUCTURE_TYPES.includes(viz.type)) {
+                if (isStructure) {
                     if (viz.scouted !== false && !viz.isGhost) {
                         audioManager.playStructureDestroyed(viz.x, viz.y);
                     }
