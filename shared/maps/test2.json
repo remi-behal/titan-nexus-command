@@ -1,0 +1,83 @@
+{
+  "width": 2000,
+  "height": 2000,
+  "resources": [
+    {
+      "id": "res_it9sug68b",
+      "x": 388.70434924504707,
+      "y": 265.8729226775513,
+      "value": 5,
+      "radius": 8,
+      "color": "#00ffff"
+    },
+    {
+      "id": "res_5ck20d9qx",
+      "x": 502.4887318636793,
+      "y": 826.6674866958701,
+      "value": 15,
+      "radius": 12,
+      "color": "#bf00ff",
+      "isSuper": true
+    },
+    {
+      "id": "res_f8y2o98eb",
+      "x": 496.3567406020661,
+      "y": 435.7530437680389,
+      "value": 15,
+      "radius": 12,
+      "color": "#bf00ff",
+      "isSuper": true
+    },
+    {
+      "id": "res_zw4drg9ik",
+      "x": 652.7225177731989,
+      "y": 259.45829499666434,
+      "value": 15,
+      "radius": 12,
+      "color": "#bf00ff",
+      "isSuper": true
+    }
+  ],
+  "lakes": [
+    {
+      "id": "lake_vd8tiii1s",
+      "x": 179.02619281359148,
+      "y": 274.78827315069657,
+      "radius": 100
+    },
+    {
+      "id": "lake_qokb9hiap",
+      "x": 925.5961289149791,
+      "y": 210.40236490375992,
+      "radius": 100
+    },
+    {
+      "id": "lake_9npvvtssw",
+      "x": 490.22474934045295,
+      "y": 92.36153311770886,
+      "radius": 100
+    }
+  ],
+  "mountains": [
+    {
+      "id": "mtn_w9v3m71pp",
+      "x": 519.364479696018,
+      "y": 647.3067422936888,
+      "radius": 100
+    }
+  ],
+  "playerBases": [
+    {
+      "id": "p1",
+      "x": 250,
+      "y": 500,
+      "owner": "player1"
+    },
+    {
+      "id": "p2",
+      "x": 750,
+      "y": 500,
+      "owner": "player2"
+    }
+  ]
+}

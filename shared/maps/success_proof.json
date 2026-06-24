@@ -1,0 +1,37 @@
+{
+  "width": 2000,
+  "height": 2000,
+  "resources": [
+    {
+      "id": "res_fall7toiz",
+      "x": 269.7695579490869,
+      "y": 360.03131811160256,
+      "value": 5,
+      "radius": 8,
+      "color": "#00ffff"
+    }
+  ],
+  "lakes": [
+    {
+      "id": "lake_p2fq26qyi",
+      "x": 727.5218486150202,
+      "y": 360.03131811160256,
+      "radius": 100
+    }
+  ],
+  "mountains": [],
+  "playerBases": [
+    {
+      "id": "p1",
+      "x": 250,
+      "y": 500,
+      "owner": "player1"
+    },
+    {
+      "id": "p2",
+      "x": 750,
+      "y": 500,
+      "owner": "player2"
+    }
+  ]
+}

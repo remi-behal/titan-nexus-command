@@ -1,0 +1,11 @@
+{
+  "resources": [
+    {
+      "x": 100,
+      "y": 100,
+      "value": 5
+    }
+  ],
+  "lakes": [],
+  "mountains": []
+}
