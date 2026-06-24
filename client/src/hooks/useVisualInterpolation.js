@@ -21,7 +21,9 @@ const SPAWN_SFX_MAP = {
             audioManager.playSamLaunch(x, y);
         } else {
             const isStructure = ENTITY_STATS[itemType]?.type === ENTITY_TYPES.STRUCTURE;
-            if (!isStructure) {
+            if (isStructure) {
+                audioManager.playShoot(x, y);
+            } else {
                 audioManager.playShoot(x, y);
             }
         }
