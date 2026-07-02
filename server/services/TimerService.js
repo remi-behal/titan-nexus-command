@@ -1,3 +1,5 @@
+import { validateActions } from '../utils/ActionValidator.js';
+
 export class TimerService {
     constructor(context) {
         this.context = context;
@@ -47,8 +49,8 @@ export class TimerService {
             this.stop();
 
             const actionsMap = {
-                player1: turnActions.player1 || [],
-                player2: turnActions.player2 || []
+                player1: validateActions(turnActions.player1 || [], 'player1', game),
+                player2: validateActions(turnActions.player2 || [], 'player2', game)
             };
 
             let snapshots;
