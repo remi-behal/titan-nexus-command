@@ -11,12 +11,12 @@
     - [x] Add light SAM defense <!-- id: 52 -->
     - [x] Add flak defense <!-- id: 53 -->
 - [x] **Economy Expansion**: Implement Extractor logic for additional energy generation. <!-- id: 45 -->
-- [ ] **Map Features**: <!-- id: 46 -->
+- [x] **Map Features**: <!-- id: 46 -->
     - [x] Lakes (Non-buildable, Link-blocking) <!-- id: 84 -->
     - [x] Mountains (Non-buildable, Link-traversable) <!-- id: 55 -->
     - [x] Energy Nodes (Static locations for Extractors) <!-- id: 13 -->
     - [x] Super Energy Nodes (High yield, competitive) <!-- id: 56 -->
-- [ ] **Weapon/Defense Expansion**: <!-- id: 86 -->
+- [x] **Weapon/Defense Expansion**: <!-- id: 86 -->
     - [x] **Cluster Bomb**: Implement separation into multiple sub-bombs landing in a perpendicular line. <!-- id: 87 -->
     - [x] **Nuke**: Implement a structure type weapon that destroys everything in a large radius after a single turn. <!-- id: 88 -->
     - [x] **Reclaimer**: Weapon that only targets friendly structures. Deletes the friendly structure and refunds 50% of the cost (rounded up to nearest integer). <!-- id: 89 -->
@@ -24,10 +24,10 @@
     - [x] **Echo artillery**: Anti artillery automatic weapon. <!-- id: 91 -->
     - [x] **Overload**: Link spreading weapon. <!-- id: 92 -->
     - [x] **Shield**: Add shield structure type. <!-- id: 93 -->
-- [ ] **Multiplayer Enhancements**: <!-- id: 47 -->
+- [x] **Multiplayer Enhancements**: <!-- id: 47 -->
     - [x] Chat system.
     - [x] Lobby management / Player slotting. Very basic lobby implemented<!-- id: 94 -->
-- [ ] **Conflict Resolution & Pathing**: <!-- id: 74 -->
+- [x] **Conflict Resolution & Pathing**: <!-- id: 74 -->
     - [x] **Structure Overlap**: Both destroyed if landing same spot. <!-- id: 59 -->
     - [x] **Autonomous Projectiles**: Persist if source hub destroyed. <!-- id: 60 -->
     - [x] **Post-Mortem Revenge**: Finish paths before elimination. <!-- id: 61 -->
