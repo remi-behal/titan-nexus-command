@@ -12,6 +12,7 @@ import SidebarLeft from './components/HUD/SidebarLeft';
 import SidebarRight from './components/HUD/SidebarRight';
 import ChatPanel from './components/HUD/ChatPanel';
 import { useGameSocket, socket } from './hooks/useGameSocket';
+import playgroundMap from '../../shared/ready_maps/playground.json';
 
 const MAX_PULL_DISTANCE = GLOBAL_STATS.MAX_PULL;
 
@@ -54,7 +55,68 @@ function App() {
     const [isAiming, setIsAiming] = useState(false);
     const [showDebugPreview] = useState(true);
     const [glitchActive, setGlitchActive] = useState(false);
-    const [currentView, setCurrentView] = useState('LOBBY'); // 'LOBBY', 'GAME', 'DESIGNER'
+    const [currentView, setCurrentView] = useState('LOBBY'); // 'LOBBY', 'GAME', 'DESIGNER', 'SANDBOX'
+
+    // Sandbox specific state
+    const [sandboxState, setSandboxState] = useState(null);
+    const [activeSandboxPlayer, setActiveSandboxPlayer] = useState('player1');
+    const [sandboxActions, setSandboxActions] = useState([]);
+    const localGameRef = useRef(null);
+    const [isSandboxResolving, setIsSandboxResolving] = useState(false);
+
+    const handleOpenSandbox = () => {
+        const g = new GameState();
+        g.initializeGame(['player1', 'player2'], playgroundMap);
+        g.players.player1.energy = 9999;
+        g.players.player2.energy = 9999;
+        g.players.player1.color = 'hsl(0, 70%, 50%)';
+        g.players.player2.color = 'hsl(60, 70%, 50%)';
+        localGameRef.current = g;
+        setSandboxState(g.getState());
+        setSandboxActions([]);
+        setActiveSandboxPlayer('player1');
+        setCurrentView('SANDBOX');
+    };
+
+    const handleExecuteSandboxTurn = async () => {
+        if (!localGameRef.current || isSandboxResolving) return;
+        setIsSandboxResolving(true);
+
+        const p1Actions = sandboxActions.filter((a) => a.playerId === 'player1');
+        const p2Actions = sandboxActions.filter((a) => a.playerId === 'player2');
+
+        const snapshots = localGameRef.current.resolveTurn({
+            player1: p1Actions,
+            player2: p2Actions
+        });
+
+        for (const snap of snapshots) {
+            setSandboxState(snap.state);
+            const delay = snap.type === 'ROUND_SUB' ? 60 : 1500;
+            await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+
+        setSandboxActions([]);
+        localGameRef.current.players.player1.energy = 9999;
+        localGameRef.current.players.player2.energy = 9999;
+        setSandboxState(localGameRef.current.getState());
+        setIsSandboxResolving(false);
+    };
+
+    const handleSandboxAimStart = (overrideHubId) => {
+        const targetHubId = overrideHubId || selectedHubId;
+        if (!targetHubId) return;
+
+        const selectedEntity = sandboxState?.entities?.find((e) => e.id === targetHubId);
+        const pendingFuelSpent = sandboxActions.filter((a) => a.sourceId === targetHubId).length;
+        const hasFuel = selectedEntity
+            ? selectedEntity.fuel === undefined || selectedEntity.fuel - pendingFuelSpent > 0
+            : false;
+
+        if (launchMode && hasFuel) {
+            setIsAiming(true);
+        }
+    };
 
     const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(2); // Dynamic Zoom state
@@ -208,13 +270,17 @@ function App() {
     // Force zoom into legal range if it was outside (e.g. on load)
     useEffect(() => {
         setZoom((prev) => Math.max(1.0, Math.min(3.0, prev)));
-    }, [playerState?.map]);
+    }, [playerState?.map, sandboxState?.map, currentView]);
 
     const handleWheel = useCallback(
         (e) => {
             e.preventDefault();
 
-            if (!viewportRef.current || isResolvingUI) return;
+            const resolving = currentView === 'SANDBOX' ? isSandboxResolving : isResolvingUI;
+            if (!viewportRef.current || resolving) return;
+
+            const activeState = currentView === 'SANDBOX' ? sandboxState : playerState;
+            if (!activeState?.map) return;
 
             const zoomSpeed = 0.001;
             const delta = -e.deltaY * zoomSpeed;
@@ -227,8 +293,8 @@ function App() {
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
 
-            const mapW = playerState.map.width || 2000;
-            const mapH = playerState.map.height || 2000;
+            const mapW = activeState.map.width || 2000;
+            const mapH = activeState.map.height || 2000;
 
             setCameraOffset((prev) => ({
                 x: (prev.x + mouseX * (1 / zoom - 1 / newZoom) + mapW) % mapW,
@@ -237,7 +303,7 @@ function App() {
 
             setZoom(newZoom);
         },
-        [zoom, isResolvingUI, playerState, setCameraOffset, setZoom]
+        [zoom, isResolvingUI, isSandboxResolving, playerState, sandboxState, currentView, setCameraOffset, setZoom]
     );
 
     // Use a Ref to ensure the non-passive native event listener always gets
@@ -261,7 +327,7 @@ function App() {
         return () => {
             viewport.removeEventListener('wheel', onWheelNative);
         };
-    }, [matchStarted, playerState, myPlayerId, currentView]);
+    }, [matchStarted, playerState, sandboxState, myPlayerId, currentView]);
 
     useEffect(() => {
         if (!matchStarted && currentView === 'LOBBY') {
@@ -271,11 +337,12 @@ function App() {
 
     // Update hub screen position whenever selectedHubId, camera, or state changes
     useEffect(() => {
-        if (!selectedHubId || !playerState) {
+        const activeState = currentView === 'SANDBOX' ? sandboxState : playerState;
+        if (!selectedHubId || !activeState) {
             setHubScreenPos(null);
             return;
         }
-        const hub = playerState.entities.find((e) => e.id === selectedHubId);
+        const hub = activeState.entities.find((e) => e.id === selectedHubId);
         if (!hub || !gameBoardRef.current) return;
 
         const pos = gameBoardRef.current.getScreenCoords(hub.x, hub.y);
@@ -291,15 +358,15 @@ function App() {
         } else {
             setHubScreenPos(pos);
         }
-    }, [selectedHubId, cameraOffset, zoom, playerState]);
+    }, [selectedHubId, cameraOffset, zoom, playerState, sandboxState, currentView]);
 
     // Close menu when resolution starts or turn is submitted
     useEffect(() => {
-        if (isResolvingUI || isLocked) {
+        if (isResolvingUI || isLocked || isSandboxResolving) {
             setSelectedHubId(null);
             setLaunchMode(false);
         }
-    }, [isResolvingUI, isLocked]);
+    }, [isResolvingUI, isLocked, isSandboxResolving]);
 
     const pBase = (() => {
         // 1. If match is active, use the game state
@@ -368,7 +435,9 @@ function App() {
         />
     );
 
-    const playerColor = pBase?.color || '#00ff44';
+    const playerColor = currentView === 'SANDBOX'
+        ? (activeSandboxPlayer === 'player1' ? 'hsl(0, 70%, 50%)' : 'hsl(60, 70%, 50%)')
+        : (pBase?.color || '#00ff44');
     // Strict color helper for CRT phosphor (requires rgba format)
     const getCRTColor = (color, alpha) => {
         if (!color || color === '#00ff44') return `rgba(0, 255, 68, ${alpha})`;
@@ -433,6 +502,227 @@ function App() {
             return <MapDesigner onSave={handleMapSave} onBack={() => setCurrentView('LOBBY')} />;
         }
 
+        if (currentView === 'SANDBOX') {
+            const pCurrentSandbox = {
+                color: activeSandboxPlayer === 'player1' ? 'hsl(0, 70%, 50%)' : 'hsl(60, 70%, 50%)',
+                energy: 9999 - sandboxActions.filter(a => a.playerId === activeSandboxPlayer).reduce((sum, act) => {
+                    const stats = ENTITY_STATS[act.itemType];
+                    return sum + (stats?.cost || 0);
+                }, 0)
+            };
+
+            const sidebarLeftSandbox = (
+                <SidebarLeft
+                    myPlayerId={activeSandboxPlayer}
+                    pCurrent={pCurrentSandbox}
+                    playerState={sandboxState}
+                    isSpectator={false}
+                    selectedHubId={selectedHubId}
+                />
+            );
+
+            const sidebarRightSandbox = (
+                <SidebarRight
+                    syncStatus={{ lockedIn: { player1: false, player2: false } }}
+                    playerState={sandboxState}
+                    timeRemaining={null}
+                    showDebugPreview={showDebugPreview}
+                    cameraOffset={cameraOffset}
+                    zoom={zoom}
+                    committedActions={sandboxActions.filter(a => a.playerId === activeSandboxPlayer)}
+                    interactionBlocked={isSandboxResolving}
+                    handleClearActions={() => {
+                        audioManager.playActionReset();
+                        setSandboxActions(prev => prev.filter(a => a.playerId !== activeSandboxPlayer));
+                    }}
+                    handleExecuteTurn={handleExecuteSandboxTurn}
+                    isLocked={false}
+                    isResolvingUI={isSandboxResolving}
+                    isSpectator={false}
+                    isUnassigned={false}
+                />
+            );
+
+            return (
+                <>
+                    {sidebarLeftSandbox}
+
+                    <div className="viewport-crt-container sandbox-active" ref={viewportRef}>
+                        <div className="sandbox-header">
+                            <span>PRACTICE RANGE | ACTIVE PILOT:</span>
+                            <button
+                                style={{
+                                    background: activeSandboxPlayer === 'player1' ? 'hsl(0, 70%, 50%)' : '#222',
+                                    color: activeSandboxPlayer === 'player1' ? '#000' : '#888',
+                                    border: '1px solid #444',
+                                    padding: '4px 12px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 'bold'
+                                }}
+                                onClick={() => {
+                                    audioManager.playClick();
+                                    setActiveSandboxPlayer('player1');
+                                }}
+                            >
+                                PLAYER 1 (RED)
+                            </button>
+                            <button
+                                style={{
+                                    background: activeSandboxPlayer === 'player2' ? 'hsl(60, 70%, 50%)' : '#222',
+                                    color: activeSandboxPlayer === 'player2' ? '#000' : '#888',
+                                    border: '1px solid #444',
+                                    padding: '4px 12px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 'bold'
+                                }}
+                                onClick={() => {
+                                    audioManager.playClick();
+                                    setActiveSandboxPlayer('player2');
+                                }}
+                            >
+                                PLAYER 2 (YELLOW)
+                            </button>
+                            <button
+                                className="exit-btn"
+                                style={{
+                                    background: '#552222',
+                                    color: '#fff',
+                                    border: '1px solid #883333',
+                                    marginLeft: 'auto',
+                                    padding: '4px 12px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 'bold'
+                                }}
+                                onClick={() => {
+                                    audioManager.playActionReset();
+                                    setCurrentView('LOBBY');
+                                }}
+                            >
+                                EXIT RANGE
+                            </button>
+                        </div>
+                        <div className="crt-scanlines-pixel-perfect" />
+                        <main className={`game-world ${isSandboxResolving ? 'locked-out' : ''}`}>
+                            <GameBoard
+                                ref={gameBoardRef}
+                                gameState={sandboxState}
+                                myPlayerId={activeSandboxPlayer}
+                                selectedHubId={selectedHubId}
+                                selectedItemType={selectedItemType}
+                                launchMode={launchMode}
+                                isAiming={isAiming}
+                                committedActions={sandboxActions.filter(a => a.playerId === activeSandboxPlayer)}
+                                showDebugPreview={showDebugPreview}
+                                maxPullDistance={MAX_PULL_DISTANCE}
+                                isResolving={isSandboxResolving}
+                                cameraOffset={cameraOffset}
+                                setCameraOffset={setCameraOffset}
+                                zoom={zoom}
+                                setZoom={setZoom}
+                                minZoom={minZoom}
+                                onSelectHub={(id) => setSelectedHubId(id)}
+                                onAimStart={handleSandboxAimStart}
+                                onAimUpdate={() => {}}
+                                onAimEnd={(x, y) => {
+                                    if (!isAiming) return;
+                                    setIsAiming(false);
+                                    const hub = sandboxState.entities.find((e) => e.id === selectedHubId);
+                                    if (!hub) return;
+
+                                    const { dx, dy } = GameState.getToroidalVector(
+                                        hub.x,
+                                        hub.y,
+                                        x,
+                                        y,
+                                        sandboxState.map.width,
+                                        sandboxState.map.height
+                                    );
+                                    let distance = Math.sqrt(dx * dx + dy * dy);
+                                    if (distance > MAX_PULL_DISTANCE) distance = MAX_PULL_DISTANCE;
+                                    const angle = GameState.calculateLaunchAngle(dx, dy);
+
+                                    const launchDistance = GameState.calculateLaunchDistance(distance);
+                                    const rad = (angle * Math.PI) / 180;
+                                    const targetX = (hub.x + Math.cos(rad) * launchDistance + sandboxState.map.width) % sandboxState.map.width;
+                                    const targetY = (hub.y + Math.sin(rad) * launchDistance + sandboxState.map.height) % sandboxState.map.height;
+
+                                    const isInvalid = GameState.checkLinkAngleSeparation(
+                                        selectedItemType,
+                                        selectedHubId,
+                                        targetX,
+                                        targetY,
+                                        sandboxState.links,
+                                        sandboxActions,
+                                        sandboxState.entities,
+                                        sandboxState.map
+                                    );
+
+                                    if (isInvalid) {
+                                        audioManager.playActionReset();
+                                        setGlitchActive(true);
+                                        setTimeout(() => setGlitchActive(false), 400);
+                                        setLaunchMode(false);
+                                        setSelectedHubId(null);
+                                        return;
+                                    }
+
+                                    const action = {
+                                        playerId: activeSandboxPlayer,
+                                        type: 'LAUNCH',
+                                        itemType: selectedItemType,
+                                        sourceId: hub.id,
+                                        sourceX: hub.x,
+                                        sourceY: hub.y,
+                                        angle: angle,
+                                        distance: distance
+                                    };
+
+                                    if (selectedItemType === 'LINK') {
+                                        audioManager.playLinkStage();
+                                    } else {
+                                        audioManager.playClick();
+                                    }
+
+                                    setSandboxActions((prev) => [...prev, action]);
+                                    setLaunchMode(false);
+                                    setSelectedHubId(null);
+                                }}
+                            />
+                            {selectedHubId &&
+                                !launchMode &&
+                                !isSandboxResolving &&
+                                (() => {
+                                    const hub = sandboxState.entities.find((e) => e.id === selectedHubId);
+                                    if (!hub) return null;
+                                    return (
+                                        <RadialMenu
+                                            x={hubScreenPos?.x || 0}
+                                            y={hubScreenPos?.y || 0}
+                                            playerEnergy={9999}
+                                            hubFuel={
+                                                hub.fuel !== undefined
+                                                    ? hub.fuel - sandboxActions.filter(a => a.sourceId === selectedHubId).length
+                                                    : 99
+                                            }
+                                            onSelect={(type) => {
+                                                setSelectedItemType(type);
+                                                setLaunchMode(true);
+                                            }}
+                                            onCancel={() => setSelectedHubId(null)}
+                                        />
+                                    );
+                                })()}
+                        </main>
+                    </div>
+
+                    {sidebarRightSandbox}
+                </>
+            );
+        }
+
         if (!matchStarted) {
             return (
                 <LobbyOverlay
@@ -442,6 +732,7 @@ function App() {
                     onReadyToggle={triggerReadyToggle}
                     onSetMap={triggerSetMap}
                     onOpenDesigner={() => setCurrentView('DESIGNER')}
+                    onOpenSandbox={handleOpenSandbox}
                     socketId={socket.id}
                     socket={socket}
                 />
