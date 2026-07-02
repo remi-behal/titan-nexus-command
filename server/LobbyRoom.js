@@ -6,6 +6,22 @@ export class LobbyRoom {
         this.spectators = [];
         this.status = 'LOBBY'; // LOBBY, IN_GAME
         this.selectedMapName = null;
+        this.chatHistory = [];
+    }
+
+    addMessage(senderId, senderName, text) {
+        const message = {
+            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+            senderId,
+            senderName,
+            text: text.slice(0, 200),
+            timestamp: Date.now()
+        };
+        this.chatHistory.push(message);
+        if (this.chatHistory.length > 50) {
+            this.chatHistory.shift();
+        }
+        return message;
     }
 
     claimSeat(slotIndex, token, socketId) {
