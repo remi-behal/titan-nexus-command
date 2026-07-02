@@ -13,7 +13,7 @@ describe('Reproduce Turn Button Bug', () => {
     beforeAll(async () => {
         const serverPath = path.resolve(__dirname, 'index.js');
         serverProcess = spawn('node', [serverPath], {
-            env: { ...process.env, PORT: '3112' },
+            env: { ...process.env, PORT: '3113' },
             stdio: 'pipe'
         });
 
@@ -32,8 +32,8 @@ describe('Reproduce Turn Button Bug', () => {
             serverProcess.stdout.on('data', listener);
         });
 
-        client1 = Client('http://localhost:3112');
-        client2 = Client('http://localhost:3112');
+        client1 = Client('http://localhost:3113');
+        client2 = Client('http://localhost:3113');
 
         await new Promise((resolve) => {
             let auths = 0;
