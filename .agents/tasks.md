@@ -57,7 +57,7 @@
 ## ⏳ Backlog
 
 - [ ] **Team Play**: Shared energy and hubs. <!-- id: 48 -->
-- [ ] **Dynamic Weather**: Methane rain and high winds. <!-- id: 49 -->
+- [x] **Dynamic Weather**: High winds (Methane rain clouds deferred). <!-- id: 49 -->
 - [ ] **Spectator Mode**: Ability to watch without a player slot. <!-- id: 50 -->
 - [ ] **Testing & Refinement**: <!-- id: 52 -->
     - [x] **Draw Condition**: Implement and test simultaneous destruction of all hubs. <!-- id: 66 -->
