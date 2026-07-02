@@ -8,6 +8,30 @@ describe('Match Restart Persistence & Auto-Reclaim', () => {
     let client1, client2;
     let p1Id, p2Id;
 
+    const joinAndReady = async (client, token, slotIndex, expectedPlayerId) => {
+        client.emit('authenticate', token);
+        await new Promise((resolve) => {
+            const handler = () => {
+                client.off('playerAssignment', handler);
+                resolve();
+            };
+            client.on('playerAssignment', handler);
+        });
+
+        client.emit('lobby:claimSeat', slotIndex);
+        await new Promise((resolve) => {
+            const handler = (id) => {
+                if (id === expectedPlayerId) {
+                    client.off('playerAssignment', handler);
+                    resolve();
+                }
+            };
+            client.on('playerAssignment', handler);
+        });
+
+        client.emit('lobby:ready', true);
+    };
+
     beforeAll(async () => {
         const serverPath = path.resolve(__dirname, 'index.js');
         serverProcess = spawn('node', [serverPath], {
@@ -15,64 +39,47 @@ describe('Match Restart Persistence & Auto-Reclaim', () => {
             stdio: 'pipe'
         });
 
-        // Drain I/O
-        serverProcess.stdout.on('data', () => {});
-        serverProcess.stderr.on('data', () => {});
-
         await new Promise((resolve, reject) => {
-            const timeout = setTimeout(
-                () => reject(new Error('Server failed to start in 15s')),
-                15000
-            );
-            serverProcess.stdout.on('data', function listener(data) {
+            const timeout = setTimeout(() => {
+                serverProcess.kill('SIGKILL');
+                reject(new Error('Server failed to start within 15s'));
+            }, 15000);
+
+            const onData = (data) => {
                 if (data.toString().includes('SERVER RUNNING')) {
-                    serverProcess.stdout.off('data', listener);
+                    serverProcess.stdout.off('data', onData);
                     clearTimeout(timeout);
                     resolve();
+                }
+            };
+
+            serverProcess.stdout.on('data', onData);
+
+            serverProcess.stderr.on('data', (data) => {
+                console.error(`[Server Stderr]: ${data.toString()}`);
+            });
+
+            serverProcess.on('exit', (code) => {
+                if (code !== null && code !== 0) {
+                    clearTimeout(timeout);
+                    reject(new Error(`Server process exited with code ${code}`));
                 }
             });
         });
 
+        // Drain stdout/stderr to avoid buffer filling
+        serverProcess.stdout.on('data', () => {});
+        serverProcess.stderr.on('data', () => {});
+
         client1 = Client('http://localhost:3117');
         client2 = Client('http://localhost:3117');
 
-        await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Auth timeout')), 10000);
-            let authenticated = 0;
-            const onAuth1 = (id) => {
-                if (id) {
-                    p1Id = id;
-                    if (++authenticated === 2) {
-                        clearTimeout(timeout);
-                        resolve();
-                    }
-                }
-            };
-            const onAuth2 = (id) => {
-                if (id) {
-                    p2Id = id;
-                    if (++authenticated === 2) {
-                        clearTimeout(timeout);
-                        resolve();
-                    }
-                }
-            };
-            client1.on('playerAssignment', onAuth1);
-            client2.on('playerAssignment', onAuth2);
+        // Authenticate, claim seats, and mark ready using event-driven flow
+        await joinAndReady(client1, 'restart-token-p1', 0, 'player1');
+        await joinAndReady(client2, 'restart-token-p2', 1, 'player2');
 
-            client1.emit('authenticate', 'restart-token-p1');
-            client2.emit('authenticate', 'restart-token-p2');
-
-            // Lobby Handshake
-            setTimeout(() => {
-                client1.emit('lobby:claimSeat', 0);
-                client2.emit('lobby:claimSeat', 1);
-                setTimeout(() => {
-                    client1.emit('lobby:ready', true);
-                    client2.emit('lobby:ready', true);
-                }, 300);
-            }, 300);
-        });
+        p1Id = 'player1';
+        p2Id = 'player2';
 
         // Wait for match start
         await new Promise((r) => client1.once('matchStarted', r));
@@ -108,16 +115,10 @@ describe('Match Restart Persistence & Auto-Reclaim', () => {
             client2.on('playerAssignment', handler);
         });
 
-        // Transition back to lobby
+        // Transition back to lobby robustly when match is restarted
         client1.on('matchRestarted', async () => {
-            client1.emit('authenticate', 'restart-token-p1');
-            client2.emit('authenticate', 'restart-token-p2');
-            await new Promise((r) => setTimeout(r, 200));
-            client1.emit('lobby:claimSeat', 0);
-            client2.emit('lobby:claimSeat', 1);
-            await new Promise((r) => setTimeout(r, 200));
-            client1.emit('lobby:ready', true);
-            client2.emit('lobby:ready', true);
+            await joinAndReady(client1, 'restart-token-p1', 0, 'player1');
+            await joinAndReady(client2, 'restart-token-p2', 1, 'player2');
         });
 
         // Trigger restart
