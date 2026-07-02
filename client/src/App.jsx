@@ -6,117 +6,56 @@ import GameBoard from './components/GameBoard';
 import RadialMenu from './components/RadialMenu';
 import { LobbyOverlay } from './components/LobbyOverlay';
 import MapDesigner from './components/MapDesigner';
-import { io } from 'socket.io-client';
 import AssetGallery from './components/AssetGallery';
-import { audioManager, TRACKS } from './utils/AudioManager';
+import { audioManager } from './utils/AudioManager';
 import SidebarLeft from './components/HUD/SidebarLeft';
 import SidebarRight from './components/HUD/SidebarRight';
 import ChatPanel from './components/HUD/ChatPanel';
-
-const socket = io('/', {
-    transports: ['polling', 'websocket'],
-    autoConnect: true
-});
+import { useGameSocket, socket } from './hooks/useGameSocket';
 
 const MAX_PULL_DISTANCE = GLOBAL_STATS.MAX_PULL;
 
-// Session Token Management
-const SESSION_TOKEN_KEY = 'titan_nexus_session_token';
-const getSessionToken = () => {
-    let token = localStorage.getItem(SESSION_TOKEN_KEY);
-    if (!token) {
-        token = self.crypto.randomUUID();
-        localStorage.setItem(SESSION_TOKEN_KEY, token);
-    }
-    return token;
-};
-
 function App() {
-    const [playerState, setPlayerState] = useState(null);
+    const {
+        isConnected,
+        myPlayerId,
+        playerState,
+        lobbyStatus,
+        matchStarted,
+        syncStatus,
+        timeRemaining,
+        isResolving,
+        chatMessages,
+        isChatOpen,
+        unreadCount,
+        availableMaps,
+        lastError,
+        committedActions,
+        setCommittedActions,
+        setLastError,
+        setMatchStarted,
+        setIsChatOpen,
+        setUnreadCount,
+        handleSendMessage,
+        handleToggleChat,
+        handleExecuteTurn,
+        handleClearActions,
+        handleRestart,
+        handleClaimSeat,
+        handleReadyToggle,
+        handleSetMap,
+        handleMapSave
+    } = useGameSocket();
+
     const turnRef = useRef(1); // Track turn for stale closures in listeners
-    const [isConnected, setIsConnected] = useState(socket.connected);
-    const [myPlayerId, setMyPlayerId] = useState(null);
-    const [audioVolume, setAudioVolume] = useState(0.5);
-    const [audioMuted, setAudioMuted] = useState(false);
-    const [currentTrackPath, setCurrentTrackPath] = useState('/audio/tracks/twimble.mod');
-    const [audioPlaying, setAudioPlaying] = useState(false);
-    const [audioShuffle, setAudioShuffle] = useState(false);
-
-    // Chat System State
-    const [chatMessages, setChatMessages] = useState([]);
-    const [isChatOpen, setIsChatOpen] = useState(false);
-    const [unreadCount, setUnreadCount] = useState(0);
-
-    // Subscribe to AudioManager's real-time changes to keep React UI in absolute sync
-    useEffect(() => {
-        const unsubscribe = audioManager.subscribe((state) => {
-            setCurrentTrackPath(state.currentTrack || '/audio/tracks/twimble.mod');
-            setAudioPlaying(state.isPlaying);
-            setAudioMuted(state.isMuted);
-            setAudioVolume(state.volume);
-            setAudioShuffle(state.shuffle);
-        });
-        return unsubscribe;
-    }, []);
-
-    const handleSendMessage = (text) => {
-        socket.emit('chat:sendMessage', { text });
-    };
-
-    const handleToggleChat = () => {
-        setIsChatOpen((prev) => !prev);
-        setUnreadCount(0);
-    };
-
-    const handleVolumeChange = (e) => {
-        const val = parseFloat(e.target.value);
-        audioManager.setVolume(val);
-    };
-
-    const handleMuteToggle = () => {
-        audioManager.toggleMute();
-    };
-
-    const handlePlayPauseToggle = () => {
-        if (audioManager.isPlaying) {
-            audioManager.pauseMusic();
-        } else {
-            audioManager.resumeMusic();
-        }
-    };
-
-    const handleNextTrack = async () => {
-        await audioManager.nextTrack();
-    };
-
-    const handlePrevTrack = async () => {
-        await audioManager.prevTrack();
-    };
-
-    const handleShuffleToggle = () => {
-        audioManager.toggleShuffle();
-    };
-
-    const handleTrackChange = (path) => {
-        audioManager.playMusic(path);
-    };
-    const [syncStatus, setSyncStatus] = useState({ lockedIn: { player1: false, player2: false } });
-    const [lastError, setLastError] = useState(null);
-    const [availableMaps, setAvailableMaps] = useState([]);
     const [selectedHubId, setSelectedHubId] = useState(null);
     const [selectedItemType, setSelectedItemType] = useState('HUB');
     const [launchMode, setLaunchMode] = useState(false);
     const [isAiming, setIsAiming] = useState(false);
-    const [committedActions, setCommittedActions] = useState([]);
     const [showDebugPreview] = useState(true);
-    const [timeRemaining, setTimeRemaining] = useState(30);
-    const [isResolving, setIsResolving] = useState(false);
     const [glitchActive, setGlitchActive] = useState(false);
     const [currentView, setCurrentView] = useState('LOBBY'); // 'LOBBY', 'GAME', 'DESIGNER'
 
-    // Lobby State
-    const [lobbyStatus, setLobbyStatus] = useState(null);
-    const [matchStarted, setMatchStarted] = useState(false);
     const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(2); // Dynamic Zoom state
     const [minZoom] = useState(1.0);
@@ -125,16 +64,6 @@ function App() {
     // Help RadialMenu track its hub
     const [hubScreenPos, setHubScreenPos] = useState(null);
     const gameBoardRef = useRef(null);
-
-    // Warm up AudioContext on standard user interaction
-    useEffect(() => {
-        const warmUpAudio = () => {
-            audioManager.playMusic(currentTrackPath);
-            window.removeEventListener('click', warmUpAudio);
-        };
-        window.addEventListener('click', warmUpAudio);
-        return () => window.removeEventListener('click', warmUpAudio);
-    }, [currentTrackPath]);
 
     const isResolvingPhase = playerState?.phase === 'RESOLVING';
     const isResolvingUI = isResolving || isResolvingPhase;
@@ -235,226 +164,49 @@ function App() {
         setSelectedHubId(null);
     };
 
-    const handleExecuteTurn = () => {
-        audioManager.playUplink();
-        if (committedActions.length > 0) {
-            socket.emit('submitActions', committedActions);
-        } else {
-            socket.emit('passTurn');
-        }
-    };
-
-    const handleClearActions = () => {
+    const triggerRestart = () => {
         audioManager.playActionReset();
-        setCommittedActions([]);
-        setLaunchMode(false);
-    };
-
-    const handleRestart = () => {
-        audioManager.playActionReset();
-        socket.emit('restartGame');
-        setCommittedActions([]);
+        handleRestart();
         setSelectedHubId(null);
         setLaunchMode(false);
-        setMatchStarted(false);
     };
 
-    const handleClaimSeat = (index) => {
+    const triggerClaimSeat = (index) => {
         audioManager.playSeatClaim();
-        socket.emit('lobby:claimSeat', index);
+        handleClaimSeat(index);
     };
 
-    const handleReadyToggle = (isReady) => {
+    const triggerReadyToggle = (isReady) => {
         audioManager.playClick();
-        socket.emit('lobby:ready', isReady);
+        handleReadyToggle(isReady);
     };
 
-    const handleSetMap = (mapName) => {
+    const triggerSetMap = (mapName) => {
         audioManager.playClick();
-        socket.emit('lobby:setMap', mapName);
+        handleSetMap(mapName);
     };
 
-    const handleMapSave = (mapData) => {
-        const name = prompt('Enter a name for your map:');
-        if (name) {
-            socket.emit('map:save', { name, data: mapData });
-        }
-    };
-
+    // CRASH REPORTER: Catch any runtime errors and show them on screen
     useEffect(() => {
-        console.log('Connecting to socket...');
-
-        const onConnect = () => {
-            console.log('Socket connected!', socket.id);
-            setIsConnected(true);
-
-            const token = getSessionToken();
-            socket.emit('authenticate', token);
-        };
-
-        const onDisconnect = () => {
-            console.log('Socket disconnected');
-            setIsConnected(false);
-        };
-
-        const onUpdate = (newState) => {
-            setPlayerState(newState);
-            setMatchStarted(true);
-
-            // Reset local committed state ONLY when the turn has advanced
-            if (newState.turn > turnRef.current) {
-                setCommittedActions([]);
-                setSelectedHubId(null);
-                setLaunchMode(false);
-                turnRef.current = newState.turn;
-                audioManager.playRoundStart();
-            }
-        };
-
-        const onAssignment = (assignedId) => {
-            console.log('Assigned as:', assignedId);
-            setMyPlayerId(assignedId);
-
-            // AUTO-START LOGIC
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('autoStart') === '1' && !assignedId) {
-                console.log('[AutoStart] Attempting auto-join (Solo Mode)...');
-                socket.emit('lobby:autoJoin', { force: true });
-            }
-        };
-
-        const onSyncStatus = (status) => {
-            setSyncStatus(status);
-        };
-
-        const onTimerUpdate = (timeLeft) => {
-            setTimeRemaining(timeLeft);
-        };
-
-        const onLobbyUpdate = (update) => {
-            console.log('Lobby update:', update);
-            setLobbyStatus(update);
-            if (update.status === 'IN_GAME') {
-                setMatchStarted(true);
-            }
-        };
-
-        const onMatchStarted = (data) => {
-            console.log('Match started!', data);
-            setMatchStarted(true);
-            // After match starts, we might need a fresh assignment
-            const token = getSessionToken();
-            socket.emit('authenticate', token);
-            socket.emit('requestState');
-        };
-
-        const onMapsUpdate = (maps) => {
-            setAvailableMaps(maps);
-        };
-
-        // CRASH REPORTER: Catch any runtime errors and show them on screen
         const handleGlobalError = (event) => {
             setLastError(`CRASH: ${event.message} at ${event.filename}:${event.lineno}`);
         };
         window.addEventListener('error', handleGlobalError);
+        return () => window.removeEventListener('error', handleGlobalError);
+    }, [setLastError]);
 
-        const onError = (err) => {
-            console.error('Socket connection error:', err);
-            setIsConnected(false);
-            setLastError(err.message || JSON.stringify(err));
-        };
-
-        const onResolutionStatus = (status) => {
-            setIsResolving(status.active);
-            if (status.active) {
-                // As soon as resolution officially starts, clear local staged actions
-                // so they don't overlap with the server-side simulation projectiles.
-                setCommittedActions([]);
-            }
-        };
-
-        const onMatchRestarted = () => {
-            console.log('Match restarted! Re-authenticating...');
-            setMatchStarted(false);
-            const token = getSessionToken();
-            socket.emit('authenticate', token);
-        };
-
-        const onChatHistory = (history) => {
-            setChatMessages(history);
-        };
-
-        const onChatNewMessage = (msg) => {
-            setChatMessages((prev) => {
-                if (prev.some((m) => m.id === msg.id)) return prev;
-                return [...prev, msg];
-            });
-            setIsChatOpen((open) => {
-                if (!open) {
-                    setUnreadCount((count) => count + 1);
-                    // Play ZzFX short high-pitch alert beep
-                    try {
-                        if (typeof window !== 'undefined' && window.zzfx) {
-                            window.zzfx(...[0.1, 0, 800, 0.05, 0.05, 0.05, 0, 1, 0.1]);
-                        }
-                    } catch (e) {
-                        console.error('Audio playback failed', e);
-                    }
-                }
-                return open;
-            });
-        };
-
-        const onActionsUpdate = (actions) => {
-            console.log('Received synced actions from server:', actions);
-            setCommittedActions(actions);
-        };
-
-        socket.on('connect', onConnect);
-        socket.on('disconnect', onDisconnect);
-        socket.on('gameStateUpdate', onUpdate);
-        socket.on('playerAssignment', onAssignment);
-        socket.on('syncStatus', onSyncStatus);
-        socket.on('timerUpdate', onTimerUpdate);
-        socket.on('resolutionStatus', onResolutionStatus);
-        socket.on('matchRestarted', onMatchRestarted);
-        socket.on('lobby:update', onLobbyUpdate);
-        socket.on('matchStarted', onMatchStarted);
-        socket.on('room:mapsUpdate', onMapsUpdate);
-        socket.on('connect_error', onError);
-        socket.on('chat:history', onChatHistory);
-        socket.on('chat:newMessage', onChatNewMessage);
-        socket.on('actionsUpdate', onActionsUpdate);
-
-        // Initial check in case it connected before the effect ran
-        if (socket.connected) onConnect();
-
-        return () => {
-            window.removeEventListener('error', handleGlobalError);
-            socket.off('connect', onConnect);
-            socket.off('disconnect', onDisconnect);
-            socket.off('gameStateUpdate', onUpdate);
-            socket.off('playerAssignment', onAssignment);
-            socket.off('syncStatus', onSyncStatus);
-            socket.off('timerUpdate', onTimerUpdate);
-            socket.off('resolutionStatus', onResolutionStatus);
-            socket.off('matchRestarted', onMatchRestarted);
-            socket.off('lobby:update', onLobbyUpdate);
-            socket.off('matchStarted', onMatchStarted);
-            socket.off('room:mapsUpdate', onMapsUpdate);
-            socket.off('connect_error', onError);
-            socket.off('chat:history', onChatHistory);
-            socket.off('chat:newMessage', onChatNewMessage);
-            socket.off('actionsUpdate', onActionsUpdate);
-        };
-    }, []);
-
-    // Minimum zoom is fixed to 1.0 because the canvas internal resolution
-    // is set to match the map dimensions (2000x2000).
-    // Zooming below 1.0 would show empty space on the internal canvas.
+    // UI state adjustments when turn advances
     useEffect(() => {
-        // Force zoom into legal range if it was outside (e.g. on load)
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (playerState?.turn > turnRef.current) {
+            setSelectedHubId(null);
+            setLaunchMode(false);
+            turnRef.current = playerState.turn;
+            audioManager.playRoundStart();
+        }
+    }, [playerState?.turn]);
+
+    // Force zoom into legal range if it was outside (e.g. on load)
+    useEffect(() => {
         setZoom((prev) => Math.max(1.0, Math.min(3.0, prev)));
     }, [playerState?.map]);
 
@@ -517,16 +269,9 @@ function App() {
         }
     }, [matchStarted, currentView]);
 
-    useEffect(() => {
-        if (!isLocked && !isResolvingUI && committedActions.length >= 0) {
-            socket.emit('syncActions', committedActions);
-        }
-    }, [committedActions, isLocked, isResolvingUI]);
-
     // Update hub screen position whenever selectedHubId, camera, or state changes
     useEffect(() => {
         if (!selectedHubId || !playerState) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
             setHubScreenPos(null);
             return;
         }
@@ -551,9 +296,7 @@ function App() {
     // Close menu when resolution starts or turn is submitted
     useEffect(() => {
         if (isResolvingUI || isLocked) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
             setSelectedHubId(null);
-
             setLaunchMode(false);
         }
     }, [isResolvingUI, isLocked]);
@@ -597,18 +340,6 @@ function App() {
             playerState={playerState}
             isSpectator={isSpectator}
             selectedHubId={selectedHubId}
-            audioVolume={audioVolume}
-            audioMuted={audioMuted}
-            currentTrackPath={currentTrackPath}
-            audioPlaying={audioPlaying}
-            audioShuffle={audioShuffle}
-            handleVolumeChange={handleVolumeChange}
-            handleMuteToggle={handleMuteToggle}
-            handlePlayPauseToggle={handlePlayPauseToggle}
-            handlePrevTrack={handlePrevTrack}
-            handleNextTrack={handleNextTrack}
-            handleShuffleToggle={handleShuffleToggle}
-            handleTrackChange={handleTrackChange}
         />
     );
 
@@ -622,8 +353,14 @@ function App() {
             zoom={zoom}
             committedActions={committedActions}
             interactionBlocked={interactionBlocked}
-            handleClearActions={handleClearActions}
-            handleExecuteTurn={handleExecuteTurn}
+            handleClearActions={() => {
+                audioManager.playActionReset();
+                handleClearActions();
+            }}
+            handleExecuteTurn={() => {
+                audioManager.playUplink();
+                handleExecuteTurn();
+            }}
             isLocked={isLocked}
             isResolvingUI={isResolvingUI}
             isSpectator={isSpectator}
@@ -701,9 +438,9 @@ function App() {
                 <LobbyOverlay
                     lobbyUpdate={lobbyStatus}
                     availableMaps={availableMaps}
-                    onClaimSeat={handleClaimSeat}
-                    onReadyToggle={handleReadyToggle}
-                    onSetMap={handleSetMap}
+                    onClaimSeat={triggerClaimSeat}
+                    onReadyToggle={triggerReadyToggle}
+                    onSetMap={triggerSetMap}
                     onOpenDesigner={() => setCurrentView('DESIGNER')}
                     socketId={socket.id}
                     socket={socket}
@@ -857,7 +594,7 @@ function App() {
                                         ? 'Mutual destruction on Titan.'
                                         : `Player ${playerState.winner} has conquered the sector.`}
                                 </p>
-                                <button className="restart-btn" onClick={handleRestart}>
+                                <button className="restart-btn" onClick={triggerRestart}>
                                     Initialize New Mission
                                 </button>
                             </div>
