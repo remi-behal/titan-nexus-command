@@ -26,7 +26,7 @@
     - [x] **Shield**: Add shield structure type. <!-- id: 93 -->
     
 - [ ] **Multiplayer Enhancements**: <!-- id: 47 -->
-    - [ ] Chat system.
+    - [x] Chat system.
     - [x] Lobby management / Player slotting. Very basic lobby implemented<!-- id: 94 -->
 - [ ] **Conflict Resolution & Pathing**: <!-- id: 74 -->
     - [x] **Structure Overlap**: Both destroyed if landing same spot. <!-- id: 59 -->
