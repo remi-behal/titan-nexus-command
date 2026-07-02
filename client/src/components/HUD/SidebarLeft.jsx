@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ENTITY_STATS, GLOBAL_STATS } from '../../../../shared/constants/EntityStats.js';
-import { TRACKS } from '../../utils/AudioManager';
+import { audioManager, TRACKS } from '../../utils/AudioManager';
 
 /**
  * SidebarLeft component handles the left HUD panel, containing player details,
@@ -11,20 +11,69 @@ export default function SidebarLeft({
     pCurrent,
     playerState,
     isSpectator,
-    selectedHubId,
-    audioVolume,
-    audioMuted,
-    currentTrackPath,
-    audioPlaying,
-    audioShuffle,
-    handleVolumeChange,
-    handleMuteToggle,
-    handlePlayPauseToggle,
-    handlePrevTrack,
-    handleNextTrack,
-    handleShuffleToggle,
-    handleTrackChange
+    selectedHubId
 }) {
+    const [audioVolume, setAudioVolume] = useState(0.5);
+    const [audioMuted, setAudioMuted] = useState(false);
+    const [currentTrackPath, setCurrentTrackPath] = useState('/audio/tracks/twimble.mod');
+    const [audioPlaying, setAudioPlaying] = useState(false);
+    const [audioShuffle, setAudioShuffle] = useState(false);
+
+    // Subscribe to AudioManager's real-time changes
+    useEffect(() => {
+        const unsubscribe = audioManager.subscribe((state) => {
+            setCurrentTrackPath(state.currentTrack || '/audio/tracks/twimble.mod');
+            setAudioPlaying(state.isPlaying);
+            setAudioMuted(state.isMuted);
+            setAudioVolume(state.volume);
+            setAudioShuffle(state.shuffle);
+        });
+        return unsubscribe;
+    }, []);
+
+    // Warm up AudioContext on standard user interaction
+    useEffect(() => {
+        const warmUpAudio = () => {
+            audioManager.playMusic(currentTrackPath);
+            window.removeEventListener('click', warmUpAudio);
+        };
+        window.addEventListener('click', warmUpAudio);
+        return () => window.removeEventListener('click', warmUpAudio);
+    }, [currentTrackPath]);
+
+    const handleVolumeChange = (e) => {
+        const val = parseFloat(e.target.value);
+        audioManager.setVolume(val);
+    };
+
+    const handleMuteToggle = () => {
+        audioManager.toggleMute();
+    };
+
+    const handlePlayPauseToggle = () => {
+        if (audioManager.isPlaying) {
+            audioManager.pauseMusic();
+        } else {
+            audioManager.resumeMusic();
+        }
+    };
+
+    const handleNextTrack = async () => {
+        await audioManager.nextTrack();
+    };
+
+    const handlePrevTrack = async () => {
+        await audioManager.prevTrack();
+    };
+
+    const handleShuffleToggle = () => {
+        audioManager.toggleShuffle();
+    };
+
+    const handleTrackChange = (path) => {
+        audioManager.playMusic(path);
+    };
+
     return (
         <aside className="sidebar-left">
             <div className="player-info" style={{ color: pCurrent.color }}>
