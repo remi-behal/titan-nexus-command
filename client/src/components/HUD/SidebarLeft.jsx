@@ -79,6 +79,39 @@ export default function SidebarLeft({
                 </div>
             </div>
 
+            {playerState?.windState && playerState.map?.modifiers?.windEnabled && (
+                <div className="wind-panel">
+                    <div className="panel-title">ATMOSPHERE STATUS</div>
+                    <div className="wind-status">
+                        {playerState.windState.active ? (
+                            <div className="wind-active-details">
+                                <div className="wind-warning animate-flash">HIGH WIND WARNING</div>
+                                <div className="wind-vector">
+                                    <span>SPEED: {(playerState.windState.speed * 10).toFixed(1)} m/s</span>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        BEARING: {Math.round(playerState.windState.angle)}°
+                                        <span 
+                                            className="wind-compass-arrow" 
+                                            style={{ 
+                                                display: 'inline-block', 
+                                                transform: `rotate(${playerState.windState.angle}deg)`,
+                                                fontSize: '0.9rem',
+                                                lineHeight: '1',
+                                                transition: 'transform 0.5s ease'
+                                            }}
+                                        >
+                                            ↑
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="wind-calm">ATMOSPHERIC PRESSURE: STABLE (NO WIND)</div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             <div className="audio-panel">
                 <div className="panel-title">COMM AUDIO</div>
                 <div className="audio-controls">

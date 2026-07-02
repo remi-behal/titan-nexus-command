@@ -689,3 +689,58 @@ canvas {
     border-color: var(--player-accent-color, #00ff44);
     color: var(--player-accent-color, #00ff44);
 }
+
+/* Retro-Tactical Wind Panel */
+.wind-panel {
+    margin-top: 1rem;
+    padding-top: 0.8rem;
+    border-top: 2px solid #222;
+    text-align: left;
+}
+
+.wind-panel .panel-title {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    color: #666;
+    letter-spacing: 1px;
+    margin-bottom: 0.4rem;
+}
+
+.wind-status {
+    background: #080808;
+    border: 1px solid #1a1a1a;
+    padding: 0.6rem;
+    font-size: 0.7rem;
+    font-family: 'Courier New', Courier, monospace;
+    border-radius: 2px;
+}
+
+.wind-warning {
+    color: #ff3366;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 0.4rem;
+    text-shadow: 0 0 5px rgba(255, 51, 102, 0.4);
+}
+
+.wind-vector {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: #00ff6c;
+}
+
+.wind-calm {
+    color: #666;
+    font-style: italic;
+}
+
+/* Flashing Warning Keyframe */
+@keyframes warningFlash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.animate-flash {
+    animation: warningFlash 1.5s infinite ease-in-out;
+}
