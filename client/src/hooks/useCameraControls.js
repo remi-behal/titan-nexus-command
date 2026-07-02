@@ -35,7 +35,8 @@ export function useCameraControls({
 
     // Helper: Calculate game coordinates from mouse event
     const getGameCoords = useCallback(
-        (e) => { // Handles MouseEvent and PointerEvent
+        (e) => {
+            // Handles MouseEvent and PointerEvent
             const canvas = canvasRef.current;
             if (!canvas) return { x: 0, y: 0 };
 
@@ -60,7 +61,7 @@ export function useCameraControls({
 
             const x = ((e.clientX - rect.left - offsetX) * scale) / zoom + cameraOffset.x;
             const y = ((e.clientY - rect.top - offsetY) * scale) / zoom + cameraOffset.y;
-            
+
             return {
                 x: TorusMath.wrapX(x, gameState.map.width),
                 y: TorusMath.wrapY(y, gameState.map.height)
@@ -69,83 +70,90 @@ export function useCameraControls({
         [cameraOffset, zoom, gameState.map.width, gameState.map.height, canvasRef]
     );
 
-    const getScreenCoords = useCallback((gameX, gameY) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return { x: 0, y: 0 };
+    const getScreenCoords = useCallback(
+        (gameX, gameY) => {
+            const canvas = canvasRef.current;
+            if (!canvas) return { x: 0, y: 0 };
 
-        const rect = canvas.getBoundingClientRect();
-        const cw = canvas.width;
-        const ch = canvas.height;
-        const rw = rect.width;
-        const rh = rect.height;
-        const canvasRatio = cw / ch;
-        const rectRatio = rw / rh;
+            const rect = canvas.getBoundingClientRect();
+            const cw = canvas.width;
+            const ch = canvas.height;
+            const rw = rect.width;
+            const rh = rect.height;
+            const canvasRatio = cw / ch;
+            const rectRatio = rw / rh;
 
-        let scale, offsetX, offsetY;
-        if (rectRatio > canvasRatio) {
-            scale = ch / rh;
-            offsetX = (rw - cw / scale) / 2;
-            offsetY = 0;
-        } else {
-            scale = cw / rw;
-            offsetX = 0;
-            offsetY = (rh - ch / scale) / 2;
-        }
+            let scale, offsetX, offsetY;
+            if (rectRatio > canvasRatio) {
+                scale = ch / rh;
+                offsetX = (rw - cw / scale) / 2;
+                offsetY = 0;
+            } else {
+                scale = cw / rw;
+                offsetX = 0;
+                offsetY = (rh - ch / scale) / 2;
+            }
 
-        const dx = gameX - cameraOffset.x;
-        const dy = gameY - cameraOffset.y;
+            const dx = gameX - cameraOffset.x;
+            const dy = gameY - cameraOffset.y;
 
-        // Viewport-absolute coordinates (master baseline)
-        const primaryX = (dx * zoom) / scale + rect.left + offsetX;
-        const primaryY = (dy * zoom) / scale + rect.top + offsetY;
+            // Viewport-absolute coordinates (master baseline)
+            const primaryX = (dx * zoom) / scale + rect.left + offsetX;
+            const primaryY = (dy * zoom) / scale + rect.top + offsetY;
 
-        // Account for 3x3 toroidal tiling
-        const mapPixelW = (gameState.map.width * zoom) / scale;
-        const mapPixelH = (gameState.map.height * zoom) / scale;
+            // Account for 3x3 toroidal tiling
+            const mapPixelW = (gameState.map.width * zoom) / scale;
+            const mapPixelH = (gameState.map.height * zoom) / scale;
 
-        const xInstances = [primaryX - mapPixelW, primaryX, primaryX + mapPixelW];
-        const yInstances = [primaryY - mapPixelH, primaryY, primaryY + mapPixelH];
+            const xInstances = [primaryX - mapPixelW, primaryX, primaryX + mapPixelW];
+            const yInstances = [primaryY - mapPixelH, primaryY, primaryY + mapPixelH];
 
-        const viewportCenterX = rect.left + rw / 2;
-        const viewportCenterY = rect.top + rh / 2;
+            const viewportCenterX = rect.left + rw / 2;
+            const viewportCenterY = rect.top + rh / 2;
 
-        const findBest = (instances, center, min, max) => {
-            let best = instances[1]; // default to primary
-            let minCenterDist = Infinity;
-            let foundVisible = false;
+            const findBest = (instances, center, min, max) => {
+                let best = instances[1]; // default to primary
+                let minCenterDist = Infinity;
+                let foundVisible = false;
 
-            for (const val of instances) {
-                const isVisible = val >= min && val <= max;
-                const dist = Math.abs(val - center);
+                for (const val of instances) {
+                    const isVisible = val >= min && val <= max;
+                    const dist = Math.abs(val - center);
 
-                if (isVisible && !foundVisible) {
-                    best = val;
-                    minCenterDist = dist;
-                    foundVisible = true;
-                } else if (isVisible && foundVisible) {
-                    if (dist < minCenterDist) {
+                    if (isVisible && !foundVisible) {
                         best = val;
                         minCenterDist = dist;
-                    }
-                } else if (!foundVisible) {
-                    if (dist < minCenterDist) {
-                        best = val;
-                        minCenterDist = dist;
+                        foundVisible = true;
+                    } else if (isVisible && foundVisible) {
+                        if (dist < minCenterDist) {
+                            best = val;
+                            minCenterDist = dist;
+                        }
+                    } else if (!foundVisible) {
+                        if (dist < minCenterDist) {
+                            best = val;
+                            minCenterDist = dist;
+                        }
                     }
                 }
-            }
-            return best;
-        };
+                return best;
+            };
 
-        const finalX = findBest(xInstances, viewportCenterX, rect.left, rect.left + rw);
-        const finalY = findBest(yInstances, viewportCenterY, rect.top, rect.top + rh);
+            const finalX = findBest(xInstances, viewportCenterX, rect.left, rect.left + rw);
+            const finalY = findBest(yInstances, viewportCenterY, rect.top, rect.top + rh);
 
-        return { x: finalX, y: finalY };
-    }, [cameraOffset, zoom, gameState.map.width, gameState.map.height, canvasRef]);
+            return { x: finalX, y: finalY };
+        },
+        [cameraOffset, zoom, gameState.map.width, gameState.map.height, canvasRef]
+    );
 
     useEffect(() => {
         const handleGlobalMouseMove = (e) => {
-            activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button });
+            activePointersRef.current.set(e.pointerId, {
+                x: e.clientX,
+                y: e.clientY,
+                button: e.button
+            });
 
             // Always track mouse coordinates for hover effects
             const { x, y } = getGameCoords(e);
@@ -156,13 +164,16 @@ export function useCameraControls({
             } else if (activePointersRef.current.size === 2) {
                 // Pinch-to-Zoom logic
                 const pointers = Array.from(activePointersRef.current.values());
-                const dist = Math.hypot(pointers[0].x - pointers[1].x, pointers[0].y - pointers[1].y);
-                
+                const dist = Math.hypot(
+                    pointers[0].x - pointers[1].x,
+                    pointers[0].y - pointers[1].y
+                );
+
                 if (lastPinchDistRef.current > 0) {
                     const zoomSpeed = 0.005;
                     const delta = (dist - lastPinchDistRef.current) * zoomSpeed;
-                    
-                    setZoom(prevZoom => {
+
+                    setZoom((prevZoom) => {
                         const newZoom = Math.max(1.0, Math.min(3.0, prevZoom + delta));
                         if (newZoom === prevZoom) return prevZoom;
 
@@ -178,7 +189,7 @@ export function useCameraControls({
                         const mapW = gameState.map.width;
                         const mapH = gameState.map.height;
 
-                        setCameraOffset(prevOffset => ({
+                        setCameraOffset((prevOffset) => ({
                             x: (prevOffset.x + localX * (1 / prevZoom - 1 / newZoom) + mapW) % mapW,
                             y: (prevOffset.y + localY * (1 / prevZoom - 1 / newZoom) + mapH) % mapH
                         }));
@@ -187,8 +198,10 @@ export function useCameraControls({
                     });
                 }
                 lastPinchDistRef.current = dist;
-                panStartRef.current = { x: (pointers[0].x + pointers[1].x) / 2, y: (pointers[0].y + pointers[1].y) / 2 };
-
+                panStartRef.current = {
+                    x: (pointers[0].x + pointers[1].x) / 2,
+                    y: (pointers[0].y + pointers[1].y) / 2
+                };
             } else if (isPanning) {
                 const dx = e.clientX - panStartRef.current.x;
                 const dy = e.clientY - panStartRef.current.y;
@@ -202,8 +215,16 @@ export function useCameraControls({
                 if (isNaN(scale) || !isFinite(scale)) return;
 
                 setCameraOffset((prev) => ({
-                    x: (prev.x - (((dx * scale) / zoom) % gameState.map.width) + gameState.map.width) % gameState.map.width,
-                    y: (prev.y - (((dy * scale) / zoom) % gameState.map.height) + gameState.map.height) % gameState.map.height
+                    x:
+                        (prev.x -
+                            (((dx * scale) / zoom) % gameState.map.width) +
+                            gameState.map.width) %
+                        gameState.map.width,
+                    y:
+                        (prev.y -
+                            (((dy * scale) / zoom) % gameState.map.height) +
+                            gameState.map.height) %
+                        gameState.map.height
                 }));
 
                 panStartRef.current = { x: e.clientX, y: e.clientY };
@@ -312,10 +333,17 @@ export function useCameraControls({
             mouseDownPosRef.current = { x: e.clientX, y: e.clientY };
         }
 
-        activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button });
+        activePointersRef.current.set(e.pointerId, {
+            x: e.clientX,
+            y: e.clientY,
+            button: e.button
+        });
         if (activePointersRef.current.size === 2) {
             const pointers = Array.from(activePointersRef.current.values());
-            lastPinchDistRef.current = Math.hypot(pointers[0].x - pointers[1].x, pointers[0].y - pointers[1].y);
+            lastPinchDistRef.current = Math.hypot(
+                pointers[0].x - pointers[1].x,
+                pointers[0].y - pointers[1].y
+            );
             setIsPanning(false);
         }
     };

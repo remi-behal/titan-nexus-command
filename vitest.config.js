@@ -4,8 +4,8 @@ export default defineConfig({
     test: {
         globals: true,
         environment: 'jsdom',
-        reporters: ['dot'],
-        silent: true,
+        reporters: ['default'],
+        silent: false,
         coverage: {
             provider: 'v8',
             reporter: ['text-summary', 'html', 'lcov'],

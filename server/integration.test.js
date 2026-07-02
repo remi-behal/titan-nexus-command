@@ -17,8 +17,8 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
         });
 
         // Drain stdout/stderr to prevent buffer freezing
-        serverProcess.stdout.on('data', () => { });
-        serverProcess.stderr.on('data', () => { });
+        serverProcess.stdout.on('data', () => {});
+        serverProcess.stderr.on('data', () => {});
 
         // Wait for server to listen
         await new Promise((resolve, reject) => {
@@ -43,10 +43,16 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
             let authenticated = 0;
             const onAuth1 = (id) => {
                 p1Id = id;
-                if (++authenticated === 2) { clearTimeout(timeout); resolve(); }
+                if (++authenticated === 2) {
+                    clearTimeout(timeout);
+                    resolve();
+                }
             };
             const onAuth2 = (_id) => {
-                if (++authenticated === 2) { clearTimeout(timeout); resolve(); }
+                if (++authenticated === 2) {
+                    clearTimeout(timeout);
+                    resolve();
+                }
             };
             client1.on('playerAssignment', onAuth1);
             client2.on('playerAssignment', onAuth2);
@@ -58,7 +64,10 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
         // Lobby Handshake
         await new Promise((resolve, reject) => {
             const timeout = setTimeout(() => reject(new Error('Lobby handshake timeout')), 10000);
-            client1.once('matchStarted', () => { clearTimeout(timeout); resolve(); });
+            client1.once('matchStarted', () => {
+                clearTimeout(timeout);
+                resolve();
+            });
 
             client1.emit('lobby:claimSeat', 0);
             client2.emit('lobby:claimSeat', 1);

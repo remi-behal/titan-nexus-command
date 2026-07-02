@@ -36,7 +36,14 @@ export function calculateLaunchAngle(dx, dy) {
 /**
  * Helper to get the shortest distance vector (dx, dy) between two points on a torus.
  */
-export function getToroidalVector(x1, y1, x2, y2, w = GLOBAL_STATS.MAP_WIDTH, h = GLOBAL_STATS.MAP_HEIGHT) {
+export function getToroidalVector(
+    x1,
+    y1,
+    x2,
+    y2,
+    w = GLOBAL_STATS.MAP_WIDTH,
+    h = GLOBAL_STATS.MAP_HEIGHT
+) {
     if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return { dx: 0, dy: 0 };
     if (w <= 0 || h <= 0) return { dx: 0, dy: 0 };
 
@@ -53,7 +60,17 @@ export function getToroidalVector(x1, y1, x2, y2, w = GLOBAL_STATS.MAP_WIDTH, h 
  * Checks if a line segment (x1, y1) -> (x2, y2) intersects a circle (cx, cy, radius).
  * Accounts for toroidal wrapping by normalizing relative to the circle center.
  */
-export function lineCircleIntersection(x1, y1, x2, y2, cx, cy, radius, w = GLOBAL_STATS.MAP_WIDTH, h = GLOBAL_STATS.MAP_HEIGHT) {
+export function lineCircleIntersection(
+    x1,
+    y1,
+    x2,
+    y2,
+    cx,
+    cy,
+    radius,
+    w = GLOBAL_STATS.MAP_WIDTH,
+    h = GLOBAL_STATS.MAP_HEIGHT
+) {
     // Step 1: Get vectors from circle center to segment endpoints
     const v1 = getToroidalVector(cx, cy, x1, y1, w, h);
     const v2 = getToroidalVector(cx, cy, x2, y2, w, h);
@@ -95,7 +112,14 @@ export function wrapY(y, h = GLOBAL_STATS.MAP_HEIGHT) {
 /**
  * Shortest distance between two points on a torus
  */
-export function getToroidalDistance(x1, y1, x2, y2, w = GLOBAL_STATS.MAP_WIDTH, h = GLOBAL_STATS.MAP_HEIGHT) {
+export function getToroidalDistance(
+    x1,
+    y1,
+    x2,
+    y2,
+    w = GLOBAL_STATS.MAP_WIDTH,
+    h = GLOBAL_STATS.MAP_HEIGHT
+) {
     if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return 0;
 
     let dx = Math.abs(x2 - x1);
@@ -161,7 +185,16 @@ export function getLinkSegments(p1, p2, w = GLOBAL_STATS.MAP_WIDTH, h = GLOBAL_S
  * Point-to-Segment Distance Math (Toroidal Aware)
  * Returns the shortest physical distance from point (px, py) to line segment (x1, y1)-(x2, y2)
  */
-export function getPointToSegmentDistance(px, py, x1, y1, x2, y2, w = GLOBAL_STATS.MAP_WIDTH, h = GLOBAL_STATS.MAP_HEIGHT) {
+export function getPointToSegmentDistance(
+    px,
+    py,
+    x1,
+    y1,
+    x2,
+    y2,
+    w = GLOBAL_STATS.MAP_WIDTH,
+    h = GLOBAL_STATS.MAP_HEIGHT
+) {
     // Translate problem to be relative to (x1, y1) in a toroidal way
     let dx = x2 - x1;
     let dy = y2 - y1;

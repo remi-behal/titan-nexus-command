@@ -7,11 +7,10 @@ const CATEGORIES = ['OFFENSE', 'DEFENSE', 'UTILITY', 'SPECIAL'];
 const RadialMenu = ({ x, y, onSelect, onCancel, playerEnergy, hubFuel }) => {
     const [currentCategory, setCurrentCategory] = useState(null);
 
-    // Filter items by category
     const getItemsInCategory = (cat) => {
         return Object.entries(ENTITY_STATS)
             .filter(([, stats]) => stats.category === cat)
-            .map(([type, stats]) => ({ type, ...stats }));
+            .map(([type, stats]) => ({ ...stats, type }));
     };
 
     const handleCategoryClick = (cat) => {
@@ -55,7 +54,8 @@ const RadialMenu = ({ x, y, onSelect, onCancel, playerEnergy, hubFuel }) => {
                 Z
             `;
 
-            const label = currentCategory ? item.type : item;
+            const label = currentCategory ? item.symbol || item.type : item;
+            const itemKey = currentCategory ? item.type : item;
             const isAffordable = currentCategory ? playerEnergy >= item.cost : true;
             // hubFuel <= 0 is only relevant for non-HUB structures that require a hub to launch
             // But since the menu is ON a hub, we check that hub's fuel.
@@ -63,7 +63,7 @@ const RadialMenu = ({ x, y, onSelect, onCancel, playerEnergy, hubFuel }) => {
 
             return (
                 <g
-                    key={label}
+                    key={itemKey}
                     className={`menu-segment ${isDisabled ? 'disabled' : ''}`}
                     onClick={(e) => {
                         e.stopPropagation();
@@ -77,8 +77,14 @@ const RadialMenu = ({ x, y, onSelect, onCancel, playerEnergy, hubFuel }) => {
                 >
                     <path d={pathData} />
                     <text
-                        x={Math.cos(startAngle + angleStep / 2) * (innerRadius + (outerRadius - innerRadius) / 2)}
-                        y={Math.sin(startAngle + angleStep / 2) * (innerRadius + (outerRadius - innerRadius) / 2)}
+                        x={
+                            Math.cos(startAngle + angleStep / 2) *
+                            (innerRadius + (outerRadius - innerRadius) / 2)
+                        }
+                        y={
+                            Math.sin(startAngle + angleStep / 2) *
+                            (innerRadius + (outerRadius - innerRadius) / 2)
+                        }
                         textAnchor="middle"
                         dominantBaseline="middle"
                     >
@@ -96,8 +102,20 @@ const RadialMenu = ({ x, y, onSelect, onCancel, playerEnergy, hubFuel }) => {
             onMouseDown={(e) => e.stopPropagation()}
         >
             <svg width="300" height="300" viewBox="-150 -150 300 300">
-                <circle cx="0" cy="0" r="45" className="menu-center" onClick={currentCategory ? handleBack : onCancel} />
-                <text x="0" y="5" textAnchor="middle" className="center-icon" onClick={currentCategory ? handleBack : onCancel}>
+                <circle
+                    cx="0"
+                    cy="0"
+                    r="45"
+                    className="menu-center"
+                    onClick={currentCategory ? handleBack : onCancel}
+                />
+                <text
+                    x="0"
+                    y="5"
+                    textAnchor="middle"
+                    className="center-icon"
+                    onClick={currentCategory ? handleBack : onCancel}
+                >
                     {currentCategory ? '←' : '✕'}
                 </text>
                 {renderRing()}

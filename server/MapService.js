@@ -27,16 +27,18 @@ class MapService {
 
     listMaps() {
         if (!fs.existsSync(MAP_DIR)) return [];
-        return fs.readdirSync(MAP_DIR)
-            .filter(f => f.endsWith('.json'))
-            .map(f => f.replace('.json', ''));
+        return fs
+            .readdirSync(MAP_DIR)
+            .filter((f) => f.endsWith('.json'))
+            .map((f) => f.replace('.json', ''));
     }
 
     listReadyMaps() {
         if (!fs.existsSync(READY_MAP_DIR)) return [];
-        return fs.readdirSync(READY_MAP_DIR)
-            .filter(f => f.endsWith('.json'))
-            .map(f => f.replace('.json', ''));
+        return fs
+            .readdirSync(READY_MAP_DIR)
+            .filter((f) => f.endsWith('.json'))
+            .map((f) => f.replace('.json', ''));
     }
 
     loadMap(name) {

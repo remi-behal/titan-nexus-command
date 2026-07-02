@@ -48,16 +48,21 @@ export default function SidebarLeft({
                                         if (stats && stats.energyGen) {
                                             projectedIncome += stats.energyGen;
                                             if (entity.type === 'EXTRACTOR') {
-                                                const node = playerState.map.resources.find((res) => {
-                                                    let dx = Math.abs(res.x - entity.x);
-                                                    let dy = Math.abs(res.y - entity.y);
-                                                    if (dx > playerState.map.width / 2)
-                                                        dx = playerState.map.width - dx;
-                                                    if (dy > playerState.map.height / 2)
-                                                        dy = playerState.map.height - dy;
-                                                    const dist = Math.sqrt(dx * dx + dy * dy);
-                                                    return dist <= GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS;
-                                                });
+                                                const node = playerState.map.resources.find(
+                                                    (res) => {
+                                                        let dx = Math.abs(res.x - entity.x);
+                                                        let dy = Math.abs(res.y - entity.y);
+                                                        if (dx > playerState.map.width / 2)
+                                                            dx = playerState.map.width - dx;
+                                                        if (dy > playerState.map.height / 2)
+                                                            dy = playerState.map.height - dy;
+                                                        const dist = Math.sqrt(dx * dx + dy * dy);
+                                                        return (
+                                                            dist <=
+                                                            GLOBAL_STATS.RESOURCE_CAPTURE_RADIUS
+                                                        );
+                                                    }
+                                                );
                                                 if (node) projectedIncome += node.value;
                                             }
                                         }
@@ -77,21 +82,21 @@ export default function SidebarLeft({
             <div className="audio-panel">
                 <div className="panel-title">COMM AUDIO</div>
                 <div className="audio-controls">
-                    <button 
-                        className={`mute-btn ${audioMuted ? 'muted' : ''}`} 
+                    <button
+                        className={`mute-btn ${audioMuted ? 'muted' : ''}`}
                         onClick={handleMuteToggle}
-                        title={audioMuted ? "Unmute Audio" : "Mute Audio"}
+                        title={audioMuted ? 'Unmute Audio' : 'Mute Audio'}
                     >
-                        {audioMuted ? "OFF" : "ON"}
+                        {audioMuted ? 'OFF' : 'ON'}
                     </button>
                     <div className="slider-container">
                         <span className="slider-label">VOL:</span>
-                        <input 
-                            type="range" 
-                            min="0" 
-                            max="1" 
-                            step="0.05" 
-                            value={audioVolume} 
+                        <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={audioVolume}
                             onChange={handleVolumeChange}
                             className="retro-slider"
                             disabled={audioMuted}
@@ -99,45 +104,68 @@ export default function SidebarLeft({
                     </div>
                 </div>
                 <div className="track-selector-container">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                        <span className="slider-label" style={{ fontSize: '0.55rem', color: '#666', letterSpacing: '1px' }}>TRACK:</span>
-                        <span className="status-label" style={{ 
-                            fontSize: '0.55rem', 
-                            color: audioPlaying ? 'var(--player-accent-color, #00ff44)' : '#666', 
-                            fontFamily: 'monospace',
-                            fontWeight: 'bold',
-                            letterSpacing: '1px'
-                        }}>
+                    <div
+                        style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '2px'
+                        }}
+                    >
+                        <span
+                            className="slider-label"
+                            style={{ fontSize: '0.55rem', color: '#666', letterSpacing: '1px' }}
+                        >
+                            TRACK:
+                        </span>
+                        <span
+                            className="status-label"
+                            style={{
+                                fontSize: '0.55rem',
+                                color: audioPlaying
+                                    ? 'var(--player-accent-color, #00ff44)'
+                                    : '#666',
+                                fontFamily: 'monospace',
+                                fontWeight: 'bold',
+                                letterSpacing: '1px'
+                            }}
+                        >
                             {audioPlaying ? '[PLAYING]' : '[PAUSED]'}
                         </span>
                     </div>
-                    <select 
-                        value={currentTrackPath} 
+                    <select
+                        value={currentTrackPath}
                         onChange={(e) => handleTrackChange(e.target.value)}
                         className="retro-select"
                     >
-                        {TRACKS.map(t => (
-                            <option key={t.id} value={t.path}>{t.name}</option>
+                        {TRACKS.map((t) => (
+                            <option key={t.id} value={t.path}>
+                                {t.name}
+                            </option>
                         ))}
                     </select>
-                    
+
                     <div className="media-controls-grid">
-                        <button className="media-btn" onClick={handlePrevTrack} title="Previous Track">
+                        <button
+                            className="media-btn"
+                            onClick={handlePrevTrack}
+                            title="Previous Track"
+                        >
                             PREV
                         </button>
-                        <button 
-                            className={`media-btn ${audioPlaying ? 'active' : ''}`} 
-                            onClick={handlePlayPauseToggle} 
-                            title={audioPlaying ? "Pause" : "Play"}
+                        <button
+                            className={`media-btn ${audioPlaying ? 'active' : ''}`}
+                            onClick={handlePlayPauseToggle}
+                            title={audioPlaying ? 'Pause' : 'Play'}
                         >
-                            {audioPlaying ? "PAUS" : "PLAY"}
+                            {audioPlaying ? 'PAUS' : 'PLAY'}
                         </button>
                         <button className="media-btn" onClick={handleNextTrack} title="Next Track">
                             NEXT
                         </button>
-                        <button 
-                            className={`media-btn ${audioShuffle ? 'active' : ''}`} 
-                            onClick={handleShuffleToggle} 
+                        <button
+                            className={`media-btn ${audioShuffle ? 'active' : ''}`}
+                            onClick={handleShuffleToggle}
                             title="Toggle Shuffle"
                         >
                             SHUF
@@ -148,10 +176,10 @@ export default function SidebarLeft({
 
             <div className="footer-hint">
                 {isSpectator
-                    ? "Observing match."
+                    ? 'Observing match.'
                     : selectedHubId
-                        ? `Hub ${selectedHubId} Selected.`
-                        : 'Select Hub.'}
+                      ? `Hub ${selectedHubId} Selected.`
+                      : 'Select Hub.'}
             </div>
         </aside>
     );

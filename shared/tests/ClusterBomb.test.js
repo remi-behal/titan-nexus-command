@@ -35,7 +35,9 @@ describe('GameState - Cluster Bomb', () => {
         // Find sub-bombs in snapshots
         const subBombsCountInSnapshots = snapshots.map((s) => {
             if (s.type === 'ROUND_SUB') {
-                return s.state.entities.filter((e) => e.itemType === 'CLUSTER_BOMB' || e.itemType === 'CLUSTER_FRAGMENT').length;
+                return s.state.entities.filter(
+                    (e) => e.itemType === 'CLUSTER_BOMB' || e.itemType === 'CLUSTER_FRAGMENT'
+                ).length;
             }
             return 0;
         });

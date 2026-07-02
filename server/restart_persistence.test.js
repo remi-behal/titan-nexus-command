@@ -16,11 +16,14 @@ describe('Match Restart Persistence & Auto-Reclaim', () => {
         });
 
         // Drain I/O
-        serverProcess.stdout.on('data', () => { });
-        serverProcess.stderr.on('data', () => { });
+        serverProcess.stdout.on('data', () => {});
+        serverProcess.stderr.on('data', () => {});
 
         await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Server failed to start in 15s')), 15000);
+            const timeout = setTimeout(
+                () => reject(new Error('Server failed to start in 15s')),
+                15000
+            );
             serverProcess.stdout.on('data', function listener(data) {
                 if (data.toString().includes('SERVER RUNNING')) {
                     serverProcess.stdout.off('data', listener);
@@ -39,13 +42,19 @@ describe('Match Restart Persistence & Auto-Reclaim', () => {
             const onAuth1 = (id) => {
                 if (id) {
                     p1Id = id;
-                    if (++authenticated === 2) { clearTimeout(timeout); resolve(); }
+                    if (++authenticated === 2) {
+                        clearTimeout(timeout);
+                        resolve();
+                    }
                 }
             };
             const onAuth2 = (id) => {
                 if (id) {
                     p2Id = id;
-                    if (++authenticated === 2) { clearTimeout(timeout); resolve(); }
+                    if (++authenticated === 2) {
+                        clearTimeout(timeout);
+                        resolve();
+                    }
                 }
             };
             client1.on('playerAssignment', onAuth1);
@@ -66,7 +75,7 @@ describe('Match Restart Persistence & Auto-Reclaim', () => {
         });
 
         // Wait for match start
-        await new Promise(r => client1.once('matchStarted', r));
+        await new Promise((r) => client1.once('matchStarted', r));
     }, 45000);
 
     afterAll(async () => {

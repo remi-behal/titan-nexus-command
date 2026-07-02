@@ -6,7 +6,12 @@
  * or UI. This makes it easy to move to the server later!
  */
 
-import { ENTITY_STATS, GLOBAL_STATS, RESOURCE_NODE_STATS, ENTITY_TYPES } from './constants/EntityStats.js';
+import {
+    ENTITY_STATS,
+    GLOBAL_STATS,
+    RESOURCE_NODE_STATS,
+    ENTITY_TYPES
+} from './constants/EntityStats.js';
 import * as TorusMath from './utils/TorusMath.js';
 import { CollisionSystem } from './systems/CollisionSystem.js';
 import { ProjectileSystem } from './systems/ProjectileSystem.js';
@@ -1201,14 +1206,21 @@ export class GameState {
                         // Force snapshot on structural landing tick to ensure secure Fog of War audio propagates instantly
                         let forceSnapshot = false;
                         tempProjectiles.forEach((p) => {
-                            if (t === p.arrivalTick && ENTITY_STATS[p.type]?.type === ENTITY_TYPES.STRUCTURE) {
+                            if (
+                                t === p.arrivalTick &&
+                                ENTITY_STATS[p.type]?.type === ENTITY_TYPES.STRUCTURE
+                            ) {
                                 forceSnapshot = true;
                             }
                         });
 
                         if (t % snapshotStep === 0 || t === subTicks || forceSnapshot) {
                             // OPTIMIZATION: Only push sub-tick snapshot if something is actually happening (visuals or active missiles)
-                            if (tempProjectiles.some((p) => p.active) || tempVisuals.length > 0 || forceSnapshot) {
+                            if (
+                                tempProjectiles.some((p) => p.active) ||
+                                tempVisuals.length > 0 ||
+                                forceSnapshot
+                            ) {
                                 const snapshotState = this.getState();
                                 snapshotState.entities = [
                                     ...snapshotState.entities,

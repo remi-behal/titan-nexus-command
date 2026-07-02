@@ -11,7 +11,9 @@ async function runVisualSmokeTest(browser) {
     await browser.wait_for_selector('#game-canvas');
 
     // 2. Check for basic UI elements
-    const canvasExists = await browser.evaluate_javascript('!!document.querySelector("#game-canvas")');
+    const canvasExists = await browser.evaluate_javascript(
+        '!!document.querySelector("#game-canvas")'
+    );
     if (!canvasExists) throw new Error('Game canvas not found');
 
     // 3. Verify Fog of War Transparency (Simplified check)

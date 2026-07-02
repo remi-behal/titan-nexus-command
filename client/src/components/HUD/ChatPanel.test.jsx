@@ -7,14 +7,20 @@ describe('ChatPanel Component', () => {
     it('should render message list and trigger onSendMessage', () => {
         const mockSend = vi.fn();
         const messages = [
-            { id: '1', senderId: 'player1', senderName: 'Player 1', text: 'Hi', timestamp: Date.now() }
+            {
+                id: '1',
+                senderId: 'player1',
+                senderName: 'Player 1',
+                text: 'Hi',
+                timestamp: Date.now()
+            }
         ];
 
         render(
-            <ChatPanel 
-                messages={messages} 
-                onSendMessage={mockSend} 
-                isOpen={true} 
+            <ChatPanel
+                messages={messages}
+                onSendMessage={mockSend}
+                isOpen={true}
                 onToggle={() => {}}
                 unreadCount={0}
             />

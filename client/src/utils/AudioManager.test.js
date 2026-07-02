@@ -58,7 +58,10 @@ describe('AudioManager', () => {
             createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
             destination: {}
         };
-        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        vi.stubGlobal(
+            'AudioContext',
+            vi.fn().mockImplementation(() => mockContext)
+        );
 
         await audioManager.init();
         expect(audioManager.ctx).toBe(mockContext);
@@ -81,14 +84,17 @@ describe('AudioManager', () => {
             createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
             destination: {}
         };
-        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        vi.stubGlobal(
+            'AudioContext',
+            vi.fn().mockImplementation(() => mockContext)
+        );
         const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
 
         await audioManager.init();
         audioManager.playRoundStart();
-        
+
         // Wait for microtasks to resolve
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         expect(zzfxSpy).toHaveBeenCalled();
     });
 
@@ -108,7 +114,10 @@ describe('AudioManager', () => {
             createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
             destination: {}
         };
-        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        vi.stubGlobal(
+            'AudioContext',
+            vi.fn().mockImplementation(() => mockContext)
+        );
         const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
 
         await audioManager.init();
@@ -127,7 +136,7 @@ describe('AudioManager', () => {
         for (const method of methods) {
             audioManager[method]();
             // Wait for microtasks to resolve
-            await new Promise(resolve => setTimeout(resolve, 1));
+            await new Promise((resolve) => setTimeout(resolve, 1));
             expect(zzfxSpy).toHaveBeenCalled();
             zzfxSpy.mockClear();
         }
@@ -149,7 +158,10 @@ describe('AudioManager', () => {
             createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
             destination: {}
         };
-        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        vi.stubGlobal(
+            'AudioContext',
+            vi.fn().mockImplementation(() => mockContext)
+        );
         const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
 
         await audioManager.init();
@@ -170,7 +182,7 @@ describe('AudioManager', () => {
         for (const method of methods) {
             audioManager[method]();
             // Wait for microtasks to resolve
-            await new Promise(resolve => setTimeout(resolve, 1));
+            await new Promise((resolve) => setTimeout(resolve, 1));
             expect(zzfxSpy).toHaveBeenCalled();
             zzfxSpy.mockClear();
         }
@@ -192,30 +204,93 @@ describe('AudioManager', () => {
             createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
             destination: {}
         };
-        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        vi.stubGlobal(
+            'AudioContext',
+            vi.fn().mockImplementation(() => mockContext)
+        );
         const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
 
         await audioManager.init();
 
         // 1. Launch
         audioManager.playSamLaunch();
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         expect(zzfxSpy).toHaveBeenLastCalledWith(
-            0.5, 0.05, 528, 0.01, 0, 0.48, 0, 0.3, -9, 0, 0, 0, 0.32, 4.2, 0, 0, 0, 1, 0, 0, 0
+            0.5,
+            0.05,
+            528,
+            0.01,
+            0,
+            0.48,
+            0,
+            0.3,
+            -9,
+            0,
+            0,
+            0,
+            0.32,
+            4.2,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0
         );
 
         // 2. Flight
         audioManager.playSamFlight();
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         expect(zzfxSpy).toHaveBeenLastCalledWith(
-            0.04, 0.05, 75, 0.04, 0, 0.08, 0, 0.5, 0, -15, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0
+            0.04,
+            0.05,
+            75,
+            0.04,
+            0,
+            0.08,
+            0,
+            0.5,
+            0,
+            -15,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0
         );
 
         // 3. Lock On
         audioManager.playSamLockOn();
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         expect(zzfxSpy).toHaveBeenLastCalledWith(
-            0.11, 0.05, 950, 0.01, 0.03, 0.08, 1, 1.8, 0, 10, 300, 0.02, 0.05, 0, 0, 0, 0, 1, 0, 0, 0
+            0.11,
+            0.05,
+            950,
+            0.01,
+            0.03,
+            0.08,
+            1,
+            1.8,
+            0,
+            10,
+            300,
+            0.02,
+            0.05,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0
         );
     });
 
@@ -235,7 +310,10 @@ describe('AudioManager', () => {
             createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
             destination: {}
         };
-        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        vi.stubGlobal(
+            'AudioContext',
+            vi.fn().mockImplementation(() => mockContext)
+        );
         const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
 
         await audioManager.init();
@@ -245,12 +323,11 @@ describe('AudioManager', () => {
 
         for (const sound of registered) {
             audioManager[sound.methodName]();
-            await new Promise(resolve => setTimeout(resolve, 1));
+            await new Promise((resolve) => setTimeout(resolve, 1));
             expect(zzfxSpy).toHaveBeenCalled();
             zzfxSpy.mockClear();
         }
     });
-
 
     it('defines and exports a valid TRACKS playlist', () => {
         expect(TRACKS).toBeDefined();
@@ -278,7 +355,10 @@ describe('AudioManager', () => {
             createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
             destination: {}
         };
-        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        vi.stubGlobal(
+            'AudioContext',
+            vi.fn().mockImplementation(() => mockContext)
+        );
 
         await audioManager.init();
         const loadSpy = vi.spyOn(audioManager.player, 'load');
@@ -307,7 +387,10 @@ describe('AudioManager', () => {
             createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
             destination: {}
         };
-        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        vi.stubGlobal(
+            'AudioContext',
+            vi.fn().mockImplementation(() => mockContext)
+        );
 
         await audioManager.init();
         const pauseSpy = vi.spyOn(audioManager.player, 'pause');
@@ -341,10 +424,13 @@ describe('AudioManager', () => {
             createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
             destination: {}
         };
-        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        vi.stubGlobal(
+            'AudioContext',
+            vi.fn().mockImplementation(() => mockContext)
+        );
 
         await audioManager.init();
-        
+
         audioManager.shuffle = false;
         audioManager.currentTrack = TRACKS[0].path;
 
@@ -374,7 +460,10 @@ describe('AudioManager', () => {
             createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
             destination: {}
         };
-        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        vi.stubGlobal(
+            'AudioContext',
+            vi.fn().mockImplementation(() => mockContext)
+        );
 
         await audioManager.init();
         audioManager.currentTrack = TRACKS[0].path;
@@ -404,7 +493,10 @@ describe('AudioManager', () => {
             createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
             destination: {}
         };
-        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        vi.stubGlobal(
+            'AudioContext',
+            vi.fn().mockImplementation(() => mockContext)
+        );
 
         await audioManager.init();
 
@@ -441,7 +533,10 @@ describe('AudioManager', () => {
             createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
             destination: {}
         };
-        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        vi.stubGlobal(
+            'AudioContext',
+            vi.fn().mockImplementation(() => mockContext)
+        );
 
         await audioManager.init();
         expect(mockContext.createDynamicsCompressor).toHaveBeenCalled();
@@ -465,16 +560,19 @@ describe('AudioManager', () => {
             createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
             destination: {}
         };
-        vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+        vi.stubGlobal(
+            'AudioContext',
+            vi.fn().mockImplementation(() => mockContext)
+        );
         const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
 
         await audioManager.init();
-        
+
         // Trigger same sound multiple times synchronously
         const p1 = audioManager.playShoot();
         const p2 = audioManager.playShoot();
         const p3 = audioManager.playShoot();
-        
+
         // Only the first one should be scheduled, others coalesce (resolve to null)
         const [, r2, r3] = await Promise.all([p1, p2, p3]);
         expect(zzfxSpy).toHaveBeenCalledTimes(1);
@@ -484,7 +582,7 @@ describe('AudioManager', () => {
         zzfxSpy.mockClear();
 
         // Wait for the end of the tick / setTimeout to clear coalescing map
-        await new Promise(resolve => setTimeout(resolve, 5));
+        await new Promise((resolve) => setTimeout(resolve, 5));
 
         // Triggering again in a new tick should play successfully
         await audioManager.playShoot();
@@ -499,11 +597,11 @@ describe('AudioManager', () => {
         it('returns 1.0 when sound is inside the viewport box', () => {
             audioManager.updateCameraContext(
                 { x: 100, y: 100 }, // cameraOffset
-                1.5,                 // zoom
-                600,                // canvasWidth
-                400,                // canvasHeight
-                2000,               // mapWidth
-                2000                // mapHeight
+                1.5, // zoom
+                600, // canvasWidth
+                400, // canvasHeight
+                2000, // mapWidth
+                2000 // mapHeight
             );
             // viewportWidth = 600/1.5 = 400. viewportHeight = 400/1.5 = 266.6.
             // Viewport rect in game space: x in [100, 500], y in [100, 366.6]
@@ -513,14 +611,7 @@ describe('AudioManager', () => {
         });
 
         it('returns MIN_FLOOR when sound is extremely far away', () => {
-            audioManager.updateCameraContext(
-                { x: 100, y: 100 },
-                1.0,
-                200,
-                200,
-                2000,
-                2000
-            );
+            audioManager.updateCameraContext({ x: 100, y: 100 }, 1.0, 200, 200, 2000, 2000);
             // viewportWidth = 200, viewportHeight = 200
             // Viewport rect: x in [100, 300], y in [100, 300]
             // Center: (200, 200)
@@ -529,14 +620,7 @@ describe('AudioManager', () => {
         });
 
         it('returns between MIN_FLOOR and 1.0 when sound is just outside the viewport edge', () => {
-            audioManager.updateCameraContext(
-                { x: 100, y: 100 },
-                1.0,
-                200,
-                200,
-                2000,
-                2000
-            );
+            audioManager.updateCameraContext({ x: 100, y: 100 }, 1.0, 200, 200, 2000, 2000);
             // viewportWidth = 200, viewportHeight = 200
             // Viewport rect: x in [100, 300], y in [100, 300]
             // Center: (200, 200)
@@ -562,34 +646,48 @@ describe('AudioManager', () => {
                 createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
                 destination: {}
             };
-            vi.stubGlobal('AudioContext', vi.fn().mockImplementation(() => mockContext));
+            vi.stubGlobal(
+                'AudioContext',
+                vi.fn().mockImplementation(() => mockContext)
+            );
             const zzfxSpy = vi.spyOn(ZzFXModule, 'zzfx').mockReturnValue(null);
 
             await audioManager.init();
 
             // Set camera context and make the sound far away so volume multiplier is MIN_FLOOR
-            audioManager.updateCameraContext(
-                { x: 100, y: 100 },
-                1.0,
-                200,
-                200,
-                2000,
-                2000
-            );
+            audioManager.updateCameraContext({ x: 100, y: 100 }, 1.0, 200, 200, 2000, 2000);
 
             // Default sfx volume in playShoot is 0.2. Global audioManager.volume is 0.5.
             // Far away spatial volume multiplier is MIN_FLOOR.
             // Final volume = 0.2 * 0.5 * MIN_FLOOR.
             await audioManager.playShoot(1200, 1200);
-            
+
             // Wait for tick
-            await new Promise(resolve => setTimeout(resolve, 5));
+            await new Promise((resolve) => setTimeout(resolve, 5));
 
             expect(zzfxSpy).toHaveBeenCalledWith(
                 expect.closeTo(0.2 * 0.5 * MIN_FLOOR), // final volume parameter
-                0.05, 400, .05, 0, .1, 0, 1, 50, -500, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0
+                0.05,
+                400,
+                0.05,
+                0,
+                0.1,
+                0,
+                1,
+                50,
+                -500,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0
             );
         });
     });
 });
-

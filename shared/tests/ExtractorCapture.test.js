@@ -69,7 +69,7 @@ describe('Extractor Capture Logic', () => {
         game.resolveTurn({ p1: [], p2: [] });
 
         // Income = UBI (10) + HUB energyGen (0) + 2x Extractor base (5 each) + 1x Node bonus (5) = 25
-        const expectedIncome = 10 + 0 + (5 * 2) + 5;
+        const expectedIncome = 10 + 0 + 5 * 2 + 5;
         expect(p1.energy).toBe(initialEnergy + expectedIncome);
     });
 });

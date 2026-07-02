@@ -10,6 +10,7 @@ import { SPEED_TIERS } from './LaunchSpeeds.js';
 export const EXPERIMENTAL_STATS = {
     SUPER_BOMB: {
         type: 'PROJECTILE',
+        symbol: '☄',
         hp: 1,
         cost: 10,
         damageFull: 20,

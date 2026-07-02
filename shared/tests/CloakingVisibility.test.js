@@ -32,7 +32,7 @@ describe('GameState - Cloaking Field Visibility', () => {
             deployed: true
         });
 
-        // Player 1 places a hub at (700, 1000). 
+        // Player 1 places a hub at (700, 1000).
         // Distance to p2Hub is 300 (just at vision limit).
         // Standard vision would see it.
         p1Hub.x = 700;

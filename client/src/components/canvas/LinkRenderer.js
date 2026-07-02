@@ -2,7 +2,18 @@ import { getGhostColor } from '../../utils/RenderingHelpers.js';
 import { VISUAL_STATS } from '../../constants/VisualStats.js';
 import { GLOBAL_STATS } from '../../../../shared/constants/EntityStats.js';
 
-export function drawLinks(ctx, visualLinks, visualEntities, players, viewBounds, mapW, mapH, offsetOffsetX, offsetOffsetY, isInVision) {
+export function drawLinks(
+    ctx,
+    visualLinks,
+    visualEntities,
+    players,
+    viewBounds,
+    mapW,
+    mapH,
+    offsetOffsetX,
+    offsetOffsetY,
+    isInVision
+) {
     const { viewL, viewR, viewT, viewB } = viewBounds;
 
     Object.values(visualLinks).forEach((link) => {

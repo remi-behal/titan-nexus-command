@@ -146,7 +146,9 @@ describe('Server Networking - Reconnection and Resilience', () => {
         });
         client1.emit('requestState');
         const state = await statePromise;
-        const p1Hub = state.entities.find((e) => e.owner === 'player1' && (e.type === 'HUB' || e.itemType === 'HUB'));
+        const p1Hub = state.entities.find(
+            (e) => e.owner === 'player1' && (e.type === 'HUB' || e.itemType === 'HUB')
+        );
         expect(p1Hub).toBeDefined();
 
         const actions = [
@@ -279,7 +281,7 @@ describe('Server Networking - Reconnection and Resilience', () => {
         await lobbyHandshake(client2, 1, token2);
 
         // Wait for match start
-        await new Promise(r => client1.once('matchStarted', r));
+        await new Promise((r) => client1.once('matchStarted', r));
 
         // Disconnect P1
         client1.disconnect();

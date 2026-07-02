@@ -45,8 +45,8 @@ describe('Auto-Start Integration', () => {
 
         // Wait for both to be authenticated
         await Promise.all([
-            new Promise(res => client1.once('playerAssignment', res)),
-            new Promise(res => client2.once('playerAssignment', res))
+            new Promise((res) => client1.once('playerAssignment', res)),
+            new Promise((res) => client2.once('playerAssignment', res))
         ]);
 
         // Auto-join client 1

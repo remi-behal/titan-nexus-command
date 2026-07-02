@@ -62,7 +62,10 @@ export class TimerService {
             }
 
             this.context.safeEmit(this.context.io, 'syncStatus', { lockedIn });
-            this.context.safeEmit(this.context.io, 'resolutionStatus', { active: true, totalRounds: snapshots.length });
+            this.context.safeEmit(this.context.io, 'resolutionStatus', {
+                active: true,
+                totalRounds: snapshots.length
+            });
 
             for (const snap of snapshots) {
                 this.context.emitFilteredState(snap.state);
@@ -71,7 +74,10 @@ export class TimerService {
                     this.context.safeEmit(this.context.io, 'resolutionRound', snap.round);
                 }
 
-                const delay = snap.type === 'ROUND_SUB' ? this.RESOLUTION_SUB_TICK_DELAY : this.RESOLUTION_ROUND_DELAY;
+                const delay =
+                    snap.type === 'ROUND_SUB'
+                        ? this.RESOLUTION_SUB_TICK_DELAY
+                        : this.RESOLUTION_ROUND_DELAY;
                 await new Promise((resolve) => setTimeout(resolve, delay));
             }
         } finally {

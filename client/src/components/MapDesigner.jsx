@@ -1,6 +1,10 @@
 import React, { useState, useRef } from 'react';
 import GameBoard from './GameBoard';
-import { ENTITY_STATS, GLOBAL_STATS, RESOURCE_NODE_STATS } from '../../../shared/constants/EntityStats.js';
+import {
+    ENTITY_STATS,
+    GLOBAL_STATS,
+    RESOURCE_NODE_STATS
+} from '../../../shared/constants/EntityStats.js';
 import './MapDesigner.css';
 
 const TOOLS = {
@@ -32,34 +36,37 @@ const MapDesigner = ({ onSave, onBack }) => {
     const gameBoardRef = useRef(null);
 
     // Mock GameState for GameBoard to render
-    const mockGameState = React.useMemo(() => ({
-        turn: 1,
-        players: {
-            player1: { color: 'hsl(0, 70%, 50%)', energy: 100 },
-            player2: { color: 'hsl(60, 70%, 50%)', energy: 100 }
-        },
-        map: {
-            width: mapData.width,
-            height: mapData.height,
-            resources: mapData.resources,
-            obstacles: [], // Added missing field
-            lakes: mapData.lakes,
-            mountains: mapData.mountains
-        },
-        entities: [
-            ...mapData.playerBases.map(b => ({
-                id: b.id,
-                type: 'HUB',
-                owner: b.owner,
-                x: b.x,
-                y: b.y,
-                hp: ENTITY_STATS.HUB.hp,
-                isStarter: true
-            }))
-        ],
-        links: [],
-        phase: 'PLANNING'
-    }), [mapData]);
+    const mockGameState = React.useMemo(
+        () => ({
+            turn: 1,
+            players: {
+                player1: { color: 'hsl(0, 70%, 50%)', energy: 100 },
+                player2: { color: 'hsl(60, 70%, 50%)', energy: 100 }
+            },
+            map: {
+                width: mapData.width,
+                height: mapData.height,
+                resources: mapData.resources,
+                obstacles: [], // Added missing field
+                lakes: mapData.lakes,
+                mountains: mapData.mountains
+            },
+            entities: [
+                ...mapData.playerBases.map((b) => ({
+                    id: b.id,
+                    type: 'HUB',
+                    owner: b.owner,
+                    x: b.x,
+                    y: b.y,
+                    hp: ENTITY_STATS.HUB.hp,
+                    isStarter: true
+                }))
+            ],
+            links: [],
+            phase: 'PLANNING'
+        }),
+        [mapData]
+    );
 
     const handleMapClick = (e) => {
         // Stop propagation to prevent GameBoard from panning if we are placing
@@ -72,46 +79,58 @@ const MapDesigner = ({ onSave, onBack }) => {
 
         console.log(`[MapDesigner] Clicked at ${coords.x}, ${coords.y} with tool ${selectedTool}`);
 
-        setMapData(prev => {
+        setMapData((prev) => {
             const newState = { ...prev };
             if (selectedTool === TOOLS.RESOURCE_STANDARD) {
-                newState.resources = [...prev.resources, {
-                    id: `res_${Math.random().toString(36).substr(2, 9)}`,
-                    x: coords.x,
-                    y: coords.y,
-                    ...RESOURCE_NODE_STATS.STANDARD
-                }];
+                newState.resources = [
+                    ...prev.resources,
+                    {
+                        id: `res_${Math.random().toString(36).substr(2, 9)}`,
+                        x: coords.x,
+                        y: coords.y,
+                        ...RESOURCE_NODE_STATS.STANDARD
+                    }
+                ];
             } else if (selectedTool === TOOLS.RESOURCE_SUPER) {
-                newState.resources = [...prev.resources, {
-                    id: `res_${Math.random().toString(36).substr(2, 9)}`,
-                    x: coords.x,
-                    y: coords.y,
-                    ...RESOURCE_NODE_STATS.SUPER
-                }];
+                newState.resources = [
+                    ...prev.resources,
+                    {
+                        id: `res_${Math.random().toString(36).substr(2, 9)}`,
+                        x: coords.x,
+                        y: coords.y,
+                        ...RESOURCE_NODE_STATS.SUPER
+                    }
+                ];
             } else if (selectedTool === TOOLS.LAKE) {
-                newState.lakes = [...prev.lakes, {
-                    id: `lake_${Math.random().toString(36).substr(2, 9)}`,
-                    x: coords.x,
-                    y: coords.y,
-                    radius: 100
-                }];
+                newState.lakes = [
+                    ...prev.lakes,
+                    {
+                        id: `lake_${Math.random().toString(36).substr(2, 9)}`,
+                        x: coords.x,
+                        y: coords.y,
+                        radius: 100
+                    }
+                ];
             } else if (selectedTool === TOOLS.MOUNTAIN) {
-                newState.mountains = [...prev.mountains, {
-                    id: `mtn_${Math.random().toString(36).substr(2, 9)}`,
-                    x: coords.x,
-                    y: coords.y,
-                    radius: 100
-                }];
+                newState.mountains = [
+                    ...prev.mountains,
+                    {
+                        id: `mtn_${Math.random().toString(36).substr(2, 9)}`,
+                        x: coords.x,
+                        y: coords.y,
+                        radius: 100
+                    }
+                ];
             } else if (selectedTool === TOOLS.DELETE) {
-                newState.resources = prev.resources.filter(r => dist(r, coords) > 30);
-                newState.lakes = prev.lakes.filter(l => dist(l, coords) > l.radius);
-                newState.mountains = prev.mountains.filter(m => dist(m, coords) > m.radius);
+                newState.resources = prev.resources.filter((r) => dist(r, coords) > 30);
+                newState.lakes = prev.lakes.filter((l) => dist(l, coords) > l.radius);
+                newState.mountains = prev.mountains.filter((m) => dist(m, coords) > m.radius);
             } else if (selectedTool === TOOLS.PLAYER1_BASE) {
-                newState.playerBases = prev.playerBases.map(b =>
+                newState.playerBases = prev.playerBases.map((b) =>
                     b.owner === 'player1' ? { ...b, x: coords.x, y: coords.y } : b
                 );
             } else if (selectedTool === TOOLS.PLAYER2_BASE) {
-                newState.playerBases = prev.playerBases.map(b =>
+                newState.playerBases = prev.playerBases.map((b) =>
                     b.owner === 'player2' ? { ...b, x: coords.x, y: coords.y } : b
                 );
             }
@@ -143,35 +162,51 @@ const MapDesigner = ({ onSave, onBack }) => {
                 <button
                     className={selectedTool === TOOLS.SELECT ? 'active' : ''}
                     onClick={() => setSelectedTool(TOOLS.SELECT)}
-                >Select/Move</button>
+                >
+                    Select/Move
+                </button>
                 <button
                     className={selectedTool === TOOLS.RESOURCE_STANDARD ? 'active' : ''}
                     onClick={() => setSelectedTool(TOOLS.RESOURCE_STANDARD)}
-                >+ Resource</button>
+                >
+                    + Resource
+                </button>
                 <button
                     className={selectedTool === TOOLS.RESOURCE_SUPER ? 'active' : ''}
                     onClick={() => setSelectedTool(TOOLS.RESOURCE_SUPER)}
-                >+ Super Res</button>
+                >
+                    + Super Res
+                </button>
                 <button
                     className={selectedTool === TOOLS.LAKE ? 'active' : ''}
                     onClick={() => setSelectedTool(TOOLS.LAKE)}
-                >+ Lake</button>
+                >
+                    + Lake
+                </button>
                 <button
                     className={selectedTool === TOOLS.MOUNTAIN ? 'active' : ''}
                     onClick={() => setSelectedTool(TOOLS.MOUNTAIN)}
-                >+ Mountain</button>
+                >
+                    + Mountain
+                </button>
                 <button
                     className={selectedTool === TOOLS.PLAYER1_BASE ? 'active' : ''}
                     onClick={() => setSelectedTool(TOOLS.PLAYER1_BASE)}
-                >P1 Base</button>
+                >
+                    P1 Base
+                </button>
                 <button
                     className={selectedTool === TOOLS.PLAYER2_BASE ? 'active' : ''}
                     onClick={() => setSelectedTool(TOOLS.PLAYER2_BASE)}
-                >P2 Base</button>
+                >
+                    P2 Base
+                </button>
                 <button
                     className={selectedTool === TOOLS.DELETE ? 'active' : ''}
                     onClick={() => setSelectedTool(TOOLS.DELETE)}
-                >Delete</button>
+                >
+                    Delete
+                </button>
                 <div className="spacer"></div>
                 <button onClick={handleExport}>Copy JSON</button>
                 <button onClick={handleSaveLocal}>Save Map</button>
@@ -190,16 +225,13 @@ const MapDesigner = ({ onSave, onBack }) => {
                     showDebugPreview={false}
                     cameraOffset={cameraOffset}
                     setCameraOffset={setCameraOffset}
-                    onSelectHub={() => { }}
-                    onAimStart={() => { }}
-                    onAimUpdate={() => { }}
-                    onAimEnd={() => { }}
+                    onSelectHub={() => {}}
+                    onAimStart={() => {}}
+                    onAimUpdate={() => {}}
+                    onAimEnd={() => {}}
                 />
                 {selectedTool !== TOOLS.SELECT && (
-                    <div
-                        className="designer-click-overlay"
-                        onMouseDown={handleMapClick}
-                    />
+                    <div className="designer-click-overlay" onMouseDown={handleMapClick} />
                 )}
             </main>
         </div>

@@ -1,11 +1,20 @@
 import React from 'react';
 import './LobbyOverlay.css';
 
-export const LobbyOverlay = ({ lobbyUpdate, availableMaps, onClaimSeat, onReadyToggle, onSetMap, onOpenDesigner, socketId, socket }) => {
+export const LobbyOverlay = ({
+    lobbyUpdate,
+    availableMaps,
+    onClaimSeat,
+    onReadyToggle,
+    onSetMap,
+    onOpenDesigner,
+    socketId,
+    socket
+}) => {
     if (!lobbyUpdate) return null;
 
-    const mySeat = lobbyUpdate.slots.find(s => s && s.socketId === socketId);
-    const mySeatIndex = lobbyUpdate.slots.findIndex(s => s && s.socketId === socketId);
+    const mySeat = lobbyUpdate.slots.find((s) => s && s.socketId === socketId);
+    const mySeatIndex = lobbyUpdate.slots.findIndex((s) => s && s.socketId === socketId);
 
     return (
         <div className="lobby-overlay">
@@ -42,11 +51,12 @@ export const LobbyOverlay = ({ lobbyUpdate, availableMaps, onClaimSeat, onReadyT
                         className="map-select"
                     >
                         <option value="">Default Sector</option>
-                        {availableMaps && availableMaps.map((map) => (
-                            <option key={map} value={map}>
-                                {map.replace(/_/g, ' ')}
-                            </option>
-                        ))}
+                        {availableMaps &&
+                            availableMaps.map((map) => (
+                                <option key={map} value={map}>
+                                    {map.replace(/_/g, ' ')}
+                                </option>
+                            ))}
                     </select>
                     {mySeatIndex !== 0 && (
                         <p className="host-only-hint">Only Player 1 can select maps</p>

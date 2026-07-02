@@ -50,7 +50,9 @@ function startMatch() {
         if (mapConfig) {
             console.log(`[Server] Starting match with custom map: ${room.selectedMapName}`);
         } else {
-            console.warn(`[Server] Failed to load custom map: ${room.selectedMapName}. Falling back to default.`);
+            console.warn(
+                `[Server] Failed to load custom map: ${room.selectedMapName}. Falling back to default.`
+            );
         }
     }
 
@@ -61,7 +63,7 @@ function startMatch() {
     context.safeEmit(io, 'matchStarted', { playerAssignments: context.playerAssignments });
 
     // Send individual assignments to each socket that was in a slot
-    context.playerIds.forEach(pid => {
+    context.playerIds.forEach((pid) => {
         const sid = context.activeSockets[pid];
         if (sid) {
             const socket = io.sockets.sockets.get(sid);
@@ -88,15 +90,20 @@ io.on('connection', (socket) => {
 
         if (context.matchStarted) {
             // Re-claim slot logic
-            socket.assignedPlayerId = Object.keys(context.playerAssignments).find(
-                (pid) => context.playerAssignments[pid] === token
-            ) || 'spectator';
+            socket.assignedPlayerId =
+                Object.keys(context.playerAssignments).find(
+                    (pid) => context.playerAssignments[pid] === token
+                ) || 'spectator';
 
             if (socket.assignedPlayerId !== 'spectator') {
                 context.activeSockets[socket.assignedPlayerId] = socket.id;
                 console.log(`Re-assigned ${socket.assignedPlayerId} to socket ${socket.id}`);
                 context.safeEmit(socket, 'playerAssignment', socket.assignedPlayerId);
-                context.safeEmit(socket, 'gameStateUpdate', context.game.getVisibleState(socket.assignedPlayerId));
+                context.safeEmit(
+                    socket,
+                    'gameStateUpdate',
+                    context.game.getVisibleState(socket.assignedPlayerId)
+                );
             } else {
                 console.log(`${socket.id} joined match as spectator`);
                 context.safeEmit(socket, 'playerAssignment', 'spectator');
@@ -115,12 +122,12 @@ io.on('connection', (socket) => {
             console.log(`Socket ${socket.id} in lobby`);
 
             // Check if this token already has a seat reserved
-            const reservedSlotIndex = room.slots.findIndex(s => s && s.token === token);
+            const reservedSlotIndex = room.slots.findIndex((s) => s && s.token === token);
             if (reservedSlotIndex !== -1) {
                 socket.assignedPlayerId = `player${reservedSlotIndex + 1}`;
                 room.slots[reservedSlotIndex].socketId = socket.id; // Update socket ID
                 context.safeEmit(socket, 'playerAssignment', socket.assignedPlayerId);
-            } else if (room.slots.filter(s => s !== null).length >= room.maxPlayers) {
+            } else if (room.slots.filter((s) => s !== null).length >= room.maxPlayers) {
                 // If lobby is full and token is not found, they are a spectator
                 socket.assignedPlayerId = 'spectator';
                 context.safeEmit(socket, 'playerAssignment', 'spectator');
@@ -142,7 +149,9 @@ io.on('connection', (socket) => {
         context.reset();
 
         // Reset all sockets
-        io.sockets.sockets.forEach(s => { s.assignedPlayerId = null; });
+        io.sockets.sockets.forEach((s) => {
+            s.assignedPlayerId = null;
+        });
 
         io.emit('lobby:update', context.lobbyManager.getOrCreateRoom('default').getUpdate());
         io.emit('matchRestarted');

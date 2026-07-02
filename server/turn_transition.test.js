@@ -18,11 +18,14 @@ describe('Server - Turn Transition & Timer Continuity', () => {
         });
 
         // Drain stdout/stderr to prevent buffer freezing
-        serverProcess.stdout.on('data', () => { });
-        serverProcess.stderr.on('data', () => { });
+        serverProcess.stdout.on('data', () => {});
+        serverProcess.stderr.on('data', () => {});
 
         await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Server failed to start in 15s')), 15000);
+            const timeout = setTimeout(
+                () => reject(new Error('Server failed to start in 15s')),
+                15000
+            );
             serverProcess.stdout.on('data', function listener(data) {
                 const output = data.toString();
                 if (output.includes('SERVER RUNNING')) {
@@ -40,7 +43,10 @@ describe('Server - Turn Transition & Timer Continuity', () => {
             const timeout = setTimeout(() => reject(new Error('Auth timeout')), 10000);
             let authenticated = 0;
             const onAuth = () => {
-                if (++authenticated === 2) { clearTimeout(timeout); resolve(); }
+                if (++authenticated === 2) {
+                    clearTimeout(timeout);
+                    resolve();
+                }
             };
             client1.on('playerAssignment', onAuth);
             client2.on('playerAssignment', onAuth);
@@ -52,7 +58,10 @@ describe('Server - Turn Transition & Timer Continuity', () => {
         // Lobby Handshake
         await new Promise((resolve, reject) => {
             const timeout = setTimeout(() => reject(new Error('Lobby handshake timeout')), 10000);
-            client1.once('matchStarted', () => { clearTimeout(timeout); resolve(); });
+            client1.once('matchStarted', () => {
+                clearTimeout(timeout);
+                resolve();
+            });
 
             client1.emit('lobby:claimSeat', 0);
             client2.emit('lobby:claimSeat', 1);

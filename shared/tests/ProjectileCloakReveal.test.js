@@ -11,8 +11,7 @@ describe('GameState - Projectile Cloak Reveal', () => {
     });
 
     it('should reveal cloaked structure if projectile is within 75px', () => {
-
-        const p2Hub = game.entities.find(e => e.owner === 'p2');
+        const p2Hub = game.entities.find((e) => e.owner === 'p2');
 
         p2Hub.x = 1000;
         p2Hub.y = 1000;
@@ -38,14 +37,13 @@ describe('GameState - Projectile Cloak Reveal', () => {
         });
 
         const visibleState = game.getVisibleState('p1');
-        const p2HubInState = visibleState.entities.find(e => e.id === p2Hub.id);
+        const p2HubInState = visibleState.entities.find((e) => e.id === p2Hub.id);
 
         expect(p2HubInState).toBeDefined();
     });
 
     it('should NOT reveal cloaked structure if projectile is far away (>75px) even if looking at it', () => {
-
-        const p2Hub = game.entities.find(e => e.owner === 'p2');
+        const p2Hub = game.entities.find((e) => e.owner === 'p2');
 
         p2Hub.x = 1000;
         p2Hub.y = 1000;
@@ -70,14 +68,14 @@ describe('GameState - Projectile Cloak Reveal', () => {
         });
 
         const visibleState = game.getVisibleState('p1');
-        const p2HubInState = visibleState.entities.find(e => e.id === p2Hub.id);
+        const p2HubInState = visibleState.entities.find((e) => e.id === p2Hub.id);
 
         expect(p2HubInState).toBeUndefined();
     });
 
     it('should stay scouted even after projectile disappears', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'p1');
-        const p2Hub = game.entities.find(e => e.owner === 'p2');
+        const p1Hub = game.entities.find((e) => e.owner === 'p1');
+        const p2Hub = game.entities.find((e) => e.owner === 'p2');
 
         p1Hub.x = 250;
         p1Hub.y = 1000;
@@ -94,19 +92,21 @@ describe('GameState - Projectile Cloak Reveal', () => {
 
         // Launcher angle 0, distance 750 (to hit 1000)
         const actions = {
-            p1: [{
-                playerId: 'p1',
-                sourceId: p1Hub.id,
-                itemType: 'HOMING_MISSILE',
-                angle: 0,
-                distance: 750
-            }]
+            p1: [
+                {
+                    playerId: 'p1',
+                    sourceId: p1Hub.id,
+                    itemType: 'HOMING_MISSILE',
+                    angle: 0,
+                    distance: 750
+                }
+            ]
         };
 
         game.resolveTurn(actions);
 
         const visibleState = game.getVisibleState('p1');
-        const p2HubInState = visibleState.entities.find(e => e.id === p2Hub.id);
+        const p2HubInState = visibleState.entities.find((e) => e.id === p2Hub.id);
 
         // EXPECTATION: It should have been seen while the missile was within 75px
         expect(p2HubInState).toBeDefined();

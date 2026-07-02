@@ -3,7 +3,7 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
 
     socket.on('lobby:autoJoin', (options = {}) => {
         const room = lobbyManager.getOrCreateRoom('default');
-        let slotIndex = room.slots.findIndex(s => s === null);
+        let slotIndex = room.slots.findIndex((s) => s === null);
         if (slotIndex === -1) return;
 
         const res = room.claimSeat(slotIndex, socket.currentToken, socket.id);
@@ -13,8 +13,8 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
             room.toggleReady(socket.id, true);
             io.emit('lobby:update', room.getUpdate());
 
-            const filledSlots = room.slots.filter(s => s !== null);
-            const allReady = filledSlots.every(s => s.ready);
+            const filledSlots = room.slots.filter((s) => s !== null);
+            const allReady = filledSlots.every((s) => s.ready);
             if (allReady && (filledSlots.length === 2 || options.force)) {
                 startMatchCallback();
             }
@@ -36,8 +36,8 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
         if (room.toggleReady(socket.id, isReady)) {
             io.emit('lobby:update', room.getUpdate());
 
-            const filledSlots = room.slots.filter(s => s !== null);
-            if (filledSlots.length === 2 && filledSlots.every(s => s.ready)) {
+            const filledSlots = room.slots.filter((s) => s !== null);
+            if (filledSlots.length === 2 && filledSlots.every((s) => s.ready)) {
                 startMatchCallback();
             }
         }

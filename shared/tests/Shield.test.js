@@ -24,23 +24,28 @@ describe('Shield Defense Logic', () => {
 
         const actions = {
             player1: [],
-            player2: [{
-                playerId: 'player2',
-                itemType: 'WEAPON',
-                sourceId: game.entities.find(e => e.owner === 'player2' && e.type === 'HUB').id,
-                angle: 180,
-                distance: 500
-            }]
+            player2: [
+                {
+                    playerId: 'player2',
+                    itemType: 'WEAPON',
+                    sourceId: game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB')
+                        .id,
+                    angle: 180,
+                    distance: 500
+                }
+            ]
         };
 
         const snapshots = game.resolveTurn(actions);
 
         let blocked = false;
         let shieldHitFound = false;
-        snapshots.forEach(s => {
+        snapshots.forEach((s) => {
             if (s.type === 'ROUND_SUB') {
-                const proj = s.state.entities.find(e => e.itemType === 'WEAPON' && e.owner === 'player2');
-                const shieldHit = s.state.entities.find(e => e.type === 'SHIELD_HIT');
+                const proj = s.state.entities.find(
+                    (e) => e.itemType === 'WEAPON' && e.owner === 'player2'
+                );
+                const shieldHit = s.state.entities.find((e) => e.type === 'SHIELD_HIT');
                 if (shieldHit) {
                     blocked = true;
                     shieldHitFound = true;
@@ -66,13 +71,16 @@ describe('Shield Defense Logic', () => {
         });
 
         const actions = {
-            player1: [{
-                playerId: 'player1',
-                itemType: 'WEAPON',
-                sourceId: game.entities.find(e => e.owner === 'player1' && e.type === 'HUB').id,
-                angle: 0,
-                distance: 250
-            }],
+            player1: [
+                {
+                    playerId: 'player1',
+                    itemType: 'WEAPON',
+                    sourceId: game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB')
+                        .id,
+                    angle: 0,
+                    distance: 250
+                }
+            ],
             player2: []
         };
 
@@ -90,28 +98,35 @@ describe('Shield Defense Logic', () => {
             isStarter: true
         });
 
-        const hubsBefore = game.entities.filter(e => e.owner === 'player2' && e.type === 'HUB').length;
+        const hubsBefore = game.entities.filter(
+            (e) => e.owner === 'player2' && e.type === 'HUB'
+        ).length;
 
         const actions = {
             player1: [],
-            player2: [{
-                playerId: 'player2',
-                itemType: 'HUB',
-                sourceId: game.entities.find(e => e.owner === 'player2' && e.type === 'HUB').id,
-                angle: 180,
-                distance: 500
-            }]
+            player2: [
+                {
+                    playerId: 'player2',
+                    itemType: 'HUB',
+                    sourceId: game.entities.find((e) => e.owner === 'player2' && e.type === 'HUB')
+                        .id,
+                    angle: 180,
+                    distance: 500
+                }
+            ]
         };
 
         game.resolveTurn(actions);
 
         expect(shield.barrierHp).toBe(ENTITY_STATS.SHIELD.barrierHpMax);
-        const hubsAfter = game.entities.filter(e => e.owner === 'player2' && e.type === 'HUB').length;
+        const hubsAfter = game.entities.filter(
+            (e) => e.owner === 'player2' && e.type === 'HUB'
+        ).length;
         expect(hubsAfter).toBe(hubsBefore);
     });
 
     it('should allow outgoing fire from inside the barrier (Crossing Rule)', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB');
         const shield = game.addEntity({
             type: 'SHIELD',
             owner: 'player1',
@@ -122,22 +137,24 @@ describe('Shield Defense Logic', () => {
         });
 
         const actions = {
-            player1: [{
-                playerId: 'player1',
-                itemType: 'WEAPON',
-                sourceId: p1Hub.id,
-                angle: 0,
-                distance: 200
-            }],
+            player1: [
+                {
+                    playerId: 'player1',
+                    itemType: 'WEAPON',
+                    sourceId: p1Hub.id,
+                    angle: 0,
+                    distance: 200
+                }
+            ],
             player2: []
         };
 
         const snapshots = game.resolveTurn(actions);
 
         let explosionFound = false;
-        snapshots.forEach(s => {
+        snapshots.forEach((s) => {
             if (s.type === 'ROUND_SUB') {
-                if (s.state.entities.some(e => e.type === 'EXPLOSION')) explosionFound = true;
+                if (s.state.entities.some((e) => e.type === 'EXPLOSION')) explosionFound = true;
             }
         });
 
@@ -156,22 +173,26 @@ describe('Shield Defense Logic', () => {
         });
 
         const actions = {
-            player1: [{
-                playerId: 'player1',
-                itemType: 'RECLAIMER',
-                sourceId: game.entities.find(e => e.owner === 'player1' && e.type === 'HUB').id,
-                angle: 0,
-                distance: 500
-            }],
+            player1: [
+                {
+                    playerId: 'player1',
+                    itemType: 'RECLAIMER',
+                    sourceId: game.entities.find((e) => e.owner === 'player1' && e.type === 'HUB')
+                        .id,
+                    angle: 0,
+                    distance: 500
+                }
+            ],
             player2: []
         };
 
         const snapshots = game.resolveTurn(actions);
 
         let reclaimerActiveAcrossBoundary = false;
-        snapshots.forEach(s => {
-            if (s.type === 'ROUND_SUB' && s.subTick > 50) { // Should have crossed boundary
-                const proj = s.state.entities.find(e => e.itemType === 'RECLAIMER');
+        snapshots.forEach((s) => {
+            if (s.type === 'ROUND_SUB' && s.subTick > 50) {
+                // Should have crossed boundary
+                const proj = s.state.entities.find((e) => e.itemType === 'RECLAIMER');
                 if (proj && proj.x > 500) reclaimerActiveAcrossBoundary = true;
             }
         });
@@ -216,7 +237,7 @@ describe('Shield Defense Logic', () => {
         expect(currDist).toBe(10);
 
         const range = 125;
-        const isBlocked = (prevDist > range && currDist <= range);
+        const isBlocked = prevDist > range && currDist <= range;
         expect(isBlocked).toBe(true);
     });
 });

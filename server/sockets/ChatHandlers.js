@@ -11,8 +11,8 @@ export function registerChatHandlers(socket, io, context) {
         if (!text || typeof text !== 'string') return;
 
         const room = lobbyManager.getOrCreateRoom('default');
-        
-        let senderName = 'Spectator';
+
+        let senderName;
         if (socket.assignedPlayerId === 'player1') {
             senderName = 'Player 1';
         } else if (socket.assignedPlayerId === 'player2') {

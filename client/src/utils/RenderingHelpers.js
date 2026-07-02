@@ -33,7 +33,7 @@ export const getToroidalLineSegments = (p1, p2, mapW, mapH) => {
         segments.push({ x1: p1.x, y1: p1.y, x2: targetX, y2: targetY });
     } else {
         // Simple implementation: Just return the offset target for now.
-        // In the canvas, we can draw to (p1.x + dx, p1.y + dy) and then re-draw 
+        // In the canvas, we can draw to (p1.x + dx, p1.y + dy) and then re-draw
         // shifted by mapW/mapH if we want full connectivity visuals.
         segments.push({ x1: p1.x, y1: p1.y, x2: targetX, y2: targetY });
     }

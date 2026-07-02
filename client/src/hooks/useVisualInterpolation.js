@@ -39,7 +39,8 @@ const SPAWN_SFX_MAP = {
     [GAME_EVENT_TYPES.SHIELD_HIT]: (itemType, x, y) => audioManager.playShieldHit(x, y),
     [GAME_EVENT_TYPES.LINK_COLLISION]: (itemType, x, y) => audioManager.playShieldHit(x, y),
     [GAME_EVENT_TYPES.SPARK]: (itemType, x, y) => audioManager.playShieldHit(x, y),
-    [GAME_EVENT_TYPES.STRUCTURE_LANDING]: (itemType, x, y) => audioManager.playStructureLanding(x, y),
+    [GAME_EVENT_TYPES.STRUCTURE_LANDING]: (itemType, x, y) =>
+        audioManager.playStructureLanding(x, y)
 };
 
 const triggerSpawnSfx = (type, itemType, x, y) => {
@@ -94,7 +95,12 @@ export function useVisualInterpolation() {
 
         // 1a. Pre-calculate vision circles and cones for re-scouting/vision check
         const currentVisionCircles = currentGameState.entities
-            .filter((e) => e.owner === myPlayerId && (ENTITY_STATS[e.itemType || e.type]?.vision || 0) > 0 && e.itemType !== 'HOMING_MISSILE')
+            .filter(
+                (e) =>
+                    e.owner === myPlayerId &&
+                    (ENTITY_STATS[e.itemType || e.type]?.vision || 0) > 0 &&
+                    e.itemType !== 'HOMING_MISSILE'
+            )
             .map((e) => ({
                 x: e.x,
                 y: e.y,
@@ -113,12 +119,16 @@ export function useVisualInterpolation() {
                     cone: stats.searchCone || 60
                 };
             })
-            .filter(c => c.radius > 0);
+            .filter((c) => c.radius > 0);
 
         const isInVision = (x, y) => {
             if (!myPlayerId || myPlayerId === 'spectator') return true;
 
-            if (currentVisionCircles.some((v) => TorusMath.getToroidalDistance(v.x, v.y, x, y, mapW, mapH) <= v.radius)) {
+            if (
+                currentVisionCircles.some(
+                    (v) => TorusMath.getToroidalDistance(v.x, v.y, x, y, mapW, mapH) <= v.radius
+                )
+            ) {
                 return true;
             }
 
@@ -179,9 +189,13 @@ export function useVisualInterpolation() {
                 const prevLockFound = viz.lockFound;
                 viz.lockFound = serverEnt.lockFound;
                 viz.flakActive = serverEnt.flakActive;
-                
+
                 if (viz.lockFound && !prevLockFound) {
-                    if (serverEnt.itemType === 'SAM_MISSILE' || serverEnt.itemType === 'SMART_SAM_MISSILE' || serverEnt.itemType === 'HOMING_MISSILE') {
+                    if (
+                        serverEnt.itemType === 'SAM_MISSILE' ||
+                        serverEnt.itemType === 'SMART_SAM_MISSILE' ||
+                        serverEnt.itemType === 'HOMING_MISSILE'
+                    ) {
                         audioManager.playSamLockOn(serverEnt.x, serverEnt.y);
                     }
                 }
@@ -203,7 +217,7 @@ export function useVisualInterpolation() {
             if (!serverIds.has(id)) {
                 const viz = visualEntities.current[id];
                 const isStructure = ENTITY_STATS[viz.type]?.type === ENTITY_TYPES.STRUCTURE;
-                
+
                 if (isStructure) {
                     if (viz.scouted !== false && !viz.isGhost) {
                         audioManager.playStructureDestroyed(viz.x, viz.y);
@@ -220,7 +234,7 @@ export function useVisualInterpolation() {
                     'LINK_COLLISION',
                     'SPARK'
                 ];
-                
+
                 if (TRANSIENT_TYPES.includes(viz.type) || viz.owner === myPlayerId) {
                     delete visualEntities.current[id];
                     return;
@@ -279,7 +293,12 @@ export function useVisualInterpolation() {
         const activeProjectiles = [];
 
         currentGameState.entities.forEach((serverEnt) => {
-            if (serverEnt.type === 'PROJECTILE' && (serverEnt.itemType === 'SAM_MISSILE' || serverEnt.itemType === 'SMART_SAM_MISSILE' || serverEnt.itemType === 'HOMING_MISSILE')) {
+            if (
+                serverEnt.type === 'PROJECTILE' &&
+                (serverEnt.itemType === 'SAM_MISSILE' ||
+                    serverEnt.itemType === 'SMART_SAM_MISSILE' ||
+                    serverEnt.itemType === 'HOMING_MISSILE')
+            ) {
                 activeProjectiles.push({
                     id: serverEnt.id,
                     x: serverEnt.x,
@@ -290,7 +309,12 @@ export function useVisualInterpolation() {
 
         if (currentGameState.audibleEvents) {
             currentGameState.audibleEvents.forEach((evt) => {
-                if (evt.type === 'PROJECTILE' && (evt.itemType === 'SAM_MISSILE' || evt.itemType === 'SMART_SAM_MISSILE' || evt.itemType === 'HOMING_MISSILE')) {
+                if (
+                    evt.type === 'PROJECTILE' &&
+                    (evt.itemType === 'SAM_MISSILE' ||
+                        evt.itemType === 'SMART_SAM_MISSILE' ||
+                        evt.itemType === 'HOMING_MISSILE')
+                ) {
                     activeProjectiles.push({
                         id: evt.id,
                         x: evt.x,

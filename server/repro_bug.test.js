@@ -18,7 +18,10 @@ describe('Reproduce Turn Button Bug', () => {
         });
 
         await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Server failed to start in 30s')), 30000);
+            const timeout = setTimeout(
+                () => reject(new Error('Server failed to start in 30s')),
+                30000
+            );
             const listener = (data) => {
                 if (data.toString().includes('SERVER RUNNING')) {
                     serverProcess.stdout.off('data', listener);
@@ -34,7 +37,9 @@ describe('Reproduce Turn Button Bug', () => {
 
         await new Promise((resolve) => {
             let auths = 0;
-            const check = () => { if (++auths === 2) resolve(); };
+            const check = () => {
+                if (++auths === 2) resolve();
+            };
             client1.on('playerAssignment', check);
             client2.on('playerAssignment', check);
             client1.emit('authenticate', 'token-p1');
@@ -43,11 +48,11 @@ describe('Reproduce Turn Button Bug', () => {
 
         client1.emit('lobby:claimSeat', 0);
         client2.emit('lobby:claimSeat', 1);
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise((r) => setTimeout(r, 100));
         client1.emit('lobby:ready', true);
         client2.emit('lobby:ready', true);
 
-        await new Promise(resolve => {
+        await new Promise((resolve) => {
             client1.on('matchStarted', resolve);
         });
     }, 40000);
@@ -62,7 +67,7 @@ describe('Reproduce Turn Button Bug', () => {
         let syncStatus;
         client1.emit('submitActions', []);
 
-        await new Promise(r => {
+        await new Promise((r) => {
             const listener = (status) => {
                 if (status.lockedIn.player1 === true) {
                     syncStatus = status;
@@ -84,7 +89,7 @@ describe('Reproduce Turn Button Bug', () => {
         });
 
         client2.emit('passTurn');
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise((r) => setTimeout(r, 1000));
 
         expect(received).toBe(true);
     });

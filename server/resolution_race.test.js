@@ -18,7 +18,10 @@ describe('Server - Resolution Race Guard', () => {
         });
 
         await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Server failed to start in 30s')), 30000);
+            const timeout = setTimeout(
+                () => reject(new Error('Server failed to start in 30s')),
+                30000
+            );
             serverProcess.stdout.on('data', function listener(data) {
                 const output = data.toString();
                 if (output.includes('SERVER RUNNING')) {
@@ -34,7 +37,9 @@ describe('Server - Resolution Race Guard', () => {
 
         await new Promise((resolve) => {
             let auths = 0;
-            const check = () => { if (++auths === 2) resolve(); };
+            const check = () => {
+                if (++auths === 2) resolve();
+            };
             client1.on('playerAssignment', check);
             client2.on('playerAssignment', check);
             client1.emit('authenticate', 'token-p1');
@@ -43,11 +48,11 @@ describe('Server - Resolution Race Guard', () => {
 
         client1.emit('lobby:claimSeat', 0);
         client2.emit('lobby:claimSeat', 1);
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise((r) => setTimeout(r, 100));
         client1.emit('lobby:ready', true);
         client2.emit('lobby:ready', true);
 
-        await new Promise(resolve => {
+        await new Promise((resolve) => {
             client1.on('matchStarted', resolve);
         });
     }, 40000);
@@ -72,9 +77,11 @@ describe('Server - Resolution Race Guard', () => {
 
         // Retrieve initial state to get player 1's HUB id
         client1.emit('requestState');
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 200));
 
-        const p1Hub = lastReceivedState?.entities?.find(e => e.owner === 'player1' && e.type === 'HUB');
+        const p1Hub = lastReceivedState?.entities?.find(
+            (e) => e.owner === 'player1' && e.type === 'HUB'
+        );
         expect(p1Hub).toBeDefined();
 
         // Trigger turn resolution by passing both turns
@@ -82,15 +89,17 @@ describe('Server - Resolution Race Guard', () => {
         client2.emit('passTurn');
 
         // Wait 200ms to ensure server's async resolveTurn loop is active and phase is RESOLVING
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 200));
 
         // Submit a late action during the resolution phase
-        const lateAction = [{
-            sourceId: p1Hub.id,
-            itemType: 'WEAPON',
-            angle: 0,
-            distance: 200
-        }];
+        const lateAction = [
+            {
+                sourceId: p1Hub.id,
+                itemType: 'WEAPON',
+                angle: 0,
+                distance: 200
+            }
+        ];
         client1.emit('submitActions', lateAction);
 
         // Wait for next turn to start

@@ -270,7 +270,13 @@ export const VisibilitySystem = {
                 const inVision = isVisible(e.x, e.y, e.owner);
                 const isLinkEndpoint = entitiesRequiredByLinks.has(e.id);
                 // Standard vision: can we see this spot?
-                const canSeeSpot = this.isPositionVisible(gameState, playerId, e.x, e.y, sourceEntities);
+                const canSeeSpot = this.isPositionVisible(
+                    gameState,
+                    playerId,
+                    e.x,
+                    e.y,
+                    sourceEntities
+                );
 
                 // Conditions to return entity:
                 if (isOwn || inVision || isLinkEndpoint || (e.scouted && !canSeeSpot)) {
@@ -290,7 +296,7 @@ export const VisibilitySystem = {
                     if (playerEnt.owner !== playerId) return false;
                     const isStructure = ENTITY_STATS[playerEnt.type]?.type === 'STRUCTURE';
                     if (!isStructure) return false;
-                    
+
                     const dist = TorusMath.getToroidalDistance(
                         playerEnt.x,
                         playerEnt.y,
@@ -304,7 +310,7 @@ export const VisibilitySystem = {
             };
 
             sourceEntities.forEach((e) => {
-                const isSoundEvent = 
+                const isSoundEvent =
                     e.type === 'PROJECTILE' ||
                     e.type === 'LASER_BEAM' ||
                     e.type === 'EXPLOSION' ||
@@ -313,7 +319,7 @@ export const VisibilitySystem = {
                     e.type === 'SPARK' ||
                     e.type === 'STRUCTURE_LANDING' ||
                     (e.deployed === false && ENTITY_STATS[e.type]?.type === 'STRUCTURE');
-                
+
                 if (isSoundEvent) {
                     const inVision = isVisible(e.x, e.y, e.owner);
                     if (!inVision && isAudible(e.x, e.y)) {

@@ -34,13 +34,15 @@ describe('GameState - Hazard and Flak Timing Delay', () => {
         p1Hub.y = 500;
 
         const actions = {
-            p1: [{
-                playerId: 'p1',
-                sourceId: p1Hub.id,
-                itemType: 'WEAPON',
-                angle: 0,
-                distance: 512 // Should reach past the hazard
-            }]
+            p1: [
+                {
+                    playerId: 'p1',
+                    sourceId: p1Hub.id,
+                    itemType: 'WEAPON',
+                    angle: 0,
+                    distance: 512 // Should reach past the hazard
+                }
+            ]
         };
 
         const resultSnapshots = game.resolveTurn(actions);
@@ -50,19 +52,19 @@ describe('GameState - Hazard and Flak Timing Delay', () => {
         // Hub is at 500. Velocity is 5.
         // Tick 1: x=505, Tick 60: x=800 (Entry!)
 
-        const subSnapshots = resultSnapshots.filter(s => s.type === 'ROUND_SUB');
+        const subSnapshots = resultSnapshots.filter((s) => s.type === 'ROUND_SUB');
 
         // Entry is at Tick 60.
         // At Tick 60, it should definitely still be active (just touched, delay hasn't passed)
-        const tick60 = subSnapshots.find(s => s.subTick === 60);
+        const tick60 = subSnapshots.find((s) => s.subTick === 60);
         expect(tick60).toBeDefined();
-        const proj60 = tick60.state.entities.find(e => e.type === 'PROJECTILE');
+        const proj60 = tick60.state.entities.find((e) => e.type === 'PROJECTILE');
         expect(proj60).toBeDefined();
 
         // At tick 78, it should definitely be gone (60 + 10 = 70 < 78)
-        const tick78 = subSnapshots.find(s => s.subTick === 78);
+        const tick78 = subSnapshots.find((s) => s.subTick === 78);
         if (tick78) {
-            const proj78 = tick78.state.entities.find(e => e.type === 'PROJECTILE');
+            const proj78 = tick78.state.entities.find((e) => e.type === 'PROJECTILE');
             expect(proj78).toBeUndefined();
         }
     });
@@ -70,8 +72,10 @@ describe('GameState - Hazard and Flak Timing Delay', () => {
     it('should NOT apply flak damage instantly upon entering flak arc', () => {
         const p1Hub = game.entities.find((e) => e.owner === 'p1');
         const p2Hub = game.entities.find((e) => e.owner === 'p2');
-        p1Hub.x = 100; p1Hub.y = 300;
-        p2Hub.x = 900; p2Hub.y = 300;
+        p1Hub.x = 100;
+        p1Hub.y = 300;
+        p2Hub.x = 900;
+        p2Hub.y = 300;
 
         // Setup Flak for P2 at (700, 300)
         game.addEntity({
@@ -84,32 +88,34 @@ describe('GameState - Hazard and Flak Timing Delay', () => {
         });
 
         const actions = {
-            p1: [{
-                playerId: 'p1',
-                sourceId: p1Hub.id,
-                itemType: 'WEAPON',
-                angle: 0,
-                distance: 512
-            }]
+            p1: [
+                {
+                    playerId: 'p1',
+                    sourceId: p1Hub.id,
+                    itemType: 'WEAPON',
+                    angle: 0,
+                    distance: 512
+                }
+            ]
         };
 
         const resultSnapshots = game.resolveTurn(actions);
-        const subSnapshots = resultSnapshots.filter(s => s.type === 'ROUND_SUB');
+        const subSnapshots = resultSnapshots.filter((s) => s.type === 'ROUND_SUB');
 
         // Entry at tick 90.
         // Tick 96: Should still be active (90 + 5 = 95 or 90 + 10 = 100).
         // Wait, if delay is 5, it dies at 95. If delay is 10, it dies at 100.
         // So at tick 96 it *might* be gone if delay was 5.
         // Let's check tick 90 + early delay.
-        const tick90 = subSnapshots.find(s => s.subTick === 90);
+        const tick90 = subSnapshots.find((s) => s.subTick === 90);
         expect(tick90).toBeDefined();
-        const proj90 = tick90.state.entities.find(e => e.type === 'PROJECTILE');
+        const proj90 = tick90.state.entities.find((e) => e.type === 'PROJECTILE');
         expect(proj90).toBeDefined();
 
         // Check tick 108: Should definitely be gone.
-        const tick108 = subSnapshots.find(s => s.subTick === 108);
+        const tick108 = subSnapshots.find((s) => s.subTick === 108);
         if (tick108) {
-            const proj108 = tick108.state.entities.find(e => e.type === 'PROJECTILE');
+            const proj108 = tick108.state.entities.find((e) => e.type === 'PROJECTILE');
             expect(proj108).toBeUndefined();
         }
     });

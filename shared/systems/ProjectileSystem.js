@@ -12,10 +12,7 @@ export const ProjectileSystem = {
      */
     updateSeekerProjectile(gameState, proj, stats, tempProjectiles) {
         // 1. Lifecycle Check: Ignite seeker at 50% distance
-        if (
-            !proj.searchMode &&
-            proj.totalDistanceMoved >= proj.intendedDistance * 0.5
-        ) {
+        if (!proj.searchMode && proj.totalDistanceMoved >= proj.intendedDistance * 0.5) {
             proj.searchMode = true;
         }
 
@@ -71,8 +68,7 @@ export const ProjectileSystem = {
                     gameState.map.width,
                     gameState.map.height
                 );
-                const angleToTarget =
-                    Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+                const angleToTarget = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
                 let diff = angleToTarget - proj.currentAngle;
                 while (diff > 180) diff -= 360;
                 while (diff < -180) diff += 360;
@@ -97,9 +93,7 @@ export const ProjectileSystem = {
             let target = gameState.entities.find((e) => e.id === proj.targetId);
             // Interceptors search in the active projectile list
             if (!target && stats?.isInterceptor) {
-                target = tempProjectiles.find(
-                    (p) => p.id === proj.targetId && p.active
-                );
+                target = tempProjectiles.find((p) => p.id === proj.targetId && p.active);
             }
 
             if (target && (target.hp > 0 || target.active)) {
@@ -115,16 +109,11 @@ export const ProjectileSystem = {
             if (target && (target.hp > 0 || target.active)) {
                 // Accelerate if target is still active
                 if (proj.velocity < stats.maxSpeed) {
-                    proj.velocity = Math.min(
-                        stats.maxSpeed,
-                        proj.velocity + stats.acceleration
-                    );
+                    proj.velocity = Math.min(stats.maxSpeed, proj.velocity + stats.acceleration);
                 }
 
-                const targetX =
-                    target.x !== undefined ? target.x : target.currX;
-                const targetY =
-                    target.y !== undefined ? target.y : target.currY;
+                const targetX = target.x !== undefined ? target.x : target.currX;
+                const targetY = target.y !== undefined ? target.y : target.currY;
 
                 // Save last known coordinates for persistence
                 proj.targetX = targetX;
@@ -138,8 +127,7 @@ export const ProjectileSystem = {
                     gameState.map.width,
                     gameState.map.height
                 );
-                const angleToTarget =
-                    Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
+                const angleToTarget = Math.atan2(vec.dy, vec.dx) * (180 / Math.PI);
 
                 let diff = angleToTarget - proj.currentAngle;
                 while (diff > 180) diff -= 360;
@@ -148,9 +136,7 @@ export const ProjectileSystem = {
                 // Toroidal flip protection
                 if (Math.abs(diff) > 170) diff = 0;
 
-                const turn =
-                    Math.sign(diff) *
-                    Math.min(Math.abs(diff), stats.turnRadius);
+                const turn = Math.sign(diff) * Math.min(Math.abs(diff), stats.turnRadius);
                 proj.currentAngle += turn;
             } else {
                 proj.lockFound = false; // Target lost
@@ -167,15 +153,9 @@ export const ProjectileSystem = {
             const targetSpeed = stats.reacquire ? GLOBAL_STATS.SPEED_TIERS.SLOW : stats.maxSpeed;
 
             if (proj.velocity < targetSpeed) {
-                proj.velocity = Math.min(
-                    targetSpeed,
-                    proj.velocity + stats.acceleration
-                );
+                proj.velocity = Math.min(targetSpeed, proj.velocity + stats.acceleration);
             } else if (proj.velocity > targetSpeed) {
-                proj.velocity = Math.max(
-                    targetSpeed,
-                    proj.velocity - stats.acceleration
-                );
+                proj.velocity = Math.max(targetSpeed, proj.velocity - stats.acceleration);
             }
         }
 
@@ -187,8 +167,7 @@ export const ProjectileSystem = {
         proj.totalDistanceMoved += moveDist;
 
         // 5. Fuel & Endurance Checks
-        const fuelLimit =
-            proj.intendedDistance * 0.5 + (stats.homingFuel || 400);
+        const fuelLimit = proj.intendedDistance * 0.5 + (stats.homingFuel || 400);
         if (proj.totalDistanceMoved >= fuelLimit) {
             proj.active = false;
             proj.hitThisTick = true;
@@ -198,9 +177,7 @@ export const ProjectileSystem = {
         if (proj.targetId) {
             let target = gameState.entities.find((e) => e.id === proj.targetId);
             if (!target && stats?.isInterceptor) {
-                target = tempProjectiles.find(
-                    (p) => p.id === proj.targetId && p.active
-                );
+                target = tempProjectiles.find((p) => p.id === proj.targetId && p.active);
             }
 
             if (target && (target.hp > 0 || target.active)) {
@@ -215,9 +192,7 @@ export const ProjectileSystem = {
                     gameState.map.height
                 );
 
-                const targetStats =
-                    ENTITY_STATS[target.type] ||
-                    ENTITY_STATS[target.itemType];
+                const targetStats = ENTITY_STATS[target.type] || ENTITY_STATS[target.itemType];
                 const hitDist = (targetStats?.size || 10) + 2;
 
                 if (actualDist <= hitDist) {
@@ -246,7 +221,17 @@ export const ProjectileSystem = {
      * Updates linear trajectory path, cluster bomb segment triggers,
      * and final landing sequence for standard projectiles.
      */
-    updateStandardProjectile(gameState, proj, t, round, tempProjectiles, tempVisuals, impacts, overloadedThisRound, snapshots) {
+    updateStandardProjectile(
+        gameState,
+        proj,
+        t,
+        round,
+        tempProjectiles,
+        tempVisuals,
+        impacts,
+        overloadedThisRound,
+        snapshots
+    ) {
         // --- Cluster Bomb Special Logic ---
         const clusterStats = ENTITY_STATS.CLUSTER_BOMB;
         if (
@@ -262,8 +247,7 @@ export const ProjectileSystem = {
 
             // Calculate perpendicular unit vector
             const dist = Math.sqrt(
-                proj.intendedDx * proj.intendedDx +
-                proj.intendedDy * proj.intendedDy
+                proj.intendedDx * proj.intendedDx + proj.intendedDy * proj.intendedDy
             );
             const px = -proj.intendedDy / dist;
             const py = proj.intendedDx / dist;
@@ -277,10 +261,8 @@ export const ProjectileSystem = {
                 const subTargetX = originalTargetX + offset * px;
                 const subTargetY = originalTargetY + offset * py;
 
-                const splitX =
-                    proj.startX + proj.intendedDx * (t / proj.arrivalTick);
-                const splitY =
-                    proj.startY + proj.intendedDy * (t / proj.arrivalTick);
+                const splitX = proj.startX + proj.intendedDx * (t / proj.arrivalTick);
+                const splitY = proj.startY + proj.intendedDy * (t / proj.arrivalTick);
 
                 // Math to ensure sub-bomb arrives at subTargetX/Y at proj.arrivalTick
                 // using the standard progress = t / arrivalTick formula.
@@ -325,19 +307,12 @@ export const ProjectileSystem = {
             proj.hitThisTick = true;
 
             if (proj.type === 'RECLAIMER') {
-                gameState.handleReclaim(
-                    proj.currX,
-                    proj.currY,
-                    proj.owner,
-                    tempVisuals,
-                    impacts
-                );
+                gameState.handleReclaim(proj.currX, proj.currY, proj.owner, tempVisuals, impacts);
             }
             const stats = ENTITY_STATS[proj.type];
             // landAsStructure: false avoids duplicate entities for weapons like Napalm
             if (
-                ((stats?.damageFull === undefined &&
-                    proj.type !== 'RECLAIMER') ||
+                ((stats?.damageFull === undefined && proj.type !== 'RECLAIMER') ||
                     stats?.landAsStructure) &&
                 stats?.landAsStructure !== false
             ) {
@@ -353,7 +328,7 @@ export const ProjectileSystem = {
                     hp: GLOBAL_STATS.UNDEPLOYED_HP
                 };
                 const newEnt = gameState.addEntity(data);
-                
+
                 // Spawn a transient visual structure landing event for audio and visual replication
                 tempVisuals.push({
                     id: `land-${Math.random()}`,
@@ -421,11 +396,7 @@ export const ProjectileSystem = {
                 proj.hitThisTick = false;
             }
 
-            if (
-                stats?.damageFull !== undefined &&
-                !stats?.landAsStructure &&
-                proj.hitThisTick
-            ) {
+            if (stats?.damageFull !== undefined && !stats?.landAsStructure && proj.hitThisTick) {
                 const potentialTargets = [
                     ...gameState.entities,
                     ...tempProjectiles.filter((p) => p.active)

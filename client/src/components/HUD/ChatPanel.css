@@ -81,9 +81,15 @@
     word-break: break-word;
 }
 
-.chat-message.player1 .sender { color: #00ffff; }
-.chat-message.player2 .sender { color: #ff00ff; }
-.chat-message.spectator .sender { color: #888; }
+.chat-message.player1 .sender {
+    color: #00ffff;
+}
+.chat-message.player2 .sender {
+    color: #ff00ff;
+}
+.chat-message.spectator .sender {
+    color: #888;
+}
 
 .chat-message .sender {
     font-weight: bold;

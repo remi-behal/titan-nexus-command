@@ -58,7 +58,7 @@ function App() {
         });
         return unsubscribe;
     }, []);
- 
+
     const handleSendMessage = (text) => {
         socket.emit('chat:sendMessage', { text });
     };
@@ -72,11 +72,11 @@ function App() {
         const val = parseFloat(e.target.value);
         audioManager.setVolume(val);
     };
- 
+
     const handleMuteToggle = () => {
         audioManager.toggleMute();
     };
- 
+
     const handlePlayPauseToggle = () => {
         if (audioManager.isPlaying) {
             audioManager.pauseMusic();
@@ -84,19 +84,19 @@ function App() {
             audioManager.resumeMusic();
         }
     };
- 
+
     const handleNextTrack = async () => {
         await audioManager.nextTrack();
     };
- 
+
     const handlePrevTrack = async () => {
         await audioManager.prevTrack();
     };
- 
+
     const handleShuffleToggle = () => {
         audioManager.toggleShuffle();
     };
- 
+
     const handleTrackChange = (path) => {
         audioManager.playMusic(path);
     };
@@ -184,8 +184,12 @@ function App() {
 
         const launchDistance = GameState.calculateLaunchDistance(distance);
         const rad = (angle * Math.PI) / 180;
-        const targetX = (hub.x + Math.cos(rad) * launchDistance + playerState.map.width) % playerState.map.width;
-        const targetY = (hub.y + Math.sin(rad) * launchDistance + playerState.map.height) % playerState.map.height;
+        const targetX =
+            (hub.x + Math.cos(rad) * launchDistance + playerState.map.width) %
+            playerState.map.width;
+        const targetY =
+            (hub.y + Math.sin(rad) * launchDistance + playerState.map.height) %
+            playerState.map.height;
 
         const isInvalid = GameState.checkLinkAngleSeparation(
             selectedItemType,
@@ -203,7 +207,7 @@ function App() {
             audioManager.playActionReset();
             setGlitchActive(true);
             setTimeout(() => setGlitchActive(false), 400);
-            
+
             setLaunchMode(false);
             setSelectedHubId(null);
             return;
@@ -382,7 +386,7 @@ function App() {
 
         const onChatNewMessage = (msg) => {
             setChatMessages((prev) => {
-                if (prev.some(m => m.id === msg.id)) return prev;
+                if (prev.some((m) => m.id === msg.id)) return prev;
                 return [...prev, msg];
             });
             setIsChatOpen((open) => {
@@ -438,41 +442,44 @@ function App() {
         };
     }, []);
 
-    // Minimum zoom is fixed to 1.0 because the canvas internal resolution 
-    // is set to match the map dimensions (2000x2000). 
+    // Minimum zoom is fixed to 1.0 because the canvas internal resolution
+    // is set to match the map dimensions (2000x2000).
     // Zooming below 1.0 would show empty space on the internal canvas.
     useEffect(() => {
         // Force zoom into legal range if it was outside (e.g. on load)
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        setZoom(prev => Math.max(1.0, Math.min(3.0, prev)));
+        setZoom((prev) => Math.max(1.0, Math.min(3.0, prev)));
     }, [playerState?.map]);
 
-    const handleWheel = useCallback((e) => {
-        e.preventDefault();
+    const handleWheel = useCallback(
+        (e) => {
+            e.preventDefault();
 
-        if (!viewportRef.current || isResolvingUI) return;
+            if (!viewportRef.current || isResolvingUI) return;
 
-        const zoomSpeed = 0.001;
-        const delta = -e.deltaY * zoomSpeed;
-        const newZoom = Math.max(1.0, Math.min(3.0, zoom + delta));
+            const zoomSpeed = 0.001;
+            const delta = -e.deltaY * zoomSpeed;
+            const newZoom = Math.max(1.0, Math.min(3.0, zoom + delta));
 
-        if (Math.abs(newZoom - zoom) < 0.0001) return;
+            if (Math.abs(newZoom - zoom) < 0.0001) return;
 
-        // Zoom-at-cursor logic
-        const rect = viewportRef.current.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
+            // Zoom-at-cursor logic
+            const rect = viewportRef.current.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
 
-        const mapW = playerState.map.width || 2000;
-        const mapH = playerState.map.height || 2000;
+            const mapW = playerState.map.width || 2000;
+            const mapH = playerState.map.height || 2000;
 
-        setCameraOffset(prev => ({
-            x: (prev.x + mouseX * (1 / zoom - 1 / newZoom) + mapW) % mapW,
-            y: (prev.y + mouseY * (1 / zoom - 1 / newZoom) + mapH) % mapH
-        }));
+            setCameraOffset((prev) => ({
+                x: (prev.x + mouseX * (1 / zoom - 1 / newZoom) + mapW) % mapW,
+                y: (prev.y + mouseY * (1 / zoom - 1 / newZoom) + mapH) % mapH
+            }));
 
-        setZoom(newZoom);
-    }, [zoom, isResolvingUI, playerState, setCameraOffset, setZoom]);
+            setZoom(newZoom);
+        },
+        [zoom, isResolvingUI, playerState, setCameraOffset, setZoom]
+    );
 
     // Use a Ref to ensure the non-passive native event listener always gets
     // the freshest state closure without needing constant event re-binding.
@@ -516,7 +523,7 @@ function App() {
             setHubScreenPos(null);
             return;
         }
-        const hub = playerState.entities.find(e => e.id === selectedHubId);
+        const hub = playerState.entities.find((e) => e.id === selectedHubId);
         if (!hub || !gameBoardRef.current) return;
 
         const pos = gameBoardRef.current.getScreenCoords(hub.x, hub.y);
@@ -528,10 +535,8 @@ function App() {
             const nx = pos.x - rect.left;
             const ny = pos.y - rect.top;
 
-             
             setHubScreenPos({ x: nx, y: ny });
         } else {
-             
             setHubScreenPos(pos);
         }
     }, [selectedHubId, cameraOffset, zoom, playerState]);
@@ -541,7 +546,7 @@ function App() {
         if (isResolvingUI || isLocked) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setSelectedHubId(null);
-             
+
             setLaunchMode(false);
         }
     }, [isResolvingUI, isLocked]);
@@ -553,7 +558,9 @@ function App() {
         }
         // 2. If in lobby, find our slot color
         if (lobbyStatus?.slots && myPlayerId) {
-            const slotIndex = lobbyStatus.slots.findIndex((s, idx) => `player${idx + 1}` === myPlayerId);
+            const slotIndex = lobbyStatus.slots.findIndex(
+                (s, idx) => `player${idx + 1}` === myPlayerId
+            );
             if (slotIndex !== -1 && lobbyStatus.slots[slotIndex]) {
                 // Match the colors used in GameState.js: hsl(index * 60, 70%, 50%)
                 return { color: `hsl(${slotIndex * 60}, 70%, 50%)` };
@@ -563,13 +570,10 @@ function App() {
         return { color: '#00ff44' };
     })();
 
-    const pendingCost = committedActions.reduce(
-        (sum, act) => {
-            const stats = ENTITY_STATS[act.itemType];
-            return sum + (stats?.cost || 0);
-        },
-        0
-    );
+    const pendingCost = committedActions.reduce((sum, act) => {
+        const stats = ENTITY_STATS[act.itemType];
+        return sum + (stats?.cost || 0);
+    }, 0);
     const pCurrent = {
         ...pBase,
         energy: Math.max(0, pBase.energy - pendingCost)
@@ -633,9 +637,9 @@ function App() {
                 const s = parseInt(matches[1]) / 100;
                 const l = parseInt(matches[2]) / 100;
 
-                const k = n => (n + h / 30) % 12;
+                const k = (n) => (n + h / 30) % 12;
                 const a = s * Math.min(l, 1 - l);
-                const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+                const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
 
                 const r = Math.round(255 * f(0));
                 const g = Math.round(255 * f(8));
@@ -663,13 +667,16 @@ function App() {
                 const h = parseInt(matches[0]);
                 const s = parseInt(matches[1]) / 100;
                 const l = parseInt(matches[2]) / 100;
-                const k = n => (n + h / 30) % 12;
+                const k = (n) => (n + h / 30) % 12;
                 const a = s * Math.min(l, 1 - l);
-                const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+                const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
                 const r = Math.round(255 * f(0));
                 const g = Math.round(255 * f(8));
                 const b = Math.round(255 * f(4));
-                document.documentElement.style.setProperty('--player-accent-color-rgb', `${r}, ${g}, ${b}`);
+                document.documentElement.style.setProperty(
+                    '--player-accent-color-rgb',
+                    `${r}, ${g}, ${b}`
+                );
             }
         } else {
             // Hex fallback green rgb (0, 255, 68)
@@ -679,12 +686,7 @@ function App() {
 
     const renderContent = () => {
         if (currentView === 'DESIGNER') {
-            return (
-                <MapDesigner
-                    onSave={handleMapSave}
-                    onBack={() => setCurrentView('LOBBY')}
-                />
-            );
+            return <MapDesigner onSave={handleMapSave} onBack={() => setCurrentView('LOBBY')} />;
         }
 
         if (!matchStarted) {
@@ -708,9 +710,14 @@ function App() {
                     {sidebarLeft}
                     <div className="viewport-crt-container">
                         <div className="loading-screen" style={{ minHeight: '300px' }}>
-                            <p>{!playerState ? 'Downloading Sector Data...' : 'Authenticating Pilot...'}</p>
+                            <p>
+                                {!playerState
+                                    ? 'Downloading Sector Data...'
+                                    : 'Authenticating Pilot...'}
+                            </p>
                             <div className="status-indicator">
-                                Socket: {isConnected ? 'Online' : 'Offline'} | ID: {myPlayerId || 'Pending'}
+                                Socket: {isConnected ? 'Online' : 'Offline'} | ID:{' '}
+                                {myPlayerId || 'Pending'}
                             </div>
                             {lastError && (
                                 <div
@@ -744,40 +751,56 @@ function App() {
 
                 <div className="viewport-crt-container" ref={viewportRef}>
                     <div className="crt-scanlines-pixel-perfect" />
-                        <main className={`game-world ${isResolvingUI ? 'locked-out' : ''} ${glitchActive ? 'glitch-rejection' : ''}`}>
-                            {!isResolvingUI && !committedActions.length && selectedHubId && launchMode && (
-                                <div className="hint-overlay">Drag from your selected Hub to launch</div>
+                    <main
+                        className={`game-world ${isResolvingUI ? 'locked-out' : ''} ${glitchActive ? 'glitch-rejection' : ''}`}
+                    >
+                        {!isResolvingUI &&
+                            !committedActions.length &&
+                            selectedHubId &&
+                            launchMode && (
+                                <div className="hint-overlay">
+                                    Drag from your selected Hub to launch
+                                </div>
                             )}
 
-                            <GameBoard
-                                ref={gameBoardRef}
-                                gameState={playerState}
-                                myPlayerId={myPlayerId}
-                                selectedHubId={selectedHubId}
-                                selectedItemType={selectedItemType}
-                                launchMode={launchMode}
-                                isAiming={isAiming}
-                                committedActions={committedActions}
-                                showDebugPreview={showDebugPreview}
-                                maxPullDistance={MAX_PULL_DISTANCE}
-                                isResolving={isResolvingUI}
-                                cameraOffset={cameraOffset}
-                                setCameraOffset={setCameraOffset}
-                                zoom={zoom}
-                                setZoom={setZoom}
-                                minZoom={minZoom}
-                                onSelectHub={(id) => {
-                                    setSelectedHubId(id);
-                                }}
-                                onAimStart={handleAimStart}
-                                onAimUpdate={() => { }}
-                                onAimEnd={handleAimEnd}
-                            />
+                        <GameBoard
+                            ref={gameBoardRef}
+                            gameState={playerState}
+                            myPlayerId={myPlayerId}
+                            selectedHubId={selectedHubId}
+                            selectedItemType={selectedItemType}
+                            launchMode={launchMode}
+                            isAiming={isAiming}
+                            committedActions={committedActions}
+                            showDebugPreview={showDebugPreview}
+                            maxPullDistance={MAX_PULL_DISTANCE}
+                            isResolving={isResolvingUI}
+                            cameraOffset={cameraOffset}
+                            setCameraOffset={setCameraOffset}
+                            zoom={zoom}
+                            setZoom={setZoom}
+                            minZoom={minZoom}
+                            onSelectHub={(id) => {
+                                setSelectedHubId(id);
+                            }}
+                            onAimStart={handleAimStart}
+                            onAimUpdate={() => {}}
+                            onAimEnd={handleAimEnd}
+                        />
 
-                            {selectedHubId && !launchMode && !interactionBlocked && playerState && (() => {
-                                const hub = playerState.entities.find(e => e.id === selectedHubId);
+                        {selectedHubId &&
+                            !launchMode &&
+                            !interactionBlocked &&
+                            playerState &&
+                            (() => {
+                                const hub = playerState.entities.find(
+                                    (e) => e.id === selectedHubId
+                                );
                                 if (!hub) {
-                                    console.log('RadialMenu check: Hub not found for ID', selectedHubId);
+                                    console.log(
+                                        'RadialMenu check: Hub not found for ID',
+                                        selectedHubId
+                                    );
                                     return null;
                                 }
 
@@ -786,7 +809,14 @@ function App() {
                                         x={hubScreenPos?.x || 0}
                                         y={hubScreenPos?.y || 0}
                                         playerEnergy={pCurrent.energy}
-                                        hubFuel={hub.fuel !== undefined ? hub.fuel - committedActions.filter(a => a.sourceId === selectedHubId).length : 99}
+                                        hubFuel={
+                                            hub.fuel !== undefined
+                                                ? hub.fuel -
+                                                  committedActions.filter(
+                                                      (a) => a.sourceId === selectedHubId
+                                                  ).length
+                                                : 99
+                                        }
                                         onSelect={(type) => {
                                             setSelectedItemType(type);
                                             setLaunchMode(true);
@@ -796,38 +826,42 @@ function App() {
                                 );
                             })()}
 
-                            {launchMode && !isResolvingUI && (
-                                <div className="hint-overlay">Pull back from the Hub to Aim & Launch!</div>
-                            )}
-                        </main>
-
-                        {playerState.winner && (
-                            <div className="winner-overlay">
-                                <div
-                                    className="winner-card"
-                                    style={{
-                                        borderColor: playerState.players[playerState.winner]?.color || '#fff'
-                                    }}
-                                >
-                                    <h2>{playerState.winner === 'DRAW' ? "It's a Draw!" : 'Victory!'}</h2>
-                                    <p>
-                                        {playerState.winner === 'DRAW'
-                                            ? 'Mutual destruction on Titan.'
-                                            : `Player ${playerState.winner} has conquered the sector.`}
-                                    </p>
-                                    <button className="restart-btn" onClick={handleRestart}>
-                                        Initialize New Mission
-                                    </button>
-                                </div>
+                        {launchMode && !isResolvingUI && (
+                            <div className="hint-overlay">
+                                Pull back from the Hub to Aim & Launch!
                             </div>
                         )}
+                    </main>
+
+                    {playerState.winner && (
+                        <div className="winner-overlay">
+                            <div
+                                className="winner-card"
+                                style={{
+                                    borderColor:
+                                        playerState.players[playerState.winner]?.color || '#fff'
+                                }}
+                            >
+                                <h2>
+                                    {playerState.winner === 'DRAW' ? "It's a Draw!" : 'Victory!'}
+                                </h2>
+                                <p>
+                                    {playerState.winner === 'DRAW'
+                                        ? 'Mutual destruction on Titan.'
+                                        : `Player ${playerState.winner} has conquered the sector.`}
+                                </p>
+                                <button className="restart-btn" onClick={handleRestart}>
+                                    Initialize New Mission
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {sidebarRight}
             </>
         );
     };
-
 
     const isGalleryMode = new URLSearchParams(window.location.search).get('gallery') === 'true';
 

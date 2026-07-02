@@ -35,7 +35,9 @@ describe('Reproduce Turn Button Bug & PassTurn', () => {
 
         await new Promise((resolve) => {
             let auths = 0;
-            const check = () => { if (++auths === 2) resolve(); };
+            const check = () => {
+                if (++auths === 2) resolve();
+            };
             client1.on('playerAssignment', check);
             client2.on('playerAssignment', check);
             client1.emit('authenticate', 'token-p1');
@@ -46,11 +48,11 @@ describe('Reproduce Turn Button Bug & PassTurn', () => {
         client1.emit('lobby:claimSeat', 0);
         client2.emit('lobby:claimSeat', 1);
 
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 200));
         client1.emit('lobby:ready', true);
         client2.emit('lobby:ready', true);
 
-        await new Promise(resolve => {
+        await new Promise((resolve) => {
             client1.on('matchStarted', resolve);
         });
     }, 30000);
@@ -65,9 +67,27 @@ describe('Reproduce Turn Button Bug & PassTurn', () => {
     it('should assign correct players and spectator', async () => {
         let p1_id, p2_id, spec_id;
         await Promise.all([
-            new Promise(r => { client1.once('playerAssignment', id => { p1_id = id; r(); }); client1.emit('requestState'); }),
-            new Promise(r => { client2.once('playerAssignment', id => { p2_id = id; r(); }); client2.emit('requestState'); }),
-            new Promise(r => { spectator.once('playerAssignment', id => { spec_id = id; r(); }); spectator.emit('authenticate', 'token-spec'); })
+            new Promise((r) => {
+                client1.once('playerAssignment', (id) => {
+                    p1_id = id;
+                    r();
+                });
+                client1.emit('requestState');
+            }),
+            new Promise((r) => {
+                client2.once('playerAssignment', (id) => {
+                    p2_id = id;
+                    r();
+                });
+                client2.emit('requestState');
+            }),
+            new Promise((r) => {
+                spectator.once('playerAssignment', (id) => {
+                    spec_id = id;
+                    r();
+                });
+                spectator.emit('authenticate', 'token-spec');
+            })
         ]);
         expect(p1_id).toBe('player1');
         expect(p2_id).toBe('player2');
@@ -97,13 +117,13 @@ describe('Reproduce Turn Button Bug & PassTurn', () => {
 
     it('should NOT allow spectators to lock out players', async () => {
         // Wait for previous turn resolution to finish (resolution takes 3s)
-        await new Promise(r => setTimeout(r, 4000));
+        await new Promise((r) => setTimeout(r, 4000));
 
         // Spectator attempts to submit actions (they shouldn't be allowed to)
         spectator.emit('submitActions', []);
 
         // Wait and check syncStatus
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 500));
 
         let syncStatus;
         client1.emit('requestState');

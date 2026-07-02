@@ -11,7 +11,7 @@ describe('GameState - Projectile Motion Vision', () => {
     });
 
     it('should reveal cloaked structure based on currX, not x', () => {
-        const p2Hub = game.entities.find(e => e.owner === 'p2');
+        const p2Hub = game.entities.find((e) => e.owner === 'p2');
         p2Hub.x = 1000;
         p2Hub.y = 1000;
 
@@ -36,7 +36,7 @@ describe('GameState - Projectile Motion Vision', () => {
         });
 
         const visibleState = game.getVisibleState('p1');
-        const p2HubInState = visibleState.entities.find(e => e.id === p2Hub.id);
+        const p2HubInState = visibleState.entities.find((e) => e.id === p2Hub.id);
 
         // Currently this will FAIL because it uses x=0
         expect(p2HubInState).toBeDefined();

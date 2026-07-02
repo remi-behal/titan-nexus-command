@@ -102,7 +102,12 @@ describe('GameState - Target Ambiguity', () => {
         const detSnap = snapshots.find((s) => {
             return (
                 s.type === 'ROUND_SUB' &&
-                s.state.entities.some((e) => e.type === 'EXPLOSION' && Math.abs(e.x - 400) < 50 && Math.abs(e.y - 500) < 20)
+                s.state.entities.some(
+                    (e) =>
+                        e.type === 'EXPLOSION' &&
+                        Math.abs(e.x - 400) < 50 &&
+                        Math.abs(e.y - 500) < 20
+                )
             );
         });
         expect(detSnap).toBeDefined();

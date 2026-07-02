@@ -1,6 +1,19 @@
 import { ENTITY_STATS } from '../../../../shared/constants/EntityStats.js';
 
-export function drawFogOfWar(ctx, fogCanvasRef, canvasWidth, canvasHeight, zoom, cameraOffset, mapW, mapH, viewBounds, entities, visualEntities, myPlayerId) {
+export function drawFogOfWar(
+    ctx,
+    fogCanvasRef,
+    canvasWidth,
+    canvasHeight,
+    zoom,
+    cameraOffset,
+    mapW,
+    mapH,
+    viewBounds,
+    entities,
+    visualEntities,
+    myPlayerId
+) {
     if (!myPlayerId || myPlayerId === 'spectator') return;
 
     if (!fogCanvasRef.current) {
@@ -40,7 +53,12 @@ export function drawFogOfWar(ctx, fogCanvasRef, canvasWidth, canvasHeight, zoom,
             const tileB = oy + mapH;
 
             const pad = 800; // Account for large visual effects crossing tile boundaries
-            const isTileVisible = !(tileR + pad < viewL || tileL - pad > viewR || tileB + pad < viewT || tileT - pad > viewB);
+            const isTileVisible = !(
+                tileR + pad < viewL ||
+                tileL - pad > viewR ||
+                tileB + pad < viewT ||
+                tileT - pad > viewB
+            );
             if (!isTileVisible) continue;
 
             fctx.save();
@@ -51,10 +69,13 @@ export function drawFogOfWar(ctx, fogCanvasRef, canvasWidth, canvasHeight, zoom,
                 // Culling: Skip if the VISION circle is outside the viewport
                 const stats = ENTITY_STATS[entity.itemType || entity.type];
                 const cullingRadius = Math.max(stats?.vision || 0, stats?.size || 20);
-                if (entity.x + ox + cullingRadius < viewL || 
+                if (
+                    entity.x + ox + cullingRadius < viewL ||
                     entity.x + ox - cullingRadius > viewR ||
-                    entity.y + oy + cullingRadius < viewT || 
-                    entity.y + oy - cullingRadius > viewB) return;
+                    entity.y + oy + cullingRadius < viewT ||
+                    entity.y + oy - cullingRadius > viewB
+                )
+                    return;
 
                 const isOwnProjectile =
                     stats?.damageFull !== undefined && entity.owner === myPlayerId;
@@ -68,16 +89,9 @@ export function drawFogOfWar(ctx, fogCanvasRef, canvasWidth, canvasHeight, zoom,
 
                         if (entity.itemType === 'HOMING_MISSILE') {
                             const rad = ((viz.currentAngle || 0) * Math.PI) / 180;
-                            const halfCone =
-                                ((stats.searchCone || 60) * (Math.PI / 180)) / 2;
+                            const halfCone = ((stats.searchCone || 60) * (Math.PI / 180)) / 2;
                             fctx.moveTo(viz.x, viz.y);
-                            fctx.arc(
-                                viz.x,
-                                viz.y,
-                                radius,
-                                rad - halfCone,
-                                rad + halfCone
-                            );
+                            fctx.arc(viz.x, viz.y, radius, rad - halfCone, rad + halfCone);
                         } else {
                             fctx.arc(viz.x, viz.y, radius, 0, Math.PI * 2);
                         }

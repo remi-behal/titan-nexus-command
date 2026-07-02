@@ -181,7 +181,7 @@ const AssetGallery = () => {
             `}</style>
 
             <div className="monitor-overlay"></div>
-            
+
             <header className="gallery-header">
                 <h1>TACTICAL_ASSET_GALLERY v1.0</h1>
                 <a href="/" className="return-btn">
@@ -190,11 +190,11 @@ const AssetGallery = () => {
             </header>
 
             <div className="gallery-grid">
-                {Object.keys(SHAPES).map(key => (
+                {Object.keys(SHAPES).map((key) => (
                     <AssetCell key={key} assetKey={key} />
                 ))}
             </div>
-            
+
             <footer className="gallery-footer">
                 <div className="footer-column">
                     <p>&gt; SYSTEM: RENDERING CORE 2.0 ACTIVE</p>
@@ -231,7 +231,9 @@ const AssetCell = ({ assetKey }) => {
                 drawField(ctx, x, y, assetKey, radius, color, false, time);
             } else {
                 // Projectiles rotate
-                const isProjectile = ['MISSILE', 'PROJECTILE_SMALL', 'NUKE_FLYING'].includes(assetKey);
+                const isProjectile = ['MISSILE', 'PROJECTILE_SMALL', 'NUKE_FLYING'].includes(
+                    assetKey
+                );
                 const rotation = isProjectile ? time / 1000 : 0;
                 drawShape(ctx, x, y, assetKey, radius, color, rotation);
             }
@@ -246,12 +248,8 @@ const AssetCell = ({ assetKey }) => {
     return (
         <div className="asset-cell">
             <canvas ref={canvasRef} width={180} height={180} />
-            <div className="asset-title">
-                {assetKey}
-            </div>
-            <div className="asset-subtitle">
-                TYPE: {SHAPES[assetKey].type}
-            </div>
+            <div className="asset-title">{assetKey}</div>
+            <div className="asset-subtitle">TYPE: {SHAPES[assetKey].type}</div>
         </div>
     );
 };

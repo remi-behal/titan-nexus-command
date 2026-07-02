@@ -45,9 +45,7 @@ export const CollisionSystem = {
 
                 const pStats = ENTITY_STATS[proj.type] || ENTITY_STATS[proj.itemType];
                 const isStructure =
-                    proj.type === 'HUB' ||
-                    proj.type === 'NUKE' ||
-                    proj.type === 'EXTRACTOR';
+                    proj.type === 'HUB' || proj.type === 'NUKE' || proj.type === 'EXTRACTOR';
 
                 if (proj.itemType === 'EMP') {
                     // EMP detonates immediately on barrier impact
@@ -109,11 +107,7 @@ export const CollisionSystem = {
                     gameState.map.height
                 );
                 // Projectile incineration uses its radius (size or default)
-                if (
-                    dist <=
-                    hStats.width / 2 + (ENTITY_STATS[proj.type]?.size || 8)
-                )
-                    isHit = true;
+                if (dist <= hStats.width / 2 + (ENTITY_STATS[proj.type]?.size || 8)) isHit = true;
             } else {
                 if (
                     TorusMath.lineCircleIntersection(
@@ -133,7 +127,7 @@ export const CollisionSystem = {
             }
 
             if (isHit) {
-                if (!proj.scheduledEffects.some(e => e.sourceId === h.id)) {
+                if (!proj.scheduledEffects.some((e) => e.sourceId === h.id)) {
                     const delay = 5 + Math.floor(Math.random() * 5);
                     proj.scheduledEffects.push({
                         type: 'incinerate',

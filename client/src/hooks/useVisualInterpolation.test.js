@@ -17,7 +17,7 @@ vi.mock('../utils/AudioManager', () => ({
         playSamLockOn: vi.fn(),
         playStructureDestroyed: vi.fn(),
         playLinkSevered: vi.fn(),
-        playLowBuzz: vi.fn(),
+        playLowBuzz: vi.fn()
     }
 }));
 
@@ -28,7 +28,7 @@ describe('useVisualInterpolation SFX triggers', () => {
 
     it('should initialize empty visual entities and links refs', () => {
         const { result } = renderHook(() => useVisualInterpolation());
-        
+
         expect(result.current.visualEntities.current).toEqual({});
         expect(result.current.visualLinks.current).toEqual({});
         expect(typeof result.current.updateInterpolation).toBe('function');
@@ -37,7 +37,7 @@ describe('useVisualInterpolation SFX triggers', () => {
     it('should handle null gameState safely', () => {
         const { result } = renderHook(() => useVisualInterpolation());
         const outcome = result.current.updateInterpolation(null, 'player1');
-        
+
         expect(outcome.visualEntities).toEqual({});
         expect(outcome.visualLinks).toEqual({});
         expect(outcome.isInVision(0, 0)).toBe(true);
@@ -45,34 +45,30 @@ describe('useVisualInterpolation SFX triggers', () => {
 
     it('should not play structure landing sound on the first state update', () => {
         const { result } = renderHook(() => useVisualInterpolation());
-        
+
         const initialGameState = {
             turn: 1,
             phase: 'PLANNING',
             map: { width: 2000, height: 2000 },
-            entities: [
-                { id: 'hub-1', type: 'HUB', x: 100, y: 100, owner: 'player1' }
-            ],
+            entities: [{ id: 'hub-1', type: 'HUB', x: 100, y: 100, owner: 'player1' }],
             links: [],
             audibleEvents: []
         };
 
         result.current.updateInterpolation(initialGameState, 'player1');
-        
+
         // AudioManager.playStructureLanding should NOT be called on initial mount/first update
         expect(audioManager.playStructureLanding).not.toHaveBeenCalled();
     });
 
     it('should not play structure landing sound on mid-game mount first update', () => {
         const { result } = renderHook(() => useVisualInterpolation());
-        
+
         const midGameState = {
             turn: 2,
             phase: 'RESOLVING',
             map: { width: 2000, height: 2000 },
-            entities: [
-                { id: 'hub-1', type: 'HUB', x: 100, y: 100, owner: 'player1' }
-            ],
+            entities: [{ id: 'hub-1', type: 'HUB', x: 100, y: 100, owner: 'player1' }],
             links: [],
             audibleEvents: []
         };
@@ -83,14 +79,12 @@ describe('useVisualInterpolation SFX triggers', () => {
 
     it('should play structure landing sound on subsequent updates when new structures spawn', () => {
         const { result } = renderHook(() => useVisualInterpolation());
-        
+
         const state1 = {
             turn: 1,
             phase: 'PLANNING',
             map: { width: 2000, height: 2000 },
-            entities: [
-                { id: 'hub-1', type: 'HUB', x: 100, y: 100, owner: 'player1' }
-            ],
+            entities: [{ id: 'hub-1', type: 'HUB', x: 100, y: 100, owner: 'player1' }],
             links: [],
             audibleEvents: []
         };
@@ -119,16 +113,14 @@ describe('useVisualInterpolation SFX triggers', () => {
 
     it('should not play FOW audible events on the first state update, but should play them subsequently', () => {
         const { result } = renderHook(() => useVisualInterpolation());
-        
+
         const state1 = {
             turn: 1,
             phase: 'PLANNING',
             map: { width: 2000, height: 2000 },
             entities: [],
             links: [],
-            audibleEvents: [
-                { id: 'evt-1', type: 'STRUCTURE_LANDING', x: 500, y: 500 }
-            ]
+            audibleEvents: [{ id: 'evt-1', type: 'STRUCTURE_LANDING', x: 500, y: 500 }]
         };
 
         const state2 = {
@@ -155,7 +147,7 @@ describe('useVisualInterpolation SFX triggers', () => {
 
     it('should play spatialized SAM flight sounds periodically for both in-vision and out-of-vision missiles, respecting the 150ms throttle', () => {
         const { result } = renderHook(() => useVisualInterpolation());
-        
+
         let mockTime = 1000000;
         const timeSpy = vi.spyOn(Date, 'now').mockImplementation(() => mockTime);
 
@@ -164,8 +156,22 @@ describe('useVisualInterpolation SFX triggers', () => {
             phase: 'PLANNING',
             map: { width: 2000, height: 2000 },
             entities: [
-                { id: 'sam-1', type: 'PROJECTILE', itemType: 'SAM_MISSILE', x: 100, y: 150, owner: 'player1' },
-                { id: 'homing-1', type: 'PROJECTILE', itemType: 'HOMING_MISSILE', x: 300, y: 350, owner: 'player1' }
+                {
+                    id: 'sam-1',
+                    type: 'PROJECTILE',
+                    itemType: 'SAM_MISSILE',
+                    x: 100,
+                    y: 150,
+                    owner: 'player1'
+                },
+                {
+                    id: 'homing-1',
+                    type: 'PROJECTILE',
+                    itemType: 'HOMING_MISSILE',
+                    x: 300,
+                    y: 350,
+                    owner: 'player1'
+                }
             ],
             links: [],
             audibleEvents: [

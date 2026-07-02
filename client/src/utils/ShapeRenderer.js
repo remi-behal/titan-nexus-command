@@ -1,12 +1,22 @@
 /**
  * ShapeRenderer.js
- * 
+ *
  * Standardized drawing engine for normalized shapes.
  */
 
 import { SHAPE_TYPES, SHAPES } from '../constants/ShapeDefinitions.js';
 
-export const drawShape = (ctx, x, y, shapeKey, radius, color, rotation = 0, isGhost = false, isWarning = false) => {
+export const drawShape = (
+    ctx,
+    x,
+    y,
+    shapeKey,
+    radius,
+    color,
+    rotation = 0,
+    isGhost = false,
+    isWarning = false
+) => {
     const shape = SHAPES[shapeKey];
     if (!shape) return;
 
@@ -14,7 +24,7 @@ export const drawShape = (ctx, x, y, shapeKey, radius, color, rotation = 0, isGh
     ctx.translate(x, y);
     ctx.rotate(rotation);
     ctx.strokeStyle = color;
-    
+
     let alpha = isGhost ? 0.3 : 1.0;
     if (isWarning && !isGhost) {
         // High-frequency flicker for critical status
@@ -22,7 +32,7 @@ export const drawShape = (ctx, x, y, shapeKey, radius, color, rotation = 0, isGh
         alpha *= flicker;
     }
     ctx.globalAlpha = alpha;
-    
+
     // Phosphor Glow
     if (!isGhost) {
         ctx.shadowBlur = 15;
@@ -30,12 +40,12 @@ export const drawShape = (ctx, x, y, shapeKey, radius, color, rotation = 0, isGh
     }
 
     if (shape.type === SHAPE_TYPES.PATH) {
-        const layers = isGhost ? 1 : (shape.layers || 1);
-        
+        const layers = isGhost ? 1 : shape.layers || 1;
+
         for (let l = 1; l <= layers; l++) {
             const r = radius * (l / layers);
             ctx.lineWidth = l === layers ? 2 : 1;
-            
+
             ctx.beginPath();
             shape.points.forEach(([px, py], i) => {
                 if (i === 0) ctx.moveTo(px * r, py * r);
@@ -74,7 +84,7 @@ export const drawShape = (ctx, x, y, shapeKey, radius, color, rotation = 0, isGh
         ctx.beginPath();
         const points = shape.points || 8;
         const jaggedness = shape.jaggedness || 0.5;
-        
+
         for (let i = 0; i < points * 2; i++) {
             const a = (i * Math.PI) / points;
             const r = i % 2 === 0 ? radius : radius * jaggedness;
@@ -82,7 +92,7 @@ export const drawShape = (ctx, x, y, shapeKey, radius, color, rotation = 0, isGh
         }
         ctx.closePath();
         ctx.stroke();
-        
+
         if (!isGhost) {
             ctx.globalAlpha = 0.3;
             ctx.fill();
@@ -92,7 +102,19 @@ export const drawShape = (ctx, x, y, shapeKey, radius, color, rotation = 0, isGh
     ctx.restore();
 };
 
-export const drawField = (ctx, x, y, shapeKey, radius, color, isGhost = false, time = Date.now(), coneAngle = 60, currentAngle = 0, isWarning = false) => {
+export const drawField = (
+    ctx,
+    x,
+    y,
+    shapeKey,
+    radius,
+    color,
+    isGhost = false,
+    time = Date.now(),
+    coneAngle = 60,
+    currentAngle = 0,
+    isWarning = false
+) => {
     const shape = SHAPES[shapeKey];
     if (!shape) return;
 
@@ -107,7 +129,7 @@ export const drawField = (ctx, x, y, shapeKey, radius, color, isGhost = false, t
         alpha *= flicker;
     }
     ctx.globalAlpha = alpha;
-    
+
     if (!isGhost) {
         ctx.shadowBlur = 10;
         ctx.shadowColor = color;
@@ -117,7 +139,7 @@ export const drawField = (ctx, x, y, shapeKey, radius, color, isGhost = false, t
         ctx.setLineDash(shape.dash || []);
         if (shape.pulse) {
             ctx.lineDashOffset = -time / 50;
-            ctx.globalAlpha *= (0.7 + Math.sin(time / 200) * 0.3);
+            ctx.globalAlpha *= 0.7 + Math.sin(time / 200) * 0.3;
         }
 
         ctx.beginPath();
@@ -139,17 +161,17 @@ export const drawField = (ctx, x, y, shapeKey, radius, color, isGhost = false, t
 
     if (shape.drawType === 'CONE') {
         const rad = (currentAngle * Math.PI) / 180;
-        const halfCone = ((coneAngle) * (Math.PI / 180)) / 2;
+        const halfCone = (coneAngle * (Math.PI / 180)) / 2;
 
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.arc(0, 0, radius, rad - halfCone, rad + halfCone);
         ctx.closePath();
-        
+
         ctx.fillStyle = color;
         ctx.globalAlpha = shape.fillOpacity || 0.1;
         ctx.fill();
-        
+
         ctx.globalAlpha = 0.4;
         ctx.stroke();
     }

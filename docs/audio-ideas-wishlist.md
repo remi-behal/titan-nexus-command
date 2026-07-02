@@ -1,13 +1,14 @@
 # Titan: Nexus Command Audio Wishlist & Roadmap
 
-This document serves as the master catalog and strategic roadmap for all procedural chiptune and cybernetic sound effects within the *Titan: Nexus Command* audio system.
+This document serves as the master catalog and strategic roadmap for all procedural chiptune and cybernetic sound effects within the _Titan: Nexus Command_ audio system.
 
 **Note** All sound effects are unrefined currently, developer needs to adjust all sounds.
 
 ---
 
 ## Phase 1: Combat & Tactical Resolution
-*Status: IMPLEMENTED & MERGED*
+
+_Status: IMPLEMENTED & MERGED_
 
 These sounds represent active simulation and resolution events played frame-accurately in the game board render loops.
 
@@ -23,7 +24,8 @@ These sounds represent active simulation and resolution events played frame-accu
 ---
 
 ## Phase 2: Interactive Planning & UI feedback
-*Status: DESIGNED (Implementing Now)*
+
+_Status: DESIGNED (Implementing Now)_
 
 These sounds cover real-time user interface selections, interactive strategic planning actions, and outpost orbital drop landing slams.
 
@@ -38,7 +40,9 @@ These sounds cover real-time user interface selections, interactive strategic pl
 ---
 
 ### Not Designed yet
+
 #### Weapon sounds
+
 - **Standard explosion**
 - **EMP explosion**
 - **napalm burn**
@@ -48,9 +52,9 @@ These sounds cover real-time user interface selections, interactive strategic pl
 - **sam missile flight**
 - **sam missile lock on**
 
-
 ## Phase 3: Future Strategic Concepts
-*Status: POSTPONED (Future Roadmap)*
+
+_Status: POSTPONED (Future Roadmap)_
 
 These concepts are designed for future strategic extensions as the game's simulation and sensory warning features expand.
 

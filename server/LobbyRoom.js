@@ -34,14 +34,16 @@ export class LobbyRoom {
         }
 
         // Remove from existing slot if any
-        this.slots = this.slots.map(slot => (slot && (slot.token === token || slot.socketId === socketId)) ? null : slot);
+        this.slots = this.slots.map((slot) =>
+            slot && (slot.token === token || slot.socketId === socketId) ? null : slot
+        );
 
         this.slots[slotIndex] = { token, socketId, ready: false };
         return { success: true };
     }
 
     toggleReady(socketId, isReady) {
-        const slot = this.slots.find(s => s && s.socketId === socketId);
+        const slot = this.slots.find((s) => s && s.socketId === socketId);
         if (slot) {
             slot.ready = isReady;
             return true;
@@ -54,11 +56,11 @@ export class LobbyRoom {
     }
 
     handleDisconnect(socketId) {
-        const slotIndex = this.slots.findIndex(s => s && s.socketId === socketId);
+        const slotIndex = this.slots.findIndex((s) => s && s.socketId === socketId);
         if (slotIndex !== -1) {
             this.slots[slotIndex] = null;
         }
-        this.spectators = this.spectators.filter(id => id !== socketId);
+        this.spectators = this.spectators.filter((id) => id !== socketId);
     }
 
     getUpdate() {

@@ -52,10 +52,17 @@ export default function SidebarRight({
                     </div>
                     {showDebugPreview && playerState?.map && (
                         <>
-                            <div className="stat-group" style={{ color: '#0f0', fontSize: '0.8em', marginTop: '10px' }}>
+                            <div
+                                className="stat-group"
+                                style={{ color: '#0f0', fontSize: '0.8em', marginTop: '10px' }}
+                            >
                                 <span className="label">Center:</span>
                                 <span className="value">
-                                    {(cameraOffset.x + (playerState.map.width / zoom) / 2).toFixed(0)}, {(cameraOffset.y + (playerState.map.height / zoom) / 2).toFixed(0)}
+                                    {(cameraOffset.x + playerState.map.width / zoom / 2).toFixed(0)}
+                                    ,{' '}
+                                    {(cameraOffset.y + playerState.map.height / zoom / 2).toFixed(
+                                        0
+                                    )}
                                 </span>
                             </div>
                         </>
@@ -78,14 +85,14 @@ export default function SidebarRight({
                     {isResolvingUI
                         ? 'Simulating'
                         : isLocked
-                            ? 'Waiting'
-                            : isSpectator
-                                ? 'Spectating'
-                                : isUnassigned
-                                    ? '...'
-                                    : committedActions.length > 0
-                                        ? `Ready (${committedActions.length})`
-                                        : 'Ready'}
+                          ? 'Waiting'
+                          : isSpectator
+                            ? 'Spectating'
+                            : isUnassigned
+                              ? '...'
+                              : committedActions.length > 0
+                                ? `Ready (${committedActions.length})`
+                                : 'Ready'}
                 </button>
             </div>
         </aside>

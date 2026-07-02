@@ -30,7 +30,6 @@ class AudioManager {
         this.registerJsonSounds();
     }
 
-
     updateCameraContext(cameraOffset, zoom, canvasW, canvasH, mapW, mapH) {
         this.cameraContext = { cameraOffset, zoom, canvasW, canvasH, mapW, mapH };
     }
@@ -41,7 +40,7 @@ class AudioManager {
         }
 
         const { cameraOffset, zoom, canvasW, canvasH, mapW, mapH } = this.cameraContext;
-        
+
         const viewportWidth = canvasW / zoom;
         const viewportHeight = canvasH / zoom;
 
@@ -80,19 +79,21 @@ class AudioManager {
             shuffle: this.shuffle
         });
         return () => {
-            this.listeners = this.listeners.filter(l => l !== listener);
+            this.listeners = this.listeners.filter((l) => l !== listener);
         };
     }
 
     notify() {
-        this.listeners.forEach(l => l({
-            currentTrack: this.currentTrack,
-            isPlaying: this.isPlaying,
-            isPaused: this.isPaused,
-            isMuted: this.isMuted,
-            volume: this.volume,
-            shuffle: this.shuffle
-        }));
+        this.listeners.forEach((l) =>
+            l({
+                currentTrack: this.currentTrack,
+                isPlaying: this.isPlaying,
+                isPaused: this.isPaused,
+                isMuted: this.isMuted,
+                volume: this.volume,
+                shuffle: this.shuffle
+            })
+        );
     }
 
     init() {
@@ -101,7 +102,7 @@ class AudioManager {
         this.initPromise = (async () => {
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
             this.ctx = new AudioCtx();
-            
+
             // Create DynamicsCompressor to prevent digital clipping
             this.compressor = this.ctx.createDynamicsCompressor();
             this.compressor.threshold.setValueAtTime(-12, this.ctx.currentTime);
@@ -110,19 +111,19 @@ class AudioManager {
             this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
             this.compressor.release.setValueAtTime(0.25, this.ctx.currentTime);
             this.compressor.connect(this.ctx.destination);
-            
+
             setZzfxContext(this.ctx, this.compressor);
-            
+
             // Dynamic import of chiptune3 only in browser context
             const { ChiptuneJsPlayer } = await import('chiptune3/chiptune3.js');
             this.player = new ChiptuneJsPlayer({
                 context: this.ctx,
                 repeatCount: 0
             });
-            
+
             // Explicitly connect gain node output to context destination
             this.player.gain.connect(this.ctx.destination);
-            
+
             // Register ended event to auto play the next track
             this.player.onEnded(() => {
                 this.nextTrack();
@@ -135,7 +136,7 @@ class AudioManager {
                     resolve();
                 });
             });
-        })().catch(e => {
+        })().catch((e) => {
             console.error('AudioManager initialization failed:', e);
             this.initPromise = null;
             throw e;
@@ -158,7 +159,7 @@ class AudioManager {
         this.currentTrack = trackPath;
         this.isPlaying = true;
         this.isPaused = false;
- 
+
         if (this.player && trackPath) {
             this.player.load(trackPath);
             this.player.setVol(this.isMuted ? 0 : this.volume);
@@ -206,7 +207,7 @@ class AudioManager {
         if (this.shuffle) {
             nextIndex = Math.floor(Math.random() * TRACKS.length);
         } else {
-            const currentIndex = TRACKS.findIndex(t => t.path === this.currentTrack);
+            const currentIndex = TRACKS.findIndex((t) => t.path === this.currentTrack);
             nextIndex = (currentIndex + 1) % TRACKS.length;
         }
         const track = TRACKS[nextIndex];
@@ -219,7 +220,7 @@ class AudioManager {
         if (this.shuffle) {
             prevIndex = Math.floor(Math.random() * TRACKS.length);
         } else {
-            const currentIndex = TRACKS.findIndex(t => t.path === this.currentTrack);
+            const currentIndex = TRACKS.findIndex((t) => t.path === this.currentTrack);
             prevIndex = (currentIndex - 1 + TRACKS.length) % TRACKS.length;
         }
         const track = TRACKS[prevIndex];
@@ -264,21 +265,26 @@ class AudioManager {
             }, 0);
         }
 
-        return this.init().then(() => {
-            if (this.ctx && this.ctx.state === 'suspended') {
-                this.ctx.resume();
-            }
-            // Compute spatial volume multiplier
-            const spatialMultiplier = this.calculateSpatialVolume(soundX, soundY);
+        return this.init()
+            .then(() => {
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+                // Compute spatial volume multiplier
+                const spatialMultiplier = this.calculateSpatialVolume(soundX, soundY);
 
-            // Inject global volume multiplier and spatial multiplier into first index
-            const finalParams = [...params];
-            finalParams[0] = (finalParams[0] === undefined ? 1 : finalParams[0]) * this.volume * spatialMultiplier;
-            return zzfx(...finalParams);
-        }).catch((err) => {
-            console.error('Failed playing SFX:', err);
-            return null;
-        });
+                // Inject global volume multiplier and spatial multiplier into first index
+                const finalParams = [...params];
+                finalParams[0] =
+                    (finalParams[0] === undefined ? 1 : finalParams[0]) *
+                    this.volume *
+                    spatialMultiplier;
+                return zzfx(...finalParams);
+            })
+            .catch((err) => {
+                console.error('Failed playing SFX:', err);
+                return null;
+            });
     }
 
     /** t[0] = volume
@@ -306,13 +312,13 @@ class AudioManager {
     registerJsonSounds() {
         if (!zzfxSounds || !zzfxSounds.sounds) return;
 
-        zzfxSounds.sounds.forEach(sound => {
+        zzfxSounds.sounds.forEach((sound) => {
             const nameWords = sound.name
                 .replace(/[^a-zA-Z0-9\s]/g, '')
                 .trim()
                 .split(/\s+/);
             const camelCaseName = nameWords
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
                 .join('');
             const methodName = 'play' + camelCaseName;
 
@@ -346,13 +352,13 @@ class AudioManager {
 
     getRegisteredSounds() {
         if (!zzfxSounds || !zzfxSounds.sounds) return [];
-        return zzfxSounds.sounds.map(sound => {
+        return zzfxSounds.sounds.map((sound) => {
             const nameWords = sound.name
                 .replace(/[^a-zA-Z0-9\s]/g, '')
                 .trim()
                 .split(/\s+/);
             const camelCaseName = nameWords
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
                 .join('');
             const methodName = 'play' + camelCaseName;
             return {
@@ -365,13 +371,9 @@ class AudioManager {
     // Inside AudioManager class
     async playHeavyErrorCombo() {
         // Plays both sounds in parallel and returns their sources in an array
-        const sources = await Promise.all([
-            this.playHeavyLaunch(),
-            this.playLongError()
-        ]);
-    return sources; // Can be routed or handled together
-}
-
+        const sources = await Promise.all([this.playHeavyLaunch(), this.playLongError()]);
+        return sources; // Can be routed or handled together
+    }
 }
 
 export const audioManager = new AudioManager();

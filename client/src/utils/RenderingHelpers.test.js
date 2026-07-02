@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { wrapCoordinate, getToroidalLineSegments, worldToScreen, getGhostColor } from './RenderingHelpers.js';
+import {
+    wrapCoordinate,
+    getToroidalLineSegments,
+    worldToScreen,
+    getGhostColor
+} from './RenderingHelpers.js';
 
 describe('Rendering Helpers', () => {
     it('wrapCoordinate should handle negative and over-max values', () => {

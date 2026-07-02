@@ -28,7 +28,10 @@ describe('ZzFX Synthesizer', () => {
 
         // Stub StereoPannerNode globally for the test environment
         const mockPanner = {};
-        vi.stubGlobal('StereoPannerNode', vi.fn().mockImplementation(() => mockPanner));
+        vi.stubGlobal(
+            'StereoPannerNode',
+            vi.fn().mockImplementation(() => mockPanner)
+        );
 
         setZzfxContext(mockContext);
         expect(zzfxX).toBe(mockContext);

@@ -98,8 +98,14 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             await waitFor(() => p2Id === 'player2', 10000);
 
             // 3. Wait for game to initialize and be in PLANNING Turn 1
-            await waitFor(() => p1State && p1State.turn === 1 && p1State.phase === 'PLANNING', 10000);
-            await waitFor(() => p2State && p2State.turn === 1 && p2State.phase === 'PLANNING', 10000);
+            await waitFor(
+                () => p1State && p1State.turn === 1 && p1State.phase === 'PLANNING',
+                10000
+            );
+            await waitFor(
+                () => p2State && p2State.turn === 1 && p2State.phase === 'PLANNING',
+                10000
+            );
 
             const hub1p1 = p1State.entities.find((e) => e.owner === p1Id);
             const hub1p2 = p2State.entities.find((e) => e.owner === p2Id);
@@ -113,7 +119,10 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
                 { playerId: p2Id, sourceId: hub1p2.id, itemType: 'HUB', angle: 225, distance: 300 }
             ]);
 
-            await waitFor(() => p1State.turn === baseTurn + 1 && p1State.phase === 'PLANNING', 25000);
+            await waitFor(
+                () => p1State.turn === baseTurn + 1 && p1State.phase === 'PLANNING',
+                25000
+            );
 
             // After resolution, each player should have 2 hubs (1 starter, 1 deployed)
             const p1HubsTurn2 = p1State.entities.filter(
@@ -188,7 +197,10 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
                 }
             ]);
 
-            await waitFor(() => p1State.turn === baseTurn + 3 && p1State.phase === 'PLANNING', 30000);
+            await waitFor(
+                () => p1State.turn === baseTurn + 3 && p1State.phase === 'PLANNING',
+                30000
+            );
 
             const p1Extractors = p1State.entities.filter(
                 (e) => e.owner === p1Id && (e.itemType === 'EXTRACTOR' || e.type === 'EXTRACTOR')
@@ -198,7 +210,10 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             // --- TURN 4 (baseTurn + 3) ---
             p1.emit('submitActions', []);
             p2.emit('submitActions', []);
-            await waitFor(() => p1State.turn === baseTurn + 4 && p1State.phase === 'PLANNING', 25000);
+            await waitFor(
+                () => p1State.turn === baseTurn + 4 && p1State.phase === 'PLANNING',
+                25000
+            );
 
             // --- TURN 5 (baseTurn + 4) ---
             // Wait for resolution to BE ACTIVE
@@ -209,15 +224,19 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
                 { playerId: p1Id, sourceId: hub1p1.id, itemType: 'WEAPON', angle: 0, distance: 100 }
             ]);
 
-            await waitFor(() => p1State.turn === baseTurn + 5 && p1State.phase === 'PLANNING', 25000);
+            await waitFor(
+                () => p1State.turn === baseTurn + 5 && p1State.phase === 'PLANNING',
+                25000
+            );
             expect(
                 p1State.entities.find(
                     (e) => e.owner === p1Id && (e.itemType === 'WEAPON' || e.type === 'WEAPON')
                 )
             ).toBeUndefined();
-
         } catch (e) {
-            process.stderr.write('--- SERVER LOGS START ---\n' + serverLogs.join('') + '\n--- SERVER LOGS END ---\n');
+            process.stderr.write(
+                '--- SERVER LOGS START ---\n' + serverLogs.join('') + '\n--- SERVER LOGS END ---\n'
+            );
             throw e;
         } finally {
             p1?.disconnect();

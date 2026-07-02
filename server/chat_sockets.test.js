@@ -42,7 +42,7 @@ describe('Chat Socket Server Handlers', () => {
             client.on('chat:newMessage', resolve);
         });
         client.emit('chat:sendMessage', { text: 'Hello socket world!' });
-        
+
         const received = await msgPromise;
         expect(received.text).toBe('Hello socket world!');
         expect(received.senderId).toBeDefined();

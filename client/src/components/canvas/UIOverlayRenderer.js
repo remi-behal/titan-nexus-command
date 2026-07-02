@@ -1,6 +1,7 @@
 export function drawUIOverlay(ctx, visualEntities, committedActions, maxPullDistance, HUB_RADIUS) {
     const getStrengthColor = (ratio) => {
-        let r, g = 0;
+        let r,
+            g = 0;
         const b = 0;
         if (ratio < 0.5) {
             const segmentRatio = ratio * 2;
@@ -35,13 +36,7 @@ export function drawUIOverlay(ctx, visualEntities, committedActions, maxPullDist
 
             ctx.fillStyle = strengthColor;
             ctx.beginPath();
-            ctx.arc(
-                ax + Math.cos(angleRad) * 15,
-                ay + Math.sin(angleRad) * 15,
-                10,
-                0,
-                Math.PI * 2
-            );
+            ctx.arc(ax + Math.cos(angleRad) * 15, ay + Math.sin(angleRad) * 15, 10, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#fff';
             ctx.font = 'bold 10px Arial';

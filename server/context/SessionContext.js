@@ -30,7 +30,11 @@ export class SessionContext {
 
         this.io.sockets.sockets.forEach((socket) => {
             if (socket.assignedPlayerId) {
-                this.safeEmit(socket, 'gameStateUpdate', this.game.getVisibleState(socket.assignedPlayerId, baseState));
+                this.safeEmit(
+                    socket,
+                    'gameStateUpdate',
+                    this.game.getVisibleState(socket.assignedPlayerId, baseState)
+                );
             } else {
                 this.safeEmit(socket, 'gameStateUpdate', baseState);
             }

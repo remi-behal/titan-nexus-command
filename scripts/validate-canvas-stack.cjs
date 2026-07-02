@@ -17,7 +17,7 @@ function validateCanvasStack(filePath) {
 
     // Independent depths for each context
     const depths = {};
-    CONTEXTS.forEach(c => depths[c] = 0);
+    CONTEXTS.forEach((c) => (depths[c] = 0));
 
     let errors = 0;
 
@@ -26,7 +26,7 @@ function validateCanvasStack(filePath) {
     lines.forEach((line, index) => {
         const lineNum = index + 1;
 
-        CONTEXTS.forEach(ctxName => {
+        CONTEXTS.forEach((ctxName) => {
             const saveRegex = new RegExp(`${ctxName}\\.save\\(`, 'g');
             const restoreRegex = new RegExp(`${ctxName}\\.restore\\(`, 'g');
 
@@ -37,7 +37,9 @@ function validateCanvasStack(filePath) {
                 depths[ctxName] += saves - restores;
 
                 if (depths[ctxName] < 0) {
-                    console.error(`ERROR [${ctxName}]: Stack Underflow at line ${lineNum}: ${line.trim()}`);
+                    console.error(
+                        `ERROR [${ctxName}]: Stack Underflow at line ${lineNum}: ${line.trim()}`
+                    );
                     errors++;
                     // Reset to avoid cascading errors for this line
                     depths[ctxName] = 0;
@@ -47,9 +49,11 @@ function validateCanvasStack(filePath) {
     });
 
     // Final check for each context
-    CONTEXTS.forEach(ctxName => {
+    CONTEXTS.forEach((ctxName) => {
         if (depths[ctxName] !== 0) {
-            console.error(`ERROR [${ctxName}]: Mismatched Canvas Stack! Final Depth: ${depths[ctxName]}. Check for missing .restore() calls.`);
+            console.error(
+                `ERROR [${ctxName}]: Mismatched Canvas Stack! Final Depth: ${depths[ctxName]}. Check for missing .restore() calls.`
+            );
             errors++;
         }
     });

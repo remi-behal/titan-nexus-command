@@ -24,7 +24,6 @@
     - [x] **Echo artillery**: Anti artillery automatic weapon. <!-- id: 91 -->
     - [x] **Overload**: Link spreading weapon. <!-- id: 92 -->
     - [x] **Shield**: Add shield structure type. <!-- id: 93 -->
-    
 - [ ] **Multiplayer Enhancements**: <!-- id: 47 -->
     - [x] Chat system.
     - [x] Lobby management / Player slotting. Very basic lobby implemented<!-- id: 94 -->

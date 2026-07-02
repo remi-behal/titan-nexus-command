@@ -11,11 +11,13 @@ describe('GameState - Landed Structure Cloak Vision', () => {
     });
 
     it('should reveal cloaked enemy structure if a landed HUB arrives via resolveTurn', () => {
-        const p1Hub = game.entities.find(e => e.owner === 'p1');
-        const p2Hub = game.entities.find(e => e.owner === 'p2');
+        const p1Hub = game.entities.find((e) => e.owner === 'p1');
+        const p2Hub = game.entities.find((e) => e.owner === 'p2');
 
-        p1Hub.x = 250; p1Hub.y = 1000;
-        p2Hub.x = 1000; p2Hub.y = 1000;
+        p1Hub.x = 250;
+        p1Hub.y = 1000;
+        p2Hub.x = 1000;
+        p2Hub.y = 1000;
 
         game.addEntity({
             type: 'CLOAKING_FIELD',
@@ -27,13 +29,15 @@ describe('GameState - Landed Structure Cloak Vision', () => {
 
         // Launch a HUB from p1 towards p2Hub (dist 750)
         const actions = {
-            p1: [{
-                playerId: 'p1',
-                sourceId: p1Hub.id,
-                itemType: 'HUB',
-                angle: 0,
-                distance: 720 // Land at 970 (30px away from p2Hub)
-            }]
+            p1: [
+                {
+                    playerId: 'p1',
+                    sourceId: p1Hub.id,
+                    itemType: 'HUB',
+                    angle: 0,
+                    distance: 720 // Land at 970 (30px away from p2Hub)
+                }
+            ]
         };
 
         game.resolveTurn(actions);
@@ -41,14 +45,13 @@ describe('GameState - Landed Structure Cloak Vision', () => {
         // After resolution, p1 has a Hub at (970, 1000)
         // Check Visibility
         const visibleState = game.getVisibleState('p1');
-        const p2HubInState = visibleState.entities.find(e => e.id === p2Hub.id);
+        const p2HubInState = visibleState.entities.find((e) => e.id === p2Hub.id);
 
         expect(p2HubInState).toBeDefined();
     });
 
     it('should reveal cloaked enemy structure even if the landed structure is still UNDEPLOYED', () => {
-
-        const p2Hub = game.entities.find(e => e.owner === 'p2');
+        const p2Hub = game.entities.find((e) => e.owner === 'p2');
 
         p2Hub.x = 1000;
         p2Hub.y = 1000;
@@ -71,7 +74,7 @@ describe('GameState - Landed Structure Cloak Vision', () => {
         });
 
         const visibleState = game.getVisibleState('p1');
-        const p2HubInState = visibleState.entities.find(e => e.id === p2Hub.id);
+        const p2HubInState = visibleState.entities.find((e) => e.id === p2Hub.id);
 
         expect(p2HubInState).toBeDefined();
     });

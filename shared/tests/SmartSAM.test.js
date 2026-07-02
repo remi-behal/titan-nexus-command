@@ -9,9 +9,23 @@ describe('Smart SAM Defense Logic', () => {
 
         game.entities = [];
         // Player 1 Hub
-        const h1 = game.addEntity({ type: 'HUB', x: 100, y: 100, owner: 'p1', deployed: true, isStarter: true });
+        const h1 = game.addEntity({
+            type: 'HUB',
+            x: 100,
+            y: 100,
+            owner: 'p1',
+            deployed: true,
+            isStarter: true
+        });
         // Player 2 Hub
-        const h2 = game.addEntity({ type: 'HUB', x: 1900, y: 100, owner: 'p2', deployed: true, isStarter: true });
+        const h2 = game.addEntity({
+            type: 'HUB',
+            x: 1900,
+            y: 100,
+            owner: 'p2',
+            deployed: true,
+            isStarter: true
+        });
 
         // Player 1 Smart SAM at (300, 100)
         const sam = game.addEntity({
@@ -50,15 +64,17 @@ describe('Smart SAM Defense Logic', () => {
 
         // Verification logic:
         // 1. Check if SAM missile fired
-        const samFired = snapshots.some(s => s.state.entities.some(e => e.itemType === 'SMART_SAM_MISSILE'));
+        const samFired = snapshots.some((s) =>
+            s.state.entities.some((e) => e.itemType === 'SMART_SAM_MISSILE')
+        );
         expect(samFired).toBe(true);
 
         // 2. Both targets should be gone
-        const weaponsLeft = game.entities.filter(e => e.type === 'WEAPON');
+        const weaponsLeft = game.entities.filter((e) => e.type === 'WEAPON');
         expect(weaponsLeft.length).toBe(0);
 
         // 3. Verify no persistence
-        const persistentMissile = game.entities.find(e => e.type === 'SMART_SAM_MISSILE');
+        const persistentMissile = game.entities.find((e) => e.type === 'SMART_SAM_MISSILE');
         expect(persistentMissile).toBeUndefined();
     });
 });

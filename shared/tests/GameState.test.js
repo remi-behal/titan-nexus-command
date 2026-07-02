@@ -607,12 +607,12 @@ describe('GameState - Fog of War', () => {
         const visibleState = game.getVisibleState('player1');
 
         // Close explosion should be in audibleEvents
-        const closeEvt = visibleState.audibleEvents.find(e => e.id === 'expl-close');
+        const closeEvt = visibleState.audibleEvents.find((e) => e.id === 'expl-close');
         expect(closeEvt).toBeDefined();
         expect(closeEvt.type).toBe('EXPLOSION');
 
         // Far explosion should NOT be in audibleEvents
-        const farEvt = visibleState.audibleEvents.find(e => e.id === 'expl-far');
+        const farEvt = visibleState.audibleEvents.find((e) => e.id === 'expl-far');
         expect(farEvt).toBeUndefined();
     });
 });

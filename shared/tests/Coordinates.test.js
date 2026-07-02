@@ -14,7 +14,7 @@ describe('Coordinate Math Stability', () => {
             { x1: 0, y1: 0, x2: 100, y2: 100, w: 0, h: 0 }
         ];
 
-        testCases.forEach(c => {
+        testCases.forEach((c) => {
             const result = GameState.getToroidalVector(c.x1, c.y1, c.x2, c.y2, c.w || W, c.h || H);
             expect(result.dx).not.toBe(NaN);
             expect(result.dy).not.toBe(NaN);
