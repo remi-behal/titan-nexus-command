@@ -405,6 +405,11 @@ function App() {
             });
         };
 
+        const onActionsUpdate = (actions) => {
+            console.log('Received synced actions from server:', actions);
+            setCommittedActions(actions);
+        };
+
         socket.on('connect', onConnect);
         socket.on('disconnect', onDisconnect);
         socket.on('gameStateUpdate', onUpdate);
@@ -419,6 +424,7 @@ function App() {
         socket.on('connect_error', onError);
         socket.on('chat:history', onChatHistory);
         socket.on('chat:newMessage', onChatNewMessage);
+        socket.on('actionsUpdate', onActionsUpdate);
 
         // Initial check in case it connected before the effect ran
         if (socket.connected) onConnect();
@@ -439,6 +445,7 @@ function App() {
             socket.off('connect_error', onError);
             socket.off('chat:history', onChatHistory);
             socket.off('chat:newMessage', onChatNewMessage);
+            socket.off('actionsUpdate', onActionsUpdate);
         };
     }, []);
 
