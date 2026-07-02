@@ -176,6 +176,7 @@ export class GameState {
             this.map.resources = [...(mapConfig.resources || [])];
             this.map.lakes = [...(mapConfig.lakes || [])];
             this.map.mountains = [...(mapConfig.mountains || [])];
+            this.map.modifiers = { ...(mapConfig.modifiers || {}) };
 
             playerIds.forEach((id, index) => {
                 this.players[id] = {
@@ -236,6 +237,7 @@ export class GameState {
                 { id: 'mtn2', x: 1350, y: 1500, radius: 100 },
                 { id: 'mtn3', x: 1500, y: 1500, radius: 100 }
             ];
+            this.map.modifiers = { windEnabled: true };
         }
     }
 

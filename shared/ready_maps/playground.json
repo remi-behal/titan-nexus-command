@@ -17,5 +17,8 @@
             "y": 500,
             "owner": "player2"
         }
-    ]
+    ],
+    "modifiers": {
+        "windEnabled": true
+    }
 }
