@@ -36,8 +36,8 @@
     - [x] **Homing Commitment**: Define "Smart" vs "Dumb" homing. <!-- id: 64 -->
 - [x] **Link Enhancement**: Add direction arrows to links indicating the source Hub. <!-- id: 53 -->
 - [x] **Link Collision**: Destroy structures if their link crosses an existing link. <!-- id: 54 -->
-- [ ] **Resolution Polish**: <!-- id: 58 -->
-    - [ ] Improve Resolution Overlay visibility/intrusiveness. <!-- id: 82 -->
+- [x] **Resolution Polish**: <!-- id: 58 -->
+    - [x] Improve Resolution Overlay visibility/intrusiveness. <!-- id: 82 -->
     - [x] Add offensive roles for Defense structures (TBD). <!-- id: 65 -->
 
 #### Phase 7: Artwork, UI/UX, Music
