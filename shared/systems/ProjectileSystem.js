@@ -162,8 +162,10 @@ export const ProjectileSystem = {
         // 4. Step-based Movement
         const moveDist = proj.velocity;
         const rad = (proj.currentAngle || 0) * (Math.PI / 180);
-        proj.currX = TorusMath.wrapX(proj.currX + Math.cos(rad) * moveDist, gameState.map.width);
-        proj.currY = TorusMath.wrapY(proj.currY + Math.sin(rad) * moveDist, gameState.map.height);
+        const windX = gameState.windState?.active ? gameState.windState.dx : 0;
+        const windY = gameState.windState?.active ? gameState.windState.dy : 0;
+        proj.currX = TorusMath.wrapX(proj.currX + Math.cos(rad) * moveDist + windX, gameState.map.width);
+        proj.currY = TorusMath.wrapY(proj.currY + Math.sin(rad) * moveDist + windY, gameState.map.height);
         proj.totalDistanceMoved += moveDist;
 
         // 5. Fuel & Endurance Checks
@@ -289,20 +291,29 @@ export const ProjectileSystem = {
 
         const progress = t / proj.arrivalTick;
 
+        let windX = 0;
+        let windY = 0;
+        if (gameState.windState?.active) {
+            windX = gameState.windState.dx * t;
+            windY = gameState.windState.dy * t;
+        }
+
         if (t < proj.arrivalTick) {
             // Use explicit intended vector to avoid "Shortest Path" directional flips
             proj.currX = TorusMath.wrapX(
-                proj.startX + proj.intendedDx * progress,
+                proj.startX + proj.intendedDx * progress + windX,
                 gameState.map.width
             );
             proj.currY = TorusMath.wrapY(
-                proj.startY + proj.intendedDy * progress,
+                proj.startY + proj.intendedDy * progress + windY,
                 gameState.map.height
             );
         } else if (t === proj.arrivalTick) {
             // Final arrival precisely at arrivalTick
-            proj.currX = TorusMath.wrapX(proj.startX + proj.intendedDx, gameState.map.width);
-            proj.currY = TorusMath.wrapY(proj.startY + proj.intendedDy, gameState.map.height);
+            const finalWindX = gameState.windState?.active ? gameState.windState.dx * proj.arrivalTick : 0;
+            const finalWindY = gameState.windState?.active ? gameState.windState.dy * proj.arrivalTick : 0;
+            proj.currX = TorusMath.wrapX(proj.startX + proj.intendedDx + finalWindX, gameState.map.width);
+            proj.currY = TorusMath.wrapY(proj.startY + proj.intendedDy + finalWindY, gameState.map.height);
             proj.active = false;
             proj.hitThisTick = true;
 
