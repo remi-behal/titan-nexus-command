@@ -20,6 +20,11 @@ export function registerGameHandlers(socket, io, context, timerService) {
             player2: lockedIn.player2
         };
         context.safeEmit(socket, 'syncStatus', { lockedIn: filteredLockedIn });
+
+        if (socket.assignedPlayerId && socket.assignedPlayerId !== 'spectator') {
+            const currentActions = turnActions[socket.assignedPlayerId] || [];
+            context.safeEmit(socket, 'actionsUpdate', currentActions);
+        }
     });
 
     socket.on('syncActions', (actions) => {

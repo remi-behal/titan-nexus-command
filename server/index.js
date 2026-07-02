@@ -104,6 +104,8 @@ io.on('connection', (socket) => {
                     'gameStateUpdate',
                     context.game.getVisibleState(socket.assignedPlayerId)
                 );
+                const currentActions = context.turnActions[socket.assignedPlayerId] || [];
+                context.safeEmit(socket, 'actionsUpdate', currentActions);
             } else {
                 console.log(`${socket.id} joined match as spectator`);
                 context.safeEmit(socket, 'playerAssignment', 'spectator');
