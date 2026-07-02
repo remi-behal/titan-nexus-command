@@ -8,6 +8,7 @@ export const LobbyOverlay = ({
     onReadyToggle,
     onSetMap,
     onOpenDesigner,
+    onOpenSandbox,
     socketId,
     socket
 }) => {
@@ -106,6 +107,24 @@ export const LobbyOverlay = ({
                     }}
                 >
                     Design Custom Map
+                </button>
+
+                <button
+                    className="sandbox-button"
+                    onClick={onOpenSandbox}
+                    style={{
+                        marginTop: '0.5rem',
+                        padding: '0.8rem 1.5rem',
+                        backgroundColor: '#27ae60',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        width: '100%'
+                    }}
+                >
+                    PRACTICE RANGE
                 </button>
 
                 <p style={{ marginTop: '1rem', opacity: 0.7, fontSize: '0.9rem' }}>
