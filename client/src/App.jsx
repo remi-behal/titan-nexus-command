@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
 import { GameState } from '../../shared/GameState.js';
 import { ENTITY_STATS, GLOBAL_STATS } from '../../shared/constants/EntityStats.js';
@@ -11,6 +11,7 @@ import AssetGallery from './components/AssetGallery';
 import { audioManager, TRACKS } from './utils/AudioManager';
 import SidebarLeft from './components/HUD/SidebarLeft';
 import SidebarRight from './components/HUD/SidebarRight';
+import ChatPanel from './components/HUD/ChatPanel';
 
 const socket = io('/', {
     transports: ['polling', 'websocket'],
@@ -41,6 +42,11 @@ function App() {
     const [audioPlaying, setAudioPlaying] = useState(false);
     const [audioShuffle, setAudioShuffle] = useState(false);
 
+    // Chat System State
+    const [chatMessages, setChatMessages] = useState([]);
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+
     // Subscribe to AudioManager's real-time changes to keep React UI in absolute sync
     useEffect(() => {
         const unsubscribe = audioManager.subscribe((state) => {
@@ -53,6 +59,15 @@ function App() {
         return unsubscribe;
     }, []);
  
+    const handleSendMessage = (text) => {
+        socket.emit('chat:sendMessage', { text });
+    };
+
+    const handleToggleChat = () => {
+        setIsChatOpen((prev) => !prev);
+        setUnreadCount(0);
+    };
+
     const handleVolumeChange = (e) => {
         const val = parseFloat(e.target.value);
         audioManager.setVolume(val);
@@ -361,6 +376,31 @@ function App() {
             socket.emit('authenticate', token);
         };
 
+        const onChatHistory = (history) => {
+            setChatMessages(history);
+        };
+
+        const onChatNewMessage = (msg) => {
+            setChatMessages((prev) => {
+                if (prev.some(m => m.id === msg.id)) return prev;
+                return [...prev, msg];
+            });
+            setIsChatOpen((open) => {
+                if (!open) {
+                    setUnreadCount((count) => count + 1);
+                    // Play ZzFX short high-pitch alert beep
+                    try {
+                        if (typeof window !== 'undefined' && window.zzfx) {
+                            window.zzfx(...[0.1, 0, 800, 0.05, 0.05, 0.05, 0, 1, 0.1]);
+                        }
+                    } catch (e) {
+                        console.error('Audio playback failed', e);
+                    }
+                }
+                return open;
+            });
+        };
+
         socket.on('connect', onConnect);
         socket.on('disconnect', onDisconnect);
         socket.on('gameStateUpdate', onUpdate);
@@ -373,6 +413,8 @@ function App() {
         socket.on('matchStarted', onMatchStarted);
         socket.on('room:mapsUpdate', onMapsUpdate);
         socket.on('connect_error', onError);
+        socket.on('chat:history', onChatHistory);
+        socket.on('chat:newMessage', onChatNewMessage);
 
         // Initial check in case it connected before the effect ran
         if (socket.connected) onConnect();
@@ -391,6 +433,8 @@ function App() {
             socket.off('matchStarted', onMatchStarted);
             socket.off('room:mapsUpdate', onMapsUpdate);
             socket.off('connect_error', onError);
+            socket.off('chat:history', onChatHistory);
+            socket.off('chat:newMessage', onChatNewMessage);
         };
     }, []);
 
@@ -794,6 +838,13 @@ function App() {
     return (
         <div className="App">
             {renderContent()}
+            <ChatPanel
+                messages={chatMessages}
+                onSendMessage={handleSendMessage}
+                isOpen={isChatOpen}
+                onToggle={handleToggleChat}
+                unreadCount={unreadCount}
+            />
         </div>
     );
 }
