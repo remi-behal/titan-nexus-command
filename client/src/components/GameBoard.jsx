@@ -129,6 +129,18 @@ const GameBoard = forwardRef(
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
 
+            // Initialize wind particle array
+            const windParticles = [];
+            const PARTICLE_COUNT = 80;
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                windParticles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    length: Math.random() * 40 + 20,
+                    speedMultiplier: Math.random() * 1.5 + 0.5
+                });
+            }
+
             const updateAndDraw = () => {
                 try {
                     const {
@@ -339,6 +351,40 @@ const GameBoard = forwardRef(
                         }
                     }
                     ctx.restore();
+
+                    // --- DRAW SCREEN-SPACE WIND PARTICLES ---
+                    if (currentGameState.windState?.active && currentGameState.map?.modifiers?.windEnabled) {
+                        const windAngle = currentGameState.windState.angle;
+                        const windSpeed = currentGameState.windState.speed;
+                        const windRad = (windAngle * Math.PI) / 180;
+                        const dx = Math.cos(windRad);
+                        const dy = Math.sin(windRad);
+
+                        ctx.save();
+                        ctx.strokeStyle = 'rgba(0, 243, 255, 0.12)';
+                        ctx.lineWidth = 1;
+
+                        windParticles.forEach((p) => {
+                            // Update position based on wind velocity
+                            p.x += dx * windSpeed * p.speedMultiplier * 3;
+                            p.y += dy * windSpeed * p.speedMultiplier * 3;
+
+                            // Wrap-around screen bounds
+                            if (p.x < -100) p.x = canvas.width + 100;
+                            else if (p.x > canvas.width + 100) p.x = -100;
+
+                            if (p.y < -100) p.y = canvas.height + 100;
+                            else if (p.y > canvas.height + 100) p.y = -100;
+
+                            // Draw streak
+                            ctx.beginPath();
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(p.x + dx * p.length, p.y + dy * p.length);
+                            ctx.stroke();
+                        });
+
+                        ctx.restore();
+                    }
                 } catch (err) {
                     console.error('Rendering Error:', err);
                 }
