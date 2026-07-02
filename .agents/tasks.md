@@ -67,7 +67,7 @@
         - [x] Latency Simulation (100ms+ ping). <!-- id: 68 -->
         - [x] Match Restart Persistence & Auto-Reclaim. <!-- id: 80 -->
     - [ ] **Test Coverage Expansion**: <!-- id: 76 -->
-        - [ ] Server-side Action Validation (ownership, energy, fuel). <!-- id: 70 -->
+        - [x] Server-side Action Validation (ownership, energy, fuel). <!-- id: 70 -->
         - [x] Socket.io event handling & Multi-player sync tests. <!-- id: 77 -->
         - [x] End-to-End game flow. <!-- id: 84 -->
         - [ ] Expanded End-to-End game flow. <!-- id: 71 -->
