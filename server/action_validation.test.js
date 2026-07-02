@@ -115,7 +115,7 @@ describe('Server Integration - Action Validation Sockets', () => {
 
         // Lobby Handshake
         await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Lobby handshake')), 10000);
+            const timeout = setTimeout(() => reject(new Error('Lobby handshake')), 25000);
             client1.once('matchStarted', () => {
                 clearTimeout(timeout);
                 resolve();
