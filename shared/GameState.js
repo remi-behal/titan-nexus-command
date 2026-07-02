@@ -33,6 +33,13 @@ export class GameState {
         };
         this.winner = null;
         this.phase = 'PLANNING'; // 'PLANNING' or 'RESOLVING'
+        this.windState = {
+            active: false,
+            angle: 0,
+            speed: 0,
+            duration: 0,
+            cooldown: 12
+        };
     }
 
     /**
@@ -82,6 +89,38 @@ export class GameState {
      */
     getToroidalDistance(x1, y1, x2, y2) {
         return TorusMath.getToroidalDistance(x1, y1, x2, y2, this.map.width, this.map.height);
+    }
+
+    updateWindCycle() {
+        if (!this.map?.modifiers?.windEnabled) {
+            this.windState.active = false;
+            this.windState.speed = 0;
+            this.windState.dx = 0;
+            this.windState.dy = 0;
+            return;
+        }
+
+        if (this.windState.active) {
+            this.windState.duration--;
+            if (this.windState.duration <= 0) {
+                this.windState.active = false;
+                this.windState.speed = 0;
+                this.windState.angle = 0;
+                this.windState.cooldown = Math.floor(Math.random() * 6) + 10; // 10 to 15 turns
+            }
+        } else {
+            this.windState.cooldown--;
+            if (this.windState.cooldown <= 0) {
+                this.windState.active = true;
+                this.windState.duration = Math.floor(Math.random() * 4) + 3; // 3 to 6 turns
+                this.windState.angle = Math.random() * 360;
+                this.windState.speed = Math.random() * 1.0 + 0.5; // 0.5 to 1.5 pixels per sub-tick
+            }
+        }
+
+        const rad = (this.windState.angle * Math.PI) / 180;
+        this.windState.dx = this.windState.active ? Math.cos(rad) * this.windState.speed : 0;
+        this.windState.dy = this.windState.active ? Math.sin(rad) * this.windState.speed : 0;
     }
 
     /**
@@ -1529,6 +1568,7 @@ export class GameState {
         this.entities = this.entities.filter((e) => e.type !== 'NAPALM_FIRE');
 
         this.turn += 1;
+        this.updateWindCycle();
 
         // Replenish Fuel and Recharge Shields for the next turn's planning phase
         this.entities.forEach((e) => {
