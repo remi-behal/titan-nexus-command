@@ -926,6 +926,12 @@ export class GameState {
                     hasActiveHazards;
 
                 if (hasActiveSimulation) {
+                    // OPTIMIZATION: Pre-filter active defensive structures once per round
+                    const activeDefenses = this.entities.filter((def) => {
+                        const stats = ENTITY_STATS[def.type];
+                        return stats && stats.range && def.deployed !== false && def.disabledUntilTurn <= this.turn;
+                    });
+
                     for (let t = 1; t <= subTicks; t++) {
                         // --- Interception Logic ---
                         // Reset per-round flak tracking for active projectiles
@@ -968,19 +974,18 @@ export class GameState {
                             }
                         });
 
-                        this.entities.forEach((def) => {
-                            // SKIP if not a functional defense or if disabled/out of fuel
+                        activeDefenses.forEach((def) => {
+                            if (def.hp <= 0) return;
+
                             const stats = ENTITY_STATS[def.type];
-                            if (!stats || !stats.range) return;
-                            if (def.deployed === false) return;
+
+                            // SKIP if disabled/out of fuel
                             if (
                                 typeof def.fuel === 'number' &&
                                 def.fuel <= 0 &&
                                 !(def.type === 'FLAK_DEFENSE' && def.flakActive)
                             )
                                 return;
-
-                            if (def.disabledUntilTurn > this.turn) return;
 
                             // Rule: One defensive action per turn round per structure (EXCEPT persistent ones)
                             if (
