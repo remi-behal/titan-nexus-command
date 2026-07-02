@@ -6,6 +6,7 @@ import { SessionContext } from './context/SessionContext.js';
 import { TimerService } from './services/TimerService.js';
 import { registerLobbyHandlers } from './sockets/LobbyHandlers.js';
 import { registerGameHandlers } from './sockets/GameHandlers.js';
+import { registerChatHandlers } from './sockets/ChatHandlers.js';
 import { mapService } from './MapService.js';
 
 const app = express();
@@ -134,6 +135,7 @@ io.on('connection', (socket) => {
 
     registerLobbyHandlers(socket, io, context, timerService, startMatch);
     registerGameHandlers(socket, io, context, timerService);
+    registerChatHandlers(socket, io, context);
 
     socket.on('restartGame', () => {
         timerService.stop();
