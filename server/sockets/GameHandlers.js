@@ -1,5 +1,6 @@
 import { ENTITY_STATS } from '../../shared/constants/EntityStats.js';
 import { mapService } from '../MapService.js';
+import { validateActions } from '../utils/ActionValidator.js';
 
 export function registerGameHandlers(socket, io, context, timerService) {
     const { game, lockedIn, turnActions } = context;
@@ -52,20 +53,7 @@ export function registerGameHandlers(socket, io, context, timerService) {
         if (!context.matchStarted || game.phase !== 'PLANNING') return;
         if (socket.assignedPlayerId !== 'player1' && socket.assignedPlayerId !== 'player2') return;
 
-        const validatedActions = [];
-        let totalCost = 0;
-        const player = game.players[socket.assignedPlayerId];
-
-        for (const action of actions) {
-            const sourceEntity = game.entities.find((e) => e.id === action.sourceId);
-            if (!sourceEntity || sourceEntity.owner !== socket.assignedPlayerId) continue;
-
-            const cost = ENTITY_STATS[action.itemType]?.cost || 0;
-            if (player.energy < totalCost + cost) continue;
-
-            totalCost += cost;
-            validatedActions.push({ ...action, playerId: socket.assignedPlayerId });
-        }
+        const validatedActions = validateActions(actions, socket.assignedPlayerId, game);
 
         turnActions[socket.assignedPlayerId] = validatedActions;
         lockedIn[socket.assignedPlayerId] = true;
