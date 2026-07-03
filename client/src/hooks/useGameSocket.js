@@ -76,6 +76,10 @@ export function useGameSocket() {
         socket.emit('lobby:setMap', mapName);
     };
 
+    const handleSetTeam = (team) => {
+        socket.emit('lobby:setTeam', { team });
+    };
+
     const handleMapSave = (mapData) => {
         const name = prompt('Enter a name for your map:');
         if (name) {
@@ -257,6 +261,7 @@ export function useGameSocket() {
         handleClaimSeat,
         handleReadyToggle,
         handleSetMap,
+        handleSetTeam,
         handleMapSave
     };
 }

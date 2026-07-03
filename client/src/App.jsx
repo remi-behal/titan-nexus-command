@@ -42,6 +42,7 @@ function App() {
         handleClaimSeat,
         handleReadyToggle,
         handleSetMap,
+        handleSetTeam,
         handleMapSave
     } = useGameSocket();
 
@@ -243,6 +244,11 @@ function App() {
     const triggerSetMap = (mapName) => {
         audioManager.playClick();
         handleSetMap(mapName);
+    };
+
+    const triggerSetTeam = (team) => {
+        audioManager.playClick();
+        handleSetTeam(team);
     };
 
     // CRASH REPORTER: Catch any runtime errors and show them on screen
@@ -730,6 +736,7 @@ function App() {
                     onSetMap={triggerSetMap}
                     onOpenDesigner={() => setCurrentView('DESIGNER')}
                     onOpenSandbox={handleOpenSandbox}
+                    onSetTeam={triggerSetTeam}
                     socketId={socket.id}
                     socket={socket}
                 />
@@ -870,8 +877,15 @@ function App() {
                             <div
                                 className="winner-card"
                                 style={{
-                                    borderColor:
-                                        playerState.players[playerState.winner]?.color || '#fff'
+                                    borderColor: (() => {
+                                        if (playerState.players[playerState.winner]) {
+                                            return playerState.players[playerState.winner].color;
+                                        }
+                                        const member = Object.keys(playerState.players).find(
+                                            (pid) => playerState.players[pid].team === playerState.winner
+                                        );
+                                        return member ? playerState.players[member].color : '#00f3ff';
+                                    })()
                                 }}
                             >
                                 <h2>
@@ -880,6 +894,8 @@ function App() {
                                 <p>
                                     {playerState.winner === 'DRAW'
                                         ? 'Mutual destruction on Titan.'
+                                        : playerState.winner.startsWith('Team')
+                                        ? `${playerState.winner} has conquered the sector.`
                                         : `Player ${playerState.winner} has conquered the sector.`}
                                 </p>
                                 <button className="restart-btn" onClick={triggerRestart}>

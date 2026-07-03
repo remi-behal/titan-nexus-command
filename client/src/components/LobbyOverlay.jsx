@@ -9,6 +9,7 @@ export const LobbyOverlay = ({
     onSetMap,
     onOpenDesigner,
     onOpenSandbox,
+    onSetTeam,
     socketId,
     socket
 }) => {
@@ -25,23 +26,38 @@ export const LobbyOverlay = ({
 
                 <div className="slots-container">
                     {lobbyUpdate.slots.map((slot, index) => (
-                        <button
+                        <div
                             key={index}
                             className={`slot-button slot-p${index + 1} ${slot ? 'occupied' : ''} ${mySeatIndex === index ? 'my-seat' : ''} ${slot?.ready ? 'is-ready' : ''}`}
                             onClick={() => !slot && onClaimSeat(index)}
-                            disabled={!!slot && slot.socketId !== socketId}
                         >
                             <span>Player {index + 1}</span>
                             {slot ? (
-                                <span className={`status-badge ${slot.ready ? 'ready' : ''}`}>
-                                    {slot.ready ? 'READY' : 'CLAIMED'}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                    {mySeatIndex === index ? (
+                                        <select
+                                            value={slot.team || 'Team A'}
+                                            onChange={(e) => onSetTeam(e.target.value)}
+                                            className="slot-team-select"
+                                            onClick={(e) => e.stopPropagation()} // Prevent triggering seat claim click
+                                        >
+                                            <option value="Team A">Team A</option>
+                                            <option value="Team B">Team B</option>
+                                        </select>
+                                    ) : (
+                                        <span className="slot-team-badge">{slot.team || 'Team A'}</span>
+                                    )}
+                                    <span className={`status-badge ${slot.ready ? 'ready' : ''}`}>
+                                        {slot.ready ? 'READY' : 'CLAIMED'}
+                                    </span>
+                                </div>
                             ) : (
                                 <span className="status-badge">AVAILABLE</span>
                             )}
-                        </button>
+                        </div>
                     ))}
                 </div>
+
 
                 <div className="map-selection">
                     <label>Battlefield:</label>
