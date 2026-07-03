@@ -196,7 +196,7 @@ export class GameState {
                 };
 
                 // Find base by owner or by index/team
-                let base = null;
+                let base;
                 if (team === 'Team A' && teamAIndex < teamABases.length) {
                     base = teamABases[teamAIndex++];
                 } else if (team === 'Team B' && teamBIndex < teamBBases.length) {

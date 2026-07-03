@@ -86,10 +86,10 @@ describe('GameState - Team Starting Base Assignment', () => {
         const p3Hub = game.entities.find(e => e.owner === 'p3' && e.type === 'HUB');
         const p4Hub = game.entities.find(e => e.owner === 'p4' && e.type === 'HUB');
 
-        // Team A left side, Team B right side
         expect(p1Hub.x).toBe(200); // 1st Team A base
         expect(p2Hub.x).toBe(1800); // 1st Team B base
         expect(p3Hub.x).toBe(200); // 2nd Team A base
+        expect(p4Hub.x).toBe(1800); // 2nd Team B base
     });
 
     it('should resolve team-level victory when all opposing team members have lost all hubs', () => {

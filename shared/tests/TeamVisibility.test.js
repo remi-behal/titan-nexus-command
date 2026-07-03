@@ -44,7 +44,6 @@ describe('VisibilitySystem - Team Shared Vision', () => {
 
     it('should allow teammates to see friendly cloaked units', () => {
         // Move p2's hub next to a friendly Cloaking Field placed by p1
-        const p1Hub = game.entities.find(e => e.owner === 'p1');
         const p2Hub = game.entities.find(e => e.owner === 'p2');
         const p3Hub = game.entities.find(e => e.owner === 'p3');
 
@@ -62,7 +61,6 @@ describe('VisibilitySystem - Team Shared Vision', () => {
         // Get visible states
         const p1State = game.getVisibleState('p1');
         const p2State = game.getVisibleState('p2');
-        const p3State = game.getVisibleState('p3');
 
         // p1 and teammate p2 should see the Cloaking Field and p2's hub
         expect(p1State.entities.find(e => e.id === cloak.id)).toBeDefined();
