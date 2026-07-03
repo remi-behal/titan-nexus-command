@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './LobbyOverlay.css';
 
 export const LobbyOverlay = ({
@@ -13,12 +13,33 @@ export const LobbyOverlay = ({
     onMapDelete,
     socketId,
     socket,
-    onLeaveRoom
+    onLeaveRoom,
+    lastError,
+    setLastError
 }) => {
+    const [showNameModal, setShowNameModal] = useState(false);
+    const [targetSeatIndex, setTargetSeatIndex] = useState(null);
+    const [nameInput, setNameInput] = useState('');
+
     if (!lobbyUpdate) return null;
 
     const mySeat = lobbyUpdate.slots.find((s) => s && s.socketId === socketId);
     const mySeatIndex = lobbyUpdate.slots.findIndex((s) => s && s.socketId === socketId);
+
+    const handleConfirmName = () => {
+        if (targetSeatIndex !== null && nameInput.trim()) {
+            localStorage.setItem('titan_nexus_player_name', nameInput.trim());
+            onClaimSeat(targetSeatIndex, nameInput.trim());
+            setShowNameModal(false);
+            setTargetSeatIndex(null);
+        }
+    };
+
+    const handleCancelName = () => {
+        setShowNameModal(false);
+        setTargetSeatIndex(null);
+        if (setLastError) setLastError(null);
+    };
 
     return (
         <div className="lobby-overlay">
@@ -26,14 +47,28 @@ export const LobbyOverlay = ({
                 <h1 className="lobby-title">TITAN: {(lobbyUpdate.id || 'NEXUS').toUpperCase()}</h1>
                 <p>Waiting for players...</p>
 
+                {lastError && (
+                    <div className="lobby-error-banner" onClick={() => setLastError && setLastError(null)}>
+                        [SYSTEM ERROR]: {lastError} (Click to dismiss)
+                    </div>
+                )}
+
                 <div className="slots-container">
                     {lobbyUpdate.slots.map((slot, index) => (
                         <div
                             key={index}
                             className={`slot-button slot-p${index + 1} ${slot ? 'occupied' : ''} ${mySeatIndex === index ? 'my-seat' : ''} ${slot?.ready ? 'is-ready' : ''}`}
-                            onClick={() => !slot && onClaimSeat(index)}
+                            onClick={() => {
+                                if (!slot) {
+                                    setTargetSeatIndex(index);
+                                    const savedName = localStorage.getItem('titan_nexus_player_name') || `Pilot_${Math.floor(Math.random() * 9000 + 1000)}`;
+                                    setNameInput(savedName);
+                                    if (setLastError) setLastError(null);
+                                    setShowNameModal(true);
+                                }
+                            }}
                         >
-                            <span>Player {index + 1}</span>
+                            <span>{slot ? (slot.playerName || `Player ${index + 1}`) : `Player ${index + 1}`}</span>
                             {slot ? (
                                 <div style={{ display: 'flex', alignItems: 'center' }}>
                                     {mySeatIndex === index ? (
@@ -181,6 +216,32 @@ export const LobbyOverlay = ({
                     Match starts when both players are ready.
                 </p>
             </div>
+
+            {showNameModal && (
+                <div className="name-modal-backdrop">
+                    <div className="name-modal-content">
+                        <h3 className="name-modal-title">SECURE COMMUNICATIONS</h3>
+                        <p className="name-modal-prompt">Enter signature for slot #{targetSeatIndex + 1}:</p>
+                        <input
+                            type="text"
+                            value={nameInput}
+                            onChange={(e) => setNameInput(e.target.value)}
+                            maxLength={15}
+                            placeholder="COMM_HANDLE"
+                            className="name-input-field"
+                            autoFocus
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleConfirmName();
+                                if (e.key === 'Escape') handleCancelName();
+                            }}
+                        />
+                        <div className="name-modal-buttons">
+                            <button className="confirm-btn" onClick={handleConfirmName}>CONFIRM</button>
+                            <button className="cancel-btn" onClick={handleCancelName}>CANCEL</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

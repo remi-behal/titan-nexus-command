@@ -66,8 +66,8 @@ export function useGameSocket() {
         setMatchStarted(false);
     };
 
-    const handleClaimSeat = (index) => {
-        socket.emit('lobby:claimSeat', index);
+    const handleClaimSeat = (index, playerName) => {
+        socket.emit('lobby:claimSeat', { slotIndex: index, playerName });
     };
 
     const handleReadyToggle = (isReady) => {
@@ -177,6 +177,10 @@ export function useGameSocket() {
             setLastError(err.message || JSON.stringify(err));
         };
 
+        const onLobbyError = (err) => {
+            setLastError(err.message || JSON.stringify(err));
+        };
+
         const onResolutionStatus = (status) => {
             setIsResolving(status.active);
             if (status.active) {
@@ -251,6 +255,7 @@ export function useGameSocket() {
         socket.on('lobby:joinedRoom', onJoinedRoom);
         socket.on('lobby:leftRoom', onLeftRoom);
         socket.on('connect_error', onError);
+        socket.on('lobby:error', onLobbyError);
         socket.on('chat:history', onChatHistory);
         socket.on('chat:newMessage', onChatNewMessage);
         socket.on('actionsUpdate', onActionsUpdate);
@@ -277,6 +282,7 @@ export function useGameSocket() {
             socket.off('lobby:joinedRoom', onJoinedRoom);
             socket.off('lobby:leftRoom', onLeftRoom);
             socket.off('connect_error', onError);
+            socket.off('lobby:error', onLobbyError);
             socket.off('chat:history', onChatHistory);
             socket.off('chat:newMessage', onChatNewMessage);
             socket.off('actionsUpdate', onActionsUpdate);

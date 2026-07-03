@@ -322,3 +322,134 @@
     box-shadow: 0 0 15px rgba(255, 0, 127, 0.5);
 }
 
+/* Custom Player Name Modal Styles */
+.name-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(2, 2, 8, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+}
+
+.name-modal-content {
+    background: rgba(6, 6, 20, 0.95);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    border-top: 3px solid #00f3ff;
+    padding: 2.5rem;
+    border-radius: 12px;
+    box-shadow: 
+        0 20px 50px rgba(0, 0, 0, 0.8),
+        0 0 30px rgba(0, 243, 255, 0.1);
+    width: 380px;
+    text-align: center;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+.name-modal-title {
+    color: #00f3ff;
+    font-size: 1.3rem;
+    letter-spacing: 2px;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+}
+
+.name-modal-prompt {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    letter-spacing: 1px;
+}
+
+.name-input-field {
+    width: 100%;
+    padding: 0.8rem;
+    background: rgba(0, 0, 0, 0.6);
+    color: #39ff14;
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    border-radius: 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.1rem;
+    outline: none;
+    text-align: center;
+    margin-bottom: 2rem;
+    letter-spacing: 2px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.name-input-field:focus {
+    border-color: #00f3ff;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+}
+
+.name-modal-buttons {
+    display: flex;
+    gap: 1rem;
+}
+
+.name-modal-buttons button {
+    flex: 1;
+    padding: 0.8rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-weight: bold;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.name-modal-buttons .confirm-btn {
+    background: transparent;
+    border: 1px solid #39ff14;
+    color: #39ff14;
+}
+
+.name-modal-buttons .confirm-btn:hover {
+    background: #39ff14;
+    color: #000;
+    box-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+}
+
+.name-modal-buttons .cancel-btn {
+    background: transparent;
+    border: 1px solid #ff007f;
+    color: #ff007f;
+}
+
+.name-modal-buttons .cancel-btn:hover {
+    background: #ff007f;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(255, 0, 127, 0.4);
+}
+
+/* Lobby System Error Banner */
+.lobby-error-banner {
+    background: rgba(255, 0, 127, 0.15);
+    border: 1px solid #ff007f;
+    color: #ff007f;
+    padding: 0.8rem;
+    border-radius: 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-shadow: 0 0 5px rgba(255, 0, 127, 0.3);
+    animation: errorGlow 2s infinite alternate;
+}
+
+@keyframes errorGlow {
+    from {
+        box-shadow: 0 0 5px rgba(255, 0, 127, 0.1);
+    }
+    to {
+        box-shadow: 0 0 12px rgba(255, 0, 127, 0.3);
+    }
+}
+

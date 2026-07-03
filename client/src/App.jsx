@@ -757,6 +757,8 @@ function App() {
                     socketId={socket.id}
                     socket={socket}
                     onLeaveRoom={leaveRoom}
+                    lastError={lastError}
+                    setLastError={setLastError}
                 />
             );
         }
@@ -914,7 +916,7 @@ function App() {
                                         ? 'Mutual destruction on Titan.'
                                         : playerState.winner.startsWith('Team')
                                         ? `${playerState.winner} has conquered the sector.`
-                                        : `Player ${playerState.winner} has conquered the sector.`}
+                                        : `${playerState.players[playerState.winner]?.name || playerState.winner} has conquered the sector.`}
                                 </p>
                                 <button className="restart-btn" onClick={triggerRestart}>
                                     Initialize New Mission

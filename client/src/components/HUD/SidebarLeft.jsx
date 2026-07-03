@@ -81,7 +81,7 @@ export default function SidebarLeft({
                 <div className="stats-blocks">
                     <div className="stat-group">
                         <span className="label">You:</span>
-                        <span className="badge">{myPlayerId || 'Pending'}</span>
+                        <span className="badge">{playerState?.players?.[myPlayerId]?.name || myPlayerId || 'Pending'}</span>
                     </div>
                     <div className="stat-group energy-group">
                         <span className="label">Energy:</span>

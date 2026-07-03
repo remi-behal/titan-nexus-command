@@ -24,18 +24,21 @@ export default function SidebarRight({
     return (
         <aside className="sidebar-right">
             <div className="sync-monitor">
-                <div
-                    className={`player-dot ${syncStatus?.lockedIn?.player1 ? 'ready' : ''}`}
-                    title="Player 1"
-                >
-                    P1
-                </div>
-                <div
-                    className={`player-dot ${syncStatus?.lockedIn?.player2 ? 'ready' : ''}`}
-                    title="Player 2"
-                >
-                    P2
-                </div>
+                {Object.keys(playerState?.players || { player1: {}, player2: {} }).map((pid) => {
+                    const p = playerState?.players?.[pid];
+                    const isReady = syncStatus?.lockedIn?.[pid];
+                    const name = p?.name || pid.replace('player', 'Player ');
+                    return (
+                        <div
+                            key={pid}
+                            className={`player-dot ${isReady ? 'ready' : ''}`}
+                            title={name}
+                            style={p?.color ? { borderColor: p.color } : {}}
+                        >
+                            {name.slice(0, 2).toUpperCase()}
+                        </div>
+                    );
+                })}
             </div>
 
             <div className="controls-stack">
