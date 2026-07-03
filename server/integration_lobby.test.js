@@ -66,4 +66,13 @@ describe('Lobby Integration Handshake', () => {
         });
         expect(update.slots[0].token).toBe('test-token');
     });
+
+    it('should allow claiming a seat with a custom name', async () => {
+        const update = await new Promise((resolve) => {
+            client1.once('lobby:update', resolve);
+            client1.emit('lobby:claimSeat', { slotIndex: 1, playerName: 'Commander X' });
+        });
+        expect(update.slots[1].playerName).toBe('Commander X');
+        expect(update.slots[0]).toBeNull();
+    });
 });

@@ -84,7 +84,9 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
         let slotIndex = room.slots.findIndex((s) => s === null);
         if (slotIndex === -1) return;
 
-        const res = room.claimSeat(slotIndex, socket.currentToken, socket.id);
+        const name = options.playerName || `Pilot_${Math.floor(Math.random() * 9000 + 1000)}`;
+
+        const res = room.claimSeat(slotIndex, socket.currentToken, socket.id, name);
         if (res.success) {
             socket.assignedPlayerId = `player${slotIndex + 1}`;
             context.safeEmit(socket, 'playerAssignment', socket.assignedPlayerId);
@@ -99,17 +101,28 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
         }
     });
 
-    socket.on('lobby:claimSeat', (slotIndex) => {
+    socket.on('lobby:claimSeat', (payload) => {
         const roomId = socket.currentRoomId;
         if (!roomId) return;
         const room = lobbyManager.rooms.get(roomId);
         if (!room) return;
 
-        const res = room.claimSeat(slotIndex, socket.currentToken, socket.id);
+        let slotIndex;
+        let playerName;
+        if (payload && typeof payload === 'object') {
+            slotIndex = payload.slotIndex;
+            playerName = payload.playerName;
+        } else {
+            slotIndex = payload;
+        }
+
+        const res = room.claimSeat(slotIndex, socket.currentToken, socket.id, playerName);
         if (res.success) {
             socket.assignedPlayerId = `player${slotIndex + 1}`;
             context.safeEmit(socket, 'playerAssignment', socket.assignedPlayerId);
             io.to(roomId).emit('lobby:update', room.getUpdate());
+        } else {
+            socket.emit('lobby:error', { message: res.message });
         }
     });
 
