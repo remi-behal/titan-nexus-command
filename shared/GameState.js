@@ -162,7 +162,7 @@ export class GameState {
     /**
      * Initialize a new game for a set of players
      */
-    initializeGame(playerIds, mapConfig = null, playerTeams = null) {
+    initializeGame(playerIds, mapConfig = null, playerTeams = null, playerNames = null) {
         this.turn = 1;
         this.entities = [];
         this.links = [];
@@ -188,11 +188,13 @@ export class GameState {
 
             playerIds.forEach((id, index) => {
                 const team = playerTeams ? playerTeams[id] : null;
+                const name = playerNames ? playerNames[id] : null;
                 this.players[id] = {
                     energy: GLOBAL_STATS.STARTING_ENERGY,
                     color: `hsl(${index * 60}, 85%, 60%)`,
                     alive: true,
-                    team: team || null
+                    team: team || null,
+                    name: name || `Player ${index + 1}`
                 };
 
                 // Find base by owner or by index/team
@@ -242,11 +244,13 @@ export class GameState {
 
             playerIds.forEach((id, index) => {
                 const team = playerTeams ? playerTeams[id] : null;
+                const name = playerNames ? playerNames[id] : null;
                 this.players[id] = {
                     energy: GLOBAL_STATS.STARTING_ENERGY,
                     color: `hsl(${index * 60}, 85%, 60%)`,
                     alive: true,
-                    team: team || null
+                    team: team || null,
+                    name: name || `Player ${index + 1}`
                 };
 
                 let startX, startY;

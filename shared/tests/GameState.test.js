@@ -905,4 +905,16 @@ describe('GameState - Slingshot Safety', () => {
             expect(isInvalid).toBe(false);
         });
     });
+
+    describe('GameState Player Naming', () => {
+        it('should assign custom player names during initializeGame', () => {
+            const game = new GameState();
+            game.initializeGame(['player1', 'player2'], null, null, {
+                player1: 'Sergeant Avery',
+                player2: 'Corporal Hicks'
+            });
+            expect(game.players.player1.name).toBe('Sergeant Avery');
+            expect(game.players.player2.name).toBe('Corporal Hicks');
+        });
+    });
 });

@@ -37,10 +37,18 @@ function startMatch(roomId = 'default') {
     console.log(`[Lobby] Starting match in room ${roomId}...`);
     const room = context.lobbyManager.getOrCreateRoom(roomId);
 
+    const playerTeams = {};
+    const playerNames = {};
+
     // Assign players based on lobby slots
     context.playerIds.forEach((pid, index) => {
-        room.playerAssignments[pid] = room.slots[index]?.token || null;
-        room.activeSockets[pid] = room.slots[index]?.socketId || null;
+        const slot = room.slots[index];
+        room.playerAssignments[pid] = slot?.token || null;
+        room.activeSockets[pid] = slot?.socketId || null;
+        if (slot) {
+            playerTeams[pid] = slot.team;
+            playerNames[pid] = slot.playerName || `Player ${index + 1}`;
+        }
     });
 
     // Load custom map if selected
@@ -56,7 +64,7 @@ function startMatch(roomId = 'default') {
         }
     }
 
-    room.game.initializeGame(context.playerIds, mapConfig);
+    room.game.initializeGame(context.playerIds, mapConfig, playerTeams, playerNames);
     room.matchStarted = true;
     room.status = 'IN_GAME';
 
