@@ -1,3 +1,5 @@
+import { mapService } from '../MapService.js';
+
 export function registerLobbyHandlers(socket, io, context, timerService, startMatchCallback) {
     const { lobbyManager } = context;
 
@@ -15,7 +17,7 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
 
             const filledSlots = room.slots.filter((s) => s !== null);
             const allReady = filledSlots.every((s) => s.ready);
-            if (allReady && (filledSlots.length === 2 || options.force)) {
+            if (allReady && (filledSlots.length >= 2 || options.force)) {
                 startMatchCallback();
             }
         }
@@ -37,9 +39,25 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
             io.emit('lobby:update', room.getUpdate());
 
             const filledSlots = room.slots.filter((s) => s !== null);
-            if (filledSlots.length === 2 && filledSlots.every((s) => s.ready)) {
+            if (filledSlots.length >= 2 && filledSlots.every((s) => s.ready)) {
                 startMatchCallback();
             }
+        }
+    });
+
+    socket.on('lobby:setTeam', ({ team }) => {
+        const room = lobbyManager.getOrCreateRoom('default');
+        
+        let maxLimit = 4;
+        if (room.selectedMapName) {
+            const mapConfig = mapService.loadReadyMap(room.selectedMapName);
+            if (mapConfig && mapConfig.maxPlayersPerTeam && mapConfig.maxPlayersPerTeam[team] !== undefined) {
+                maxLimit = mapConfig.maxPlayersPerTeam[team];
+            }
+        }
+
+        if (room.setTeam(socket.id, team, maxLimit)) {
+            io.emit('lobby:update', room.getUpdate());
         }
     });
 
@@ -52,3 +70,4 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
         }
     });
 }
+

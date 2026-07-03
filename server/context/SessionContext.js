@@ -5,16 +5,25 @@ export class SessionContext {
     constructor() {
         this.game = new GameState();
         this.lobbyManager = new LobbyManager();
-        this.playerIds = ['player1', 'player2'];
-        this.playerAssignments = { player1: null, player2: null };
-        this.activeSockets = { player1: null, player2: null };
-        this.turnActions = { player1: null, player2: null };
-        this.lockedIn = { player1: false, player2: false };
+        this.playerIds = Array.from({ length: 8 }, (_, i) => `player${i + 1}`);
+        this.playerAssignments = {};
+        this.activeSockets = {};
+        this.turnActions = {};
+        this.lockedIn = {};
+        
+        this.playerIds.forEach((pid) => {
+            this.playerAssignments[pid] = null;
+            this.activeSockets[pid] = null;
+            this.turnActions[pid] = null;
+            this.lockedIn[pid] = false;
+        });
+
         this.matchStarted = false;
         this.SIMULATED_LATENCY = parseInt(process.env.SIMULATED_LATENCY) || 0;
         this.TURN_DURATION = parseInt(process.env.TURN_DURATION) || 30;
         this.io = null;
     }
+
 
     safeEmit(emitter, event, data) {
         if (this.SIMULATED_LATENCY > 0) {
@@ -46,9 +55,18 @@ export class SessionContext {
         const room = this.lobbyManager.getOrCreateRoom('default');
         room.status = 'LOBBY';
         room.slots = new Array(room.maxPlayers).fill(null);
-        this.playerAssignments = { player1: null, player2: null };
-        this.activeSockets = { player1: null, player2: null };
-        this.turnActions = { player1: null, player2: null };
-        this.lockedIn = { player1: false, player2: false };
+        
+        this.playerAssignments = {};
+        this.activeSockets = {};
+        this.turnActions = {};
+        this.lockedIn = {};
+        
+        this.playerIds.forEach((pid) => {
+            this.playerAssignments[pid] = null;
+            this.activeSockets[pid] = null;
+            this.turnActions[pid] = null;
+            this.lockedIn[pid] = false;
+        });
     }
+
 }

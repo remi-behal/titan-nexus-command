@@ -44,7 +44,7 @@ describe('Lobby Integration Handshake', () => {
             client1.emit('authenticate', 'test-token');
         });
         expect(update.id).toBe('default');
-        expect(update.slots).toHaveLength(2);
+        expect(update.slots).toHaveLength(8);
     });
 
     it('should allow claiming a seat and receiving update', async () => {

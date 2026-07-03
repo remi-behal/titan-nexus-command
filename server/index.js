@@ -38,10 +38,10 @@ function startMatch() {
     const room = context.lobbyManager.getOrCreateRoom('default');
 
     // Assign players based on lobby slots
-    context.playerAssignments.player1 = room.slots[0]?.token || null;
-    context.playerAssignments.player2 = room.slots[1]?.token || null;
-    context.activeSockets.player1 = room.slots[0]?.socketId || null;
-    context.activeSockets.player2 = room.slots[1]?.socketId || null;
+    context.playerIds.forEach((pid, index) => {
+        context.playerAssignments[pid] = room.slots[index]?.token || null;
+        context.activeSockets[pid] = room.slots[index]?.socketId || null;
+    });
 
     // Load custom map if selected
     let mapConfig = null;
@@ -114,10 +114,12 @@ io.on('connection', (socket) => {
             context.safeEmit(socket, 'lobby:update', room.getUpdate()); // Send lobby state on reconnect
 
             // Only send valid player lock status
-            const filteredLockedIn = {
-                player1: context.lockedIn.player1,
-                player2: context.lockedIn.player2
-            };
+            const filteredLockedIn = {};
+            context.playerIds.forEach((pid) => {
+                if (context.playerAssignments[pid]) {
+                    filteredLockedIn[pid] = context.lockedIn[pid];
+                }
+            });
             context.safeEmit(io, 'syncStatus', { lockedIn: filteredLockedIn });
         } else {
             // Lobby Phase

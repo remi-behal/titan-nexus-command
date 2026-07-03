@@ -1,5 +1,5 @@
 export class LobbyRoom {
-    constructor(id, maxPlayers = 2) {
+    constructor(id, maxPlayers = 8) {
         this.id = id;
         this.maxPlayers = maxPlayers;
         this.slots = new Array(maxPlayers).fill(null);
@@ -38,9 +38,24 @@ export class LobbyRoom {
             slot && (slot.token === token || slot.socketId === socketId) ? null : slot
         );
 
-        this.slots[slotIndex] = { token, socketId, ready: false };
+        const defaultTeam = slotIndex < 4 ? 'Team A' : 'Team B';
+        this.slots[slotIndex] = { token, socketId, ready: false, team: defaultTeam };
         return { success: true };
     }
+
+    setTeam(socketId, team, maxPlayersPerTeam = 4) {
+        const slot = this.slots.find((s) => s && s.socketId === socketId);
+        if (!slot) return false;
+
+        const count = this.slots.filter((s) => s && s.team === team && s.socketId !== socketId).length;
+        if (count >= maxPlayersPerTeam) {
+            return false;
+        }
+
+        slot.team = team;
+        return true;
+    }
+
 
     toggleReady(socketId, isReady) {
         const slot = this.slots.find((s) => s && s.socketId === socketId);
