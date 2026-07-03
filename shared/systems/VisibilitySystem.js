@@ -9,9 +9,16 @@ export const VisibilitySystem = {
     isPositionVisible(gameState, playerId, x, y, entities = null) {
         if (!playerId || playerId === 'spectator') return true;
 
+        const player = gameState.players[playerId];
+        const team = player ? player.team : null;
+
         const sourceEntities = entities || gameState.entities;
         return sourceEntities.some((e) => {
-            if (e.owner !== playerId) return false;
+            const ownerPlayer = gameState.players[e.owner];
+            const ownerTeam = ownerPlayer ? ownerPlayer.team : null;
+            const isTeammate = team && ownerTeam && team === ownerTeam;
+
+            if (e.owner !== playerId && !isTeammate) return false;
 
             // Correctly identify stat key for buildings vs projectiles
             const statKey =
@@ -101,8 +108,16 @@ export const VisibilitySystem = {
     getVisionCircles(gameState, playerId) {
         if (!playerId || playerId === 'spectator') return [];
 
+        const player = gameState.players[playerId];
+        const team = player ? player.team : null;
+
         return gameState.entities
-            .filter((e) => e.owner === playerId)
+            .filter((e) => {
+                const ownerPlayer = gameState.players[e.owner];
+                const ownerTeam = ownerPlayer ? ownerPlayer.team : null;
+                const isTeammate = team && ownerTeam && team === ownerTeam;
+                return e.owner === playerId || isTeammate;
+            })
             .map((e) => {
                 // Consistent statKey logic with isPositionVisible
                 const statKey =
@@ -136,7 +151,10 @@ export const VisibilitySystem = {
             if (ent.scouted) return;
 
             for (const observerId of observerIds) {
-                if (ent.owner === observerId) continue;
+                const entOwnerPlayer = gameState.players[ent.owner];
+                const observerPlayer = gameState.players[observerId];
+                const isTeammate = entOwnerPlayer && observerPlayer && entOwnerPlayer.team && entOwnerPlayer.team === observerPlayer.team;
+                if (ent.owner === observerId || isTeammate) continue;
 
                 const ex = ent.currX !== undefined ? ent.currX : ent.x;
                 const ey = ent.currY !== undefined ? ent.currY : ent.y;
@@ -184,16 +202,28 @@ export const VisibilitySystem = {
             return state;
         }
 
+        const player = gameState.players[playerId];
+        const team = player ? player.team : null;
+
         const isVisible = (x, y, targetOwnerId = null) => {
+            const targetOwnerPlayer = gameState.players[targetOwnerId];
+            const targetOwnerTeam = targetOwnerPlayer ? targetOwnerPlayer.team : null;
+            const isTeammate = team && targetOwnerTeam && team === targetOwnerTeam;
+
             if (
                 targetOwnerId &&
                 targetOwnerId !== playerId &&
+                !isTeammate &&
                 this.isPositionCloaked(gameState, targetOwnerId, x, y, state.entities)
             ) {
                 // Cloaked: only visible at detectionRange (75px)
                 const detectionRange = ENTITY_STATS.CLOAKING_FIELD.detectionRange || 75;
                 return state.entities.some((e) => {
-                    if (e.owner !== playerId) return false;
+                    const observerPlayer = gameState.players[e.owner];
+                    const observerTeam = observerPlayer ? observerPlayer.team : null;
+                    const isObserverTeammate = team && observerTeam && team === observerTeam;
+
+                    if (e.owner !== playerId && !isObserverTeammate) return false;
                     const ex = e.currX !== undefined ? e.currX : e.x;
                     const ey = e.currY !== undefined ? e.currY : e.y;
                     const dist = TorusMath.getToroidalDistance(
