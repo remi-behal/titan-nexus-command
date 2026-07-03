@@ -1613,9 +1613,11 @@ export class GameState {
         });
 
         const alivePlayers = Object.keys(this.players).filter((pid) => this.players[pid].alive);
-        if (alivePlayers.length === 1) {
-            this.winner = alivePlayers[0];
-        } else if (alivePlayers.length === 0) {
+        const aliveTeams = new Set(alivePlayers.map((pid) => this.players[pid].team || pid));
+
+        if (aliveTeams.size === 1) {
+            this.winner = Array.from(aliveTeams)[0];
+        } else if (aliveTeams.size === 0) {
             this.winner = 'DRAW';
         }
 

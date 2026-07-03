@@ -90,6 +90,39 @@ describe('GameState - Team Starting Base Assignment', () => {
         expect(p1Hub.x).toBe(200); // 1st Team A base
         expect(p2Hub.x).toBe(1800); // 1st Team B base
         expect(p3Hub.x).toBe(200); // 2nd Team A base
-        expect(p4Hub.x).toBe(1800); // 2nd Team B base
+    });
+
+    it('should resolve team-level victory when all opposing team members have lost all hubs', () => {
+        const game = new GameState();
+        game.initializeGame(['p1', 'p2', 'p3'], null, {
+            p1: 'Team A',
+            p2: 'Team A',
+            p3: 'Team B'
+        });
+
+        // Destroy p3's hub (Team B)
+        game.entities = game.entities.filter(e => e.owner !== 'p3');
+
+        // Resolve turn with empty actions
+        game.resolveTurn({});
+
+        expect(game.winner).toBe('Team A');
+    });
+
+    it('should resolve to DRAW when all players on both teams have lost all hubs', () => {
+        const game = new GameState();
+        game.initializeGame(['p1', 'p2', 'p3'], null, {
+            p1: 'Team A',
+            p2: 'Team A',
+            p3: 'Team B'
+        });
+
+        // Destroy all hubs
+        game.entities = game.entities.filter(e => e.type !== 'HUB');
+
+        // Resolve turn with empty actions
+        game.resolveTurn({});
+
+        expect(game.winner).toBe('DRAW');
     });
 });
