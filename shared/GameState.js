@@ -162,7 +162,7 @@ export class GameState {
     /**
      * Initialize a new game for a set of players
      */
-    initializeGame(playerIds, mapConfig = null) {
+    initializeGame(playerIds, mapConfig = null, playerTeams = null) {
         this.turn = 1;
         this.entities = [];
         this.links = [];
@@ -178,18 +178,36 @@ export class GameState {
             this.map.mountains = [...(mapConfig.mountains || [])];
             this.map.modifiers = { ...(mapConfig.modifiers || {}) };
 
+            const teamABases = mapConfig.playerBases?.filter(b => b.team === 'Team A') || [];
+            const teamBBases = mapConfig.playerBases?.filter(b => b.team === 'Team B') || [];
+            const neutralBases = mapConfig.playerBases?.filter(b => !b.team) || [];
+
+            let teamAIndex = 0;
+            let teamBIndex = 0;
+            let neutralIndex = 0;
+
             playerIds.forEach((id, index) => {
+                const team = playerTeams ? playerTeams[id] : null;
                 this.players[id] = {
                     energy: GLOBAL_STATS.STARTING_ENERGY,
                     color: `hsl(${index * 60}, 85%, 60%)`,
-                    alive: true
+                    alive: true,
+                    team: team || null
                 };
 
-                // Find base by owner or by index
-                const pKey = `player${index + 1}`;
-                const base =
-                    mapConfig.playerBases?.find((b) => b.owner === pKey) ||
-                    mapConfig.playerBases?.[index];
+                // Find base by owner or by index/team
+                let base = null;
+                if (team === 'Team A' && teamAIndex < teamABases.length) {
+                    base = teamABases[teamAIndex++];
+                } else if (team === 'Team B' && teamBIndex < teamBBases.length) {
+                    base = teamBBases[teamBIndex++];
+                } else {
+                    const pKey = `player${index + 1}`;
+                    base =
+                        mapConfig.playerBases?.find((b) => b.owner === pKey) ||
+                        neutralBases[neutralIndex++] ||
+                        mapConfig.playerBases?.[index];
+                }
 
                 if (base) {
                     this.addEntity({
@@ -203,16 +221,47 @@ export class GameState {
                 }
             });
         } else {
-            // Default Hardcoded Layout (backward compatibility for tests)
+            // Default Hardcoded Layout
+            const defaultBases = {
+                'Team A': [
+                    { x: 200, y: 500 },
+                    { x: 200, y: 1000 },
+                    { x: 200, y: 1500 },
+                    { x: 500, y: 1000 }
+                ],
+                'Team B': [
+                    { x: 1800, y: 500 },
+                    { x: 1800, y: 1000 },
+                    { x: 1800, y: 1500 },
+                    { x: 1500, y: 1000 }
+                ]
+            };
+
+            let teamAIndex = 0;
+            let teamBIndex = 0;
+
             playerIds.forEach((id, index) => {
+                const team = playerTeams ? playerTeams[id] : null;
                 this.players[id] = {
                     energy: GLOBAL_STATS.STARTING_ENERGY,
                     color: `hsl(${index * 60}, 85%, 60%)`,
-                    alive: true
+                    alive: true,
+                    team: team || null
                 };
 
-                const startX = 250 + index * 500;
-                const startY = 500;
+                let startX, startY;
+                if (team === 'Team A' && teamAIndex < defaultBases['Team A'].length) {
+                    const coords = defaultBases['Team A'][teamAIndex++];
+                    startX = coords.x;
+                    startY = coords.y;
+                } else if (team === 'Team B' && teamBIndex < defaultBases['Team B'].length) {
+                    const coords = defaultBases['Team B'][teamBIndex++];
+                    startX = coords.x;
+                    startY = coords.y;
+                } else {
+                    startX = 250 + index * 500;
+                    startY = 500;
+                }
 
                 this.addEntity({
                     type: 'HUB',
