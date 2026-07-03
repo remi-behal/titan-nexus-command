@@ -19,10 +19,14 @@ export function registerChatHandlers(socket, io, context) {
         if (!room) return;
 
         let senderName;
-        if (socket.assignedPlayerId === 'player1') {
-            senderName = 'Player 1';
-        } else if (socket.assignedPlayerId === 'player2') {
-            senderName = 'Player 2';
+        const slot = room.slots.find(
+            (s) => s && (s.socketId === socket.id || s.token === socket.currentToken)
+        );
+        if (slot && slot.playerName) {
+            senderName = slot.playerName;
+        } else if (context.matchStarted && socket.assignedPlayerId && socket.assignedPlayerId !== 'spectator') {
+            const player = context.game.players[socket.assignedPlayerId];
+            senderName = player?.name || socket.assignedPlayerId.replace('player', 'Player ');
         } else {
             senderName = `Spectator (${socket.id.slice(0, 4)})`;
         }

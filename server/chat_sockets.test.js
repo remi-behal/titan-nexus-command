@@ -48,4 +48,27 @@ describe('Chat Socket Server Handlers', () => {
         expect(received.senderId).toBeDefined();
         expect(received.senderName).toBeDefined();
     });
+
+    it('should resolve chat sender names using custom lobby slot names', async () => {
+        client.emit('authenticate', 'chat-test-token-2');
+        
+        // Wait for auth to complete
+        await new Promise((resolve) => client.once('chat:history', resolve));
+
+        // Claim a seat with custom name
+        await new Promise((resolve) => {
+            client.once('lobby:update', resolve);
+            client.emit('lobby:claimSeat', { slotIndex: 2, playerName: 'General Kenobi' });
+        });
+
+        const msgPromise = new Promise((resolve) => {
+            client.on('chat:newMessage', resolve);
+        });
+
+        client.emit('chat:sendMessage', { text: 'Hello there' });
+
+        const received = await msgPromise;
+        expect(received.text).toBe('Hello there');
+        expect(received.senderName).toBe('General Kenobi');
+    });
 });
