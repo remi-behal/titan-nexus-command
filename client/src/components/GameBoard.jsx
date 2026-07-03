@@ -213,10 +213,10 @@ const GameBoard = forwardRef(
 
                     // Get player object and their color
                     const player = currentGameState.players[myPlayerId];
-                    const playerColor = player ? player.color : 'hsl(120, 70%, 50%)';
+                    const playerColor = player ? player.color : 'hsl(120, 85%, 60%)';
                     // Dim the player's HSL color to 4% lightness for a gorgeous dark themed floor
                     const floorColor = playerColor.startsWith('hsl')
-                        ? playerColor.replace('50%', '5%')
+                        ? playerColor.replace(/\d+%\)$/, '5%)')
                         : '#0c0d12'; // Fallback
                     // 2. BACKGROUND
                     ctx.fillStyle = floorColor;

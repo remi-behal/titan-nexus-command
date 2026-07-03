@@ -127,7 +127,7 @@ export function useGameSocket() {
             }
         };
 
-        const onMatchStarted = (data) => {
+        const onMatchStarted = () => {
             setMatchStarted(true);
             const token = getSessionToken();
             socket.emit('authenticate', token);

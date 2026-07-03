@@ -181,7 +181,7 @@ export class GameState {
             playerIds.forEach((id, index) => {
                 this.players[id] = {
                     energy: GLOBAL_STATS.STARTING_ENERGY,
-                    color: `hsl(${index * 60}, 70%, 50%)`,
+                    color: `hsl(${index * 60}, 85%, 60%)`,
                     alive: true
                 };
 
@@ -207,7 +207,7 @@ export class GameState {
             playerIds.forEach((id, index) => {
                 this.players[id] = {
                     energy: GLOBAL_STATS.STARTING_ENERGY,
-                    color: `hsl(${index * 60}, 70%, 50%)`,
+                    color: `hsl(${index * 60}, 85%, 60%)`,
                     alive: true
                 };
 

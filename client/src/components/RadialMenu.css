@@ -6,44 +6,70 @@
 }
 
 .radial-menu-container svg {
-    filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.5));
+    filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.6));
+}
+
+.menu-segment {
+    color: #00ffcc; /* neon cyan/green default */
+    cursor: pointer;
+    transition: color 0.2s ease;
 }
 
 .menu-segment path {
-    fill: rgba(0, 0, 0, 0.95);
-    stroke: #444;
-    stroke-width: 2;
+    fill: rgba(6, 12, 12, 0.96);
+    stroke: rgba(0, 255, 204, 0.25);
+    stroke-width: 1.5;
     transition: all 0.2s ease;
     cursor: pointer;
     pointer-events: auto;
 }
 
+.menu-segment:hover {
+    color: #00ff44; /* bright neon green on hover */
+}
+
 .menu-segment:hover path {
-    fill: #00ff44;
-    stroke: #fff;
+    fill: rgba(0, 255, 68, 0.15);
+    stroke: #00ff44;
+}
+
+.menu-segment.disabled {
+    color: #445555 !important;
+    cursor: not-allowed;
 }
 
 .menu-segment.disabled path {
-    opacity: 0.3 !important;
+    fill: rgba(10, 15, 15, 0.85);
+    stroke: rgba(255, 255, 255, 0.05);
+    cursor: not-allowed;
 }
 
 .menu-segment text {
-    fill: #fff;
-    font-size: 9px;
+    fill: currentColor;
     font-family: 'Courier New', Courier, monospace;
     font-weight: bold;
     pointer-events: none;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
 }
 
-.menu-segment.disabled text {
-    fill: #666;
+.menu-segment .name-text {
+    font-size: 8px;
+}
+
+.menu-segment .cost-text {
+    fill: #00ff44;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.menu-segment.disabled .cost-text {
+    fill: #445555;
 }
 
 .menu-center {
     fill: #000;
-    stroke: #00ff44;
+    stroke: #00ffcc;
     stroke-width: 3;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -51,13 +77,14 @@
 }
 
 .menu-center:hover {
-    fill: rgba(80, 40, 40, 0.9);
-    stroke: rgba(255, 100, 100, 0.6);
+    fill: rgba(30, 10, 10, 0.95);
+    stroke: #ff3b30; /* Red alarm center button on hover */
 }
 
 .center-icon {
     fill: #fff;
-    font-size: 24px;
+    font-size: 20px;
+    font-family: 'Courier New', Courier, monospace;
     font-weight: bold;
     cursor: pointer;
     pointer-events: none;

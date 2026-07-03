@@ -24,8 +24,10 @@ export default function ChatPanel({ messages, onSendMessage, isOpen, onToggle, u
 
     return (
         <div className={`chat-panel-container ${isOpen ? 'open' : 'collapsed'}`}>
-            <button className="chat-toggle-btn" onClick={onToggle}>
-                💬 {unreadCount > 0 && <span className="unread-dot">{unreadCount}</span>}
+            <button className={`chat-toggle-btn ${unreadCount > 0 ? 'alert' : ''}`} onClick={onToggle}>
+                <span className="comms-status-dot" />
+                <span className="comms-label">COMMS</span>
+                {unreadCount > 0 && <span className="unread-count">[{unreadCount}]</span>}
             </button>
 
             {isOpen && (

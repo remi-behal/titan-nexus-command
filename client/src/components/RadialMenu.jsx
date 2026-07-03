@@ -1,8 +1,132 @@
 import React, { useState } from 'react';
 import './RadialMenu.css';
 import { ENTITY_STATS } from '../../../shared/constants/EntityStats.js';
+import { SHAPES } from '../constants/ShapeDefinitions.js';
 
 const CATEGORIES = ['OFFENSE', 'DEFENSE', 'UTILITY', 'SPECIAL'];
+
+const CATEGORY_ICONS = {
+    OFFENSE: 'WEAPON',
+    DEFENSE: 'SHIELD',
+    UTILITY: 'HUB',
+    SPECIAL: 'OVERLOAD'
+};
+
+const DISPLAY_NAMES = {
+    LASER_POINT_DEFENSE: 'L.P.D.',
+    LIGHT_SAM_DEFENSE: 'SAM',
+    SMART_SAM_DEFENSE: 'S-SAM',
+    FLAK_DEFENSE: 'FLAK',
+    CLOAKING_FIELD: 'CLOAK',
+    ECHO_ARTILLERY: 'ECHO',
+    CLUSTER_BOMB: 'CLUSTER',
+    HOMING_MISSILE: 'HOMING',
+    EXTRACTOR: 'EXTRACT',
+    RECLAIMER: 'RECLAIM'
+};
+
+const getDisplayName = (type) => {
+    return DISPLAY_NAMES[type] || type;
+};
+
+const getShapeKey = (itemType) => {
+    if (itemType === 'HOMING_MISSILE') return 'MISSILE';
+    if (itemType === 'NUKE') return 'NUKE_FLYING';
+    return itemType;
+};
+
+const EntityIcon = ({ itemType, scale = 12 }) => {
+    const shapeKey = getShapeKey(itemType);
+    const shape = SHAPES[shapeKey];
+    if (!shape) return null;
+
+    const layers = shape.layers || 1;
+    const bracingLines = [];
+    if (shape.bracing) {
+        const len = shape.points.length;
+        const halfLen = Math.floor(len / 2);
+        for (let i = 0; i < halfLen; i++) {
+            const p1 = shape.points[i];
+            const p2 = shape.points[i + halfLen];
+            bracingLines.push(
+                <line
+                    key={`brace-${i}`}
+                    x1={p1[0] * scale}
+                    y1={p1[1] * scale}
+                    x2={p2[0] * scale}
+                    y2={p2[1] * scale}
+                    stroke="currentColor"
+                    strokeWidth={0.8}
+                    opacity={0.6}
+                />
+            );
+        }
+    }
+
+    const paths = [];
+    if (shape.type === 'PATH') {
+        for (let l = 1; l <= layers; l++) {
+            const r = scale * (l / layers);
+            const pathParts = shape.points.map(([px, py], i) => {
+                const command = i === 0 ? 'M' : 'L';
+                return `${command} ${px * r} ${py * r}`;
+            });
+            if (shape.closed) pathParts.push('Z');
+            const d = pathParts.join(' ');
+            paths.push(
+                <path
+                    key={`layer-${l}`}
+                    d={d}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={l === layers ? 1.5 : 0.8}
+                />
+            );
+        }
+    }
+
+    let symbolEl = null;
+    if (shape.symbol === 'RADIATION') {
+        const r = scale * 0.6;
+        const arcs = [];
+        for (let i = 0; i < 3; i++) {
+            const startA = (i * 120 - 30) * (Math.PI / 180);
+            const endA = (i * 120 + 30) * (Math.PI / 180);
+            const xStart = Math.cos(startA) * r * 0.8;
+            const yStart = Math.sin(startA) * r * 0.8;
+            const xEnd = Math.cos(endA) * r * 0.8;
+            const yEnd = Math.sin(endA) * r * 0.8;
+            arcs.push(
+                <path
+                    key={`rad-arc-${i}`}
+                    d={`M 0 0 L ${xStart} ${yStart} A ${r * 0.8} ${r * 0.8} 0 0 1 ${xEnd} ${yEnd} Z`}
+                    fill="currentColor"
+                />
+            );
+        }
+        symbolEl = (
+            <g>
+                <circle cx="0" cy="0" r={r * 0.2} fill="currentColor" />
+                {arcs}
+            </g>
+        );
+    } else if (shape.symbol === 'CORE') {
+        const r = scale * 0.6;
+        symbolEl = (
+            <g>
+                <circle cx="0" cy="0" r={r * 0.3} fill="currentColor" opacity={0.4} stroke="currentColor" strokeWidth={1} />
+            </g>
+        );
+    }
+
+    return (
+        <g className="entity-icon-svg">
+            {bracingLines}
+            {paths}
+            {symbolEl}
+        </g>
+    );
+};
 
 const RadialMenu = ({ x, y, onSelect, onCancel, playerEnergy, hubFuel }) => {
     const [currentCategory, setCurrentCategory] = useState(null);
@@ -54,12 +178,27 @@ const RadialMenu = ({ x, y, onSelect, onCancel, playerEnergy, hubFuel }) => {
                 Z
             `;
 
-            const label = currentCategory ? item.symbol || item.type : item;
-            const itemKey = currentCategory ? item.type : item;
-            const isAffordable = currentCategory ? playerEnergy >= item.cost : true;
-            // hubFuel <= 0 is only relevant for non-HUB structures that require a hub to launch
-            // But since the menu is ON a hub, we check that hub's fuel.
-            const isDisabled = currentCategory && (!isAffordable || hubFuel <= 0);
+            const isCategory = !currentCategory;
+            const displayName = isCategory ? item : getDisplayName(item.type);
+            const iconType = isCategory ? CATEGORY_ICONS[item] : item.type;
+            const itemKey = isCategory ? item : item.type;
+            const isAffordable = isCategory ? true : playerEnergy >= item.cost;
+            const isDisabled = !isCategory && (!isAffordable || hubFuel <= 0);
+
+            const midAngle = startAngle + angleStep / 2;
+            const cos = Math.cos(midAngle);
+            const sin = Math.sin(midAngle);
+
+            const rIcon = isCategory ? 75 : 78;
+            const rText = isCategory ? 98 : 100;
+            const rCost = 60;
+
+            const xIcon = cos * rIcon;
+            const yIcon = sin * rIcon;
+            const xText = cos * rText;
+            const yText = sin * rText;
+            const xCost = cos * rCost;
+            const yCost = sin * rCost;
 
             return (
                 <g
@@ -76,20 +215,35 @@ const RadialMenu = ({ x, y, onSelect, onCancel, playerEnergy, hubFuel }) => {
                     }}
                 >
                     <path d={pathData} />
+                    
+                    {/* Vector shape icon */}
+                    <g transform={`translate(${xIcon}, ${yIcon})`}>
+                        <EntityIcon itemType={iconType} scale={12} />
+                    </g>
+
+                    {/* Text Label */}
                     <text
-                        x={
-                            Math.cos(startAngle + angleStep / 2) *
-                            (innerRadius + (outerRadius - innerRadius) / 2)
-                        }
-                        y={
-                            Math.sin(startAngle + angleStep / 2) *
-                            (innerRadius + (outerRadius - innerRadius) / 2)
-                        }
+                        x={xText}
+                        y={yText}
                         textAnchor="middle"
                         dominantBaseline="middle"
+                        className="name-text"
                     >
-                        {label.length > 10 ? label.substring(0, 8) + '...' : label}
+                        {displayName}
                     </text>
+
+                    {/* Energy Cost (only for items) */}
+                    {!isCategory && (
+                        <text
+                            x={xCost}
+                            y={yCost}
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                            className="cost-text"
+                        >
+                            {item.cost}E
+                        </text>
+                    )}
                 </g>
             );
         });

@@ -32,10 +32,9 @@ describe('RadialMenu Component', () => {
         // Now categories are not visible, but OFFENSE items are visible
         expect(screen.queryByText('DEFENSE')).toBeNull();
 
-        // Let's verify that items under OFFENSE are displayed using their symbols
-        // For example, WEAPON symbol is '💣', CLUSTER_BOMB is '💥'
-        expect(screen.getByText('💣')).toBeDefined();
-        expect(screen.getByText('💥')).toBeDefined();
+        // Let's verify that items under OFFENSE are displayed using their display names
+        expect(screen.getByText('WEAPON')).toBeDefined();
+        expect(screen.getByText('CLUSTER')).toBeDefined();
 
         // Click the center area to go back (currently shows '←' when in category)
         fireEvent.click(screen.getByText('←'));
@@ -71,8 +70,8 @@ describe('RadialMenu Component', () => {
             // item.type is "NAPALM", which is <= 10 characters so it won't be truncated.
             expect(screen.getByText('NAPALM')).toBeDefined();
 
-            // Other items like WEAPON still have their symbols
-            expect(screen.getByText('💣')).toBeDefined();
+            // Other items like WEAPON still have their display names
+            expect(screen.getByText('WEAPON')).toBeDefined();
         } finally {
             // Restore original symbol
             ENTITY_STATS.NAPALM.symbol = originalNapalmSymbol;
@@ -97,8 +96,8 @@ describe('RadialMenu Component', () => {
         // Click UTILITY category
         fireEvent.click(screen.getByText('UTILITY'));
 
-        // Click EXTRACTOR symbol ('⛏')
-        fireEvent.click(screen.getByText('⛏'));
+        // Click EXTRACTOR display name ('EXTRACT')
+        fireEvent.click(screen.getByText('EXTRACT'));
 
         // Expect onSelect to be called with 'EXTRACTOR'
         expect(mockSelect).toHaveBeenCalledWith('EXTRACTOR');

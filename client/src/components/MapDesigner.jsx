@@ -40,8 +40,8 @@ const MapDesigner = ({ onSave, onBack }) => {
         () => ({
             turn: 1,
             players: {
-                player1: { color: 'hsl(0, 70%, 50%)', energy: 100 },
-                player2: { color: 'hsl(60, 70%, 50%)', energy: 100 }
+                player1: { color: 'hsl(0, 85%, 60%)', energy: 100 },
+                player2: { color: 'hsl(60, 85%, 60%)', energy: 100 }
             },
             map: {
                 width: mapData.width,

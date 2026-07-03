@@ -45,7 +45,7 @@ describe('Rendering Helpers', () => {
 
     describe('getGhostColor', () => {
         it('should transform highly saturated HSL to target ghost saturation', () => {
-            expect(getGhostColor('hsl(0, 70%, 50%)', '35%')).toBe('hsl(0, 35%, 50%)');
+            expect(getGhostColor('hsl(0, 85%, 60%)', '35%')).toBe('hsl(0, 35%, 60%)');
             expect(getGhostColor('hsl(120, 100%, 25%)', '10%')).toBe('hsl(120, 10%, 25%)');
         });
         it('should fallback to gray for non-HSL colors', () => {

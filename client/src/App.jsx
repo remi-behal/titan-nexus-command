@@ -34,9 +34,6 @@ function App() {
         committedActions,
         setCommittedActions,
         setLastError,
-        setMatchStarted,
-        setIsChatOpen,
-        setUnreadCount,
         handleSendMessage,
         handleToggleChat,
         handleExecuteTurn,
@@ -69,8 +66,8 @@ function App() {
         g.initializeGame(['player1', 'player2'], playgroundMap);
         g.players.player1.energy = 9999;
         g.players.player2.energy = 9999;
-        g.players.player1.color = 'hsl(0, 70%, 50%)';
-        g.players.player2.color = 'hsl(60, 70%, 50%)';
+        g.players.player1.color = 'hsl(0, 85%, 60%)';
+        g.players.player2.color = 'hsl(60, 85%, 60%)';
         localGameRef.current = g;
         setSandboxState(g.getState());
         setSandboxActions([]);
@@ -379,8 +376,8 @@ function App() {
                 (s, idx) => `player${idx + 1}` === myPlayerId
             );
             if (slotIndex !== -1 && lobbyStatus.slots[slotIndex]) {
-                // Match the colors used in GameState.js: hsl(index * 60, 70%, 50%)
-                return { color: `hsl(${slotIndex * 60}, 70%, 50%)` };
+                // Match the colors used in GameState.js: hsl(index * 60, 85%, 60%)
+                return { color: `hsl(${slotIndex * 60}, 85%, 60%)` };
             }
         }
         // 3. Absolute fallback (Spectator or unassigned)
@@ -436,7 +433,7 @@ function App() {
     );
 
     const playerColor = currentView === 'SANDBOX'
-        ? (activeSandboxPlayer === 'player1' ? 'hsl(0, 70%, 50%)' : 'hsl(60, 70%, 50%)')
+        ? (activeSandboxPlayer === 'player1' ? 'hsl(0, 85%, 60%)' : 'hsl(60, 85%, 60%)')
         : (pBase?.color || '#00ff44');
     // Strict color helper for CRT phosphor (requires rgba format)
     const getCRTColor = (color, alpha) => {
@@ -504,7 +501,7 @@ function App() {
 
         if (currentView === 'SANDBOX') {
             const pCurrentSandbox = {
-                color: activeSandboxPlayer === 'player1' ? 'hsl(0, 70%, 50%)' : 'hsl(60, 70%, 50%)',
+                color: activeSandboxPlayer === 'player1' ? 'hsl(0, 85%, 60%)' : 'hsl(60, 85%, 60%)',
                 energy: 9999 - sandboxActions.filter(a => a.playerId === activeSandboxPlayer).reduce((sum, act) => {
                     const stats = ENTITY_STATS[act.itemType];
                     return sum + (stats?.cost || 0);
@@ -552,7 +549,7 @@ function App() {
                             <span>PRACTICE RANGE | ACTIVE PILOT:</span>
                             <button
                                 style={{
-                                    background: activeSandboxPlayer === 'player1' ? 'hsl(0, 70%, 50%)' : '#222',
+                                    background: activeSandboxPlayer === 'player1' ? 'hsl(0, 85%, 60%)' : '#222',
                                     color: activeSandboxPlayer === 'player1' ? '#000' : '#888',
                                     border: '1px solid #444',
                                     padding: '4px 12px',
@@ -569,7 +566,7 @@ function App() {
                             </button>
                             <button
                                 style={{
-                                    background: activeSandboxPlayer === 'player2' ? 'hsl(60, 70%, 50%)' : '#222',
+                                    background: activeSandboxPlayer === 'player2' ? 'hsl(60, 85%, 60%)' : '#222',
                                     color: activeSandboxPlayer === 'player2' ? '#000' : '#888',
                                     border: '1px solid #444',
                                     padding: '4px 12px',
