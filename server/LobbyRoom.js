@@ -110,7 +110,7 @@ export class LobbyRoom {
         return message;
     }
 
-    claimSeat(slotIndex, token, socketId) {
+    claimSeat(slotIndex, token, socketId, playerName) {
         if (slotIndex < 0 || slotIndex >= this.maxPlayers) {
             return { success: false, message: 'Invalid slot' };
         }
@@ -119,13 +119,34 @@ export class LobbyRoom {
             return { success: false, message: 'Slot already occupied' };
         }
 
+        let trimmedName;
+        if (playerName === undefined || playerName === null) {
+            trimmedName = `Player ${slotIndex + 1}`;
+        } else if (typeof playerName !== 'string' || !playerName.trim()) {
+            return { success: false, message: 'Name cannot be empty!' };
+        } else {
+            trimmedName = playerName.trim();
+        }
+
+        if (trimmedName.length > 15) {
+            return { success: false, message: 'Name must be 15 characters or less!' };
+        }
+
+        // Check if name is already taken by another player (using case-insensitive comparison)
+        const nameTaken = this.slots.some(
+            (slot) => slot && slot.token !== token && slot.playerName && slot.playerName.toLowerCase() === trimmedName.toLowerCase()
+        );
+        if (nameTaken) {
+            return { success: false, message: 'Name is already taken!' };
+        }
+
         // Remove from existing slot if any
         this.slots = this.slots.map((slot) =>
             slot && (slot.token === token || slot.socketId === socketId) ? null : slot
         );
 
         const defaultTeam = slotIndex < 4 ? 'Team A' : 'Team B';
-        this.slots[slotIndex] = { token, socketId, ready: false, team: defaultTeam };
+        this.slots[slotIndex] = { token, socketId, ready: false, team: defaultTeam, playerName: trimmedName };
         return { success: true };
     }
 

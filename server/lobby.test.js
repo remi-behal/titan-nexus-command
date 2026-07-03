@@ -45,5 +45,29 @@ describe('LobbyRoom', () => {
         const overLimit = room.setTeam('socket-3', 'Team B', 2);
         expect(overLimit).toBe(false);
     });
+
+    it('should validate name length and uniqueness on claimSeat', () => {
+        const room = new LobbyRoom('test-room', 4);
+        
+        // 1. Success claim
+        const res1 = room.claimSeat(0, 'token-1', 'socket-1', 'Alpha');
+        expect(res1.success).toBe(true);
+        expect(room.slots[0].playerName).toBe('Alpha');
+
+        // 2. Reject duplicate name (case-insensitive)
+        const res2 = room.claimSeat(1, 'token-2', 'socket-2', 'alpha');
+        expect(res2.success).toBe(false);
+        expect(res2.message).toBe('Name is already taken!');
+
+        // 3. Reject empty name or whitespace
+        const res3 = room.claimSeat(1, 'token-2', 'socket-2', '   ');
+        expect(res3.success).toBe(false);
+        expect(res3.message).toBe('Name cannot be empty!');
+
+        // 4. Reject over-long name
+        const res4 = room.claimSeat(1, 'token-2', 'socket-2', 'VeryLongNameThatIsTooLong');
+        expect(res4.success).toBe(false);
+        expect(res4.message).toBe('Name must be 15 characters or less!');
+    });
 });
 
