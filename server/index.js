@@ -46,7 +46,7 @@ function startMatch() {
     // Load custom map if selected
     let mapConfig = null;
     if (room.selectedMapName) {
-        mapConfig = mapService.loadReadyMap(room.selectedMapName);
+        mapConfig = mapService.loadReadyMap(room.selectedMapName) || mapService.loadMap(room.selectedMapName);
         if (mapConfig) {
             console.log(`[Server] Starting match with custom map: ${room.selectedMapName}`);
         } else {

@@ -78,6 +78,19 @@ export function registerGameHandlers(socket, io, context, timerService) {
         try {
             const fileName = mapService.saveMap(name, data);
             socket.emit('map:saveSuccess', fileName);
+
+            // Broadcast updated map list to all clients
+            const readyMaps = mapService.listReadyMaps().map((n) => ({
+                id: n,
+                name: n.replace(/_/g, ' '),
+                isCustom: false
+            }));
+            const customMaps = mapService.listMaps().map((n) => ({
+                id: n,
+                name: n.replace(/_/g, ' '),
+                isCustom: true
+            }));
+            io.emit('room:mapsUpdate', [...readyMaps, ...customMaps]);
         } catch (err) {
             socket.emit('map:saveError', err.message);
         }
@@ -89,7 +102,42 @@ export function registerGameHandlers(socket, io, context, timerService) {
     });
 
     socket.on('room:listMaps', () => {
-        const maps = mapService.listReadyMaps();
-        socket.emit('room:mapsUpdate', maps);
+        const readyMaps = mapService.listReadyMaps().map((n) => ({
+            id: n,
+            name: n.replace(/_/g, ' '),
+            isCustom: false
+        }));
+        const customMaps = mapService.listMaps().map((n) => ({
+            id: n,
+            name: n.replace(/_/g, ' '),
+            isCustom: true
+        }));
+        socket.emit('room:mapsUpdate', [...readyMaps, ...customMaps]);
+    });
+
+    socket.on('map:delete', (mapName) => {
+        try {
+            const success = mapService.deleteMap(mapName);
+            if (success) {
+                socket.emit('map:deleteSuccess', mapName);
+
+                // Broadcast updated map list to all clients
+                const readyMaps = mapService.listReadyMaps().map((n) => ({
+                    id: n,
+                    name: n.replace(/_/g, ' '),
+                    isCustom: false
+                }));
+                const customMaps = mapService.listMaps().map((n) => ({
+                    id: n,
+                    name: n.replace(/_/g, ' '),
+                    isCustom: true
+                }));
+                io.emit('room:mapsUpdate', [...readyMaps, ...customMaps]);
+            } else {
+                socket.emit('map:deleteError', 'Map not found');
+            }
+        } catch (err) {
+            socket.emit('map:deleteError', err.message);
+        }
     });
 }

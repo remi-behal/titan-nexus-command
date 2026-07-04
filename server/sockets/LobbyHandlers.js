@@ -50,7 +50,7 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
         
         let maxLimit = 4;
         if (room.selectedMapName) {
-            const mapConfig = mapService.loadReadyMap(room.selectedMapName);
+            const mapConfig = mapService.loadReadyMap(room.selectedMapName) || mapService.loadMap(room.selectedMapName);
             if (mapConfig && mapConfig.maxPlayersPerTeam && mapConfig.maxPlayersPerTeam[team] !== undefined) {
                 maxLimit = mapConfig.maxPlayersPerTeam[team];
             }
