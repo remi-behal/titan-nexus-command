@@ -217,12 +217,23 @@ export class LobbyRoom {
     }
 
     getUpdate() {
+        const spectatorsWithNames = this.spectators.map(sid => {
+            if (this.context && this.context.io) {
+                const s = this.context.io.sockets.sockets.get(sid);
+                if (s && s.playerName) {
+                    return { id: sid, name: s.playerName };
+                }
+            }
+            return { id: sid, name: `Spectator (${sid.substring(0, 5)})` };
+        });
+
         return {
             id: this.id,
             slots: this.slots,
             maxPlayers: this.maxPlayers,
             status: this.status,
-            selectedMapName: this.selectedMapName
+            selectedMapName: this.selectedMapName,
+            spectators: spectatorsWithNames
         };
     }
 }

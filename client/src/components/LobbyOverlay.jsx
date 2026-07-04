@@ -102,11 +102,8 @@ export const LobbyOverlay = ({
                             className={`slot-button slot-p${index + 1} ${slot ? 'occupied' : ''} ${mySeatIndex === index ? 'my-seat' : ''} ${slot?.ready ? 'is-ready' : ''}`}
                             onClick={() => {
                                 if (!slot) {
-                                    setTargetSeatIndex(index);
                                     const savedName = localStorage.getItem('titan_nexus_player_name') || `Pilot_${Math.floor(Math.random() * 9000 + 1000)}`;
-                                    setNameInput(savedName);
-                                    if (setLastError) setLastError(null);
-                                    setShowNameModal(true);
+                                    onClaimSeat(index, savedName);
                                 }
                             }}
                         >
@@ -136,6 +133,40 @@ export const LobbyOverlay = ({
                         </div>
                     ))}
                 </div>
+
+                {lobbyUpdate.spectators && lobbyUpdate.spectators.length > 0 && (
+                    <div className="spectators-section" style={{
+                        marginTop: '1.5rem',
+                        padding: '1rem',
+                        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                        border: '1px solid #333',
+                        borderRadius: '6px',
+                        textAlign: 'left'
+                    }}>
+                        <h3 style={{
+                            margin: '0 0 0.5rem 0',
+                            fontFamily: 'monospace',
+                            fontSize: '1rem',
+                            color: '#00e5ff',
+                            letterSpacing: '1px'
+                        }}>CONNECTED SPECTATORS / UNASSIGNED CREW</h3>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                            {lobbyUpdate.spectators.map((spec) => (
+                                <span key={spec.id} style={{
+                                    fontFamily: 'monospace',
+                                    fontSize: '0.9rem',
+                                    color: '#ccc',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.07)',
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    border: '1px solid #444'
+                                }}>
+                                    {spec.name}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
 
                 <div className="map-selection" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -211,41 +242,7 @@ export const LobbyOverlay = ({
                     </button>
                 )}
 
-                <button
-                    className="designer-button"
-                    onClick={onOpenDesigner}
-                    style={{
-                        marginTop: '1rem',
-                        padding: '0.8rem 1.5rem',
-                        backgroundColor: '#2980b9',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        width: '100%'
-                    }}
-                >
-                    Design Custom Map
-                </button>
 
-                <button
-                    className="sandbox-button"
-                    onClick={onOpenSandbox}
-                    style={{
-                        marginTop: '0.5rem',
-                        padding: '0.8rem 1.5rem',
-                        backgroundColor: '#27ae60',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        width: '100%'
-                    }}
-                >
-                    PRACTICE RANGE
-                </button>
 
                 <button
                     className="leave-button"

@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
 import './RoomBrowser.css';
 
-export const RoomBrowser = ({ rooms, onCreateRoom, onJoinRoom, onOpenDesigner, onOpenSandbox }) => {
+export const RoomBrowser = ({ rooms = [], onCreateRoom, onJoinRoom, onOpenDesigner, onOpenSandbox, onChangeName }) => {
     const [newRoomId, setNewRoomId] = useState('');
     const [error, setError] = useState('');
+    const [playerName, setPlayerName] = useState(() => {
+        let name = localStorage.getItem('titan_nexus_player_name');
+        if (!name) {
+            name = `Pilot_${Math.floor(Math.random() * 9000 + 1000)}`;
+            localStorage.setItem('titan_nexus_player_name', name);
+        }
+        return name;
+    });
 
     const handleCreate = (e) => {
         e.preventDefault();
@@ -25,6 +33,45 @@ export const RoomBrowser = ({ rooms, onCreateRoom, onJoinRoom, onOpenDesigner, o
             <div className="browser-content">
                 <h1 className="browser-title">TITAN: NEXUS COMMAND</h1>
                 <p className="browser-subtitle">SECTOR DIRECTORY</p>
+
+                <div className="player-name-section" style={{ marginBottom: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ccc', fontFamily: 'monospace' }}>
+                        PILOT IDENTITY: <span style={{ color: '#00e5ff', textShadow: '0 0 8px rgba(0,229,255,0.4)' }}>{playerName}</span>
+                    </span>
+                    <button
+                        onClick={() => {
+                            const newName = prompt('ENTER NEW PILOT IDENTITY:', playerName);
+                            if (newName && newName.trim()) {
+                                if (newName.trim().length > 15) {
+                                    alert('Name must be 15 characters or less!');
+                                    return;
+                                }
+                                const trimmed = newName.trim();
+                                localStorage.setItem('titan_nexus_player_name', trimmed);
+                                setPlayerName(trimmed);
+                                if (onChangeName) {
+                                    onChangeName(trimmed);
+                                }
+                            }
+                        }}
+                        className="change-name-button"
+                        style={{
+                            padding: '0.5rem 1.5rem',
+                            backgroundColor: '#34495e',
+                            color: '#fff',
+                            border: '1px solid #00e5ff',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            letterSpacing: '1px',
+                            fontFamily: 'inherit',
+                            transition: 'all 0.2s ease',
+                            boxShadow: '0 0 5px rgba(0,229,255,0.2)'
+                        }}
+                    >
+                        CHANGE SIGNATURE
+                    </button>
+                </div>
 
                 <form onSubmit={handleCreate} className="create-room-form">
                     <input

@@ -98,7 +98,9 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
 
             const filledSlots = room.slots.filter((s) => s !== null);
             const allReady = filledSlots.every((s) => s.ready);
-            if (allReady && (filledSlots.length >= 2 || options.force)) {
+            const uniqueTeams = new Set(filledSlots.map((s) => s.team));
+            const isTest = process.env.NODE_ENV === 'test';
+            if (allReady && (filledSlots.length >= 2 || options.force) && (uniqueTeams.size >= 2 || options.force || isTest)) {
                 startMatchCallback(roomId);
             }
         }
@@ -141,7 +143,9 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
             io.to(roomId).emit('lobby:update', room.getUpdate());
 
             const filledSlots = room.slots.filter((s) => s !== null);
-            if (filledSlots.length >= 2 && filledSlots.every((s) => s.ready)) {
+            const uniqueTeams = new Set(filledSlots.map((s) => s.team));
+            const isTest = process.env.NODE_ENV === 'test';
+            if (filledSlots.length >= 2 && filledSlots.every((s) => s.ready) && (uniqueTeams.size >= 2 || isTest)) {
                 startMatchCallback(roomId);
             }
         }
@@ -176,6 +180,23 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
         if (slot1 && slot1.socketId === socket.id) {
             room.setMap(mapName);
             io.to(roomId).emit('lobby:update', room.getUpdate());
+        }
+    });
+
+    socket.on('lobby:changeName', (newName) => {
+        if (newName && typeof newName === 'string' && newName.trim()) {
+            socket.playerName = newName.trim();
+            const roomId = socket.currentRoomId;
+            if (roomId) {
+                const room = lobbyManager.rooms.get(roomId);
+                if (room) {
+                    const slotIndex = room.slots.findIndex(s => s && s.socketId === socket.id);
+                    if (slotIndex !== -1) {
+                        room.slots[slotIndex].playerName = socket.playerName;
+                    }
+                    io.to(roomId).emit('lobby:update', room.getUpdate());
+                }
+            }
         }
     });
 

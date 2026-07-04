@@ -169,6 +169,13 @@ export class GameState {
         this.players = {};
         this.winner = null;
 
+        const teams = playerIds.map(id => {
+            const team = playerTeams ? playerTeams[id] : null;
+            return team || id;
+        });
+        const uniqueTeams = new Set(teams);
+        this.isSingleTeamMatch = uniqueTeams.size <= 1;
+
         if (mapConfig) {
             // Use injected map configuration
             this.map.width = mapConfig.width || GLOBAL_STATS.MAP_WIDTH;
@@ -1619,7 +1626,7 @@ export class GameState {
         const alivePlayers = Object.keys(this.players).filter((pid) => this.players[pid].alive);
         const aliveTeams = new Set(alivePlayers.map((pid) => this.players[pid].team || pid));
 
-        if (aliveTeams.size === 1) {
+        if (aliveTeams.size === 1 && !this.isSingleTeamMatch) {
             this.winner = Array.from(aliveTeams)[0];
         } else if (aliveTeams.size === 0) {
             this.winner = 'DRAW';

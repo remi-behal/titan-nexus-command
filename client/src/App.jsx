@@ -238,9 +238,9 @@ function App() {
         setLaunchMode(false);
     };
 
-    const triggerClaimSeat = (index) => {
+    const triggerClaimSeat = (index, playerName) => {
         audioManager.playSeatClaim();
-        handleClaimSeat(index);
+        handleClaimSeat(index, playerName);
     };
 
     const triggerReadyToggle = (isReady) => {
@@ -742,6 +742,7 @@ function App() {
                         onJoinRoom={joinRoom}
                         onOpenDesigner={() => setCurrentView('DESIGNER')}
                         onOpenSandbox={handleOpenSandbox}
+                        onChangeName={(newName) => socket.emit('lobby:changeName', newName)}
                     />
                 );
             }

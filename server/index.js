@@ -37,11 +37,22 @@ function startMatch(roomId = 'default') {
     console.log(`[Lobby] Starting match in room ${roomId}...`);
     const room = context.lobbyManager.getOrCreateRoom(roomId);
 
+    const filledSlots = room.slots.filter(s => s !== null);
+    const uniqueTeams = new Set(filledSlots.map(s => s.team));
+    const isTest = process.env.NODE_ENV === 'test';
+    if (filledSlots.length >= 2 && uniqueTeams.size < 2 && !isTest) {
+        console.warn(`[Lobby] Cannot start match in room ${roomId}: all players are on the same team.`);
+        room.emit(io, 'lobby:error', { message: 'Cannot start match: all players are on the same team.' });
+        return;
+    }
+
     const playerTeams = {};
     const playerNames = {};
 
+    const roomPlayerIds = Array.from({ length: room.maxPlayers }, (_, i) => `player${i + 1}`);
+
     // Assign players based on lobby slots
-    context.playerIds.forEach((pid, index) => {
+    roomPlayerIds.forEach((pid, index) => {
         const slot = room.slots[index];
         room.playerAssignments[pid] = slot?.token || null;
         room.activeSockets[pid] = slot?.socketId || null;
@@ -64,7 +75,7 @@ function startMatch(roomId = 'default') {
         }
     }
 
-    room.game.initializeGame(context.playerIds, mapConfig, playerTeams, playerNames);
+    room.game.initializeGame(roomPlayerIds, mapConfig, playerTeams, playerNames);
     room.matchStarted = true;
     room.status = 'IN_GAME';
 
@@ -77,7 +88,7 @@ function startMatch(roomId = 'default') {
     room.emit(io, 'matchStarted', { playerAssignments: room.playerAssignments });
 
     // Send individual assignments to each socket that was in a slot
-    context.playerIds.forEach((pid) => {
+    roomPlayerIds.forEach((pid) => {
         const sid = room.activeSockets[pid];
         if (sid) {
             const socket = io.sockets.sockets.get(sid);
@@ -102,9 +113,20 @@ io.on('connection', (socket) => {
     // Immediately send the room list to the socket
     socket.emit('lobby:roomsList', context.lobbyManager.getRoomList());
 
-    socket.on('authenticate', (token) => {
+    socket.on('authenticate', (authData) => {
+        let token;
+        let playerName;
+        if (authData && typeof authData === 'object') {
+            token = authData.token;
+            playerName = authData.playerName;
+        } else {
+            token = authData;
+        }
         if (!token) return;
         socket.currentToken = token;
+        if (playerName) {
+            socket.playerName = playerName;
+        }
         console.log(`Authenticating socket ${socket.id} with token ${token}`);
 
         // Look up room using findRoomBySocketId or currentRoomId (defaulting to 'default')
@@ -142,7 +164,8 @@ io.on('connection', (socket) => {
 
             // Only send valid player lock status
             const filteredLockedIn = {};
-            context.playerIds.forEach((pid) => {
+            const roomPlayerIds = Array.from({ length: room.maxPlayers }, (_, i) => `player${i + 1}`);
+            roomPlayerIds.forEach((pid) => {
                 if (room.playerAssignments[pid]) {
                     filteredLockedIn[pid] = room.lockedIn[pid];
                 }

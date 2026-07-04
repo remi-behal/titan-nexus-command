@@ -109,7 +109,8 @@ export function useGameSocket() {
         const onConnect = () => {
             setIsConnected(true);
             const token = getSessionToken();
-            socket.emit('authenticate', token);
+            const playerName = localStorage.getItem('titan_nexus_player_name') || `Pilot_${Math.floor(Math.random() * 9000 + 1000)}`;
+            socket.emit('authenticate', { token, playerName });
         };
 
         const onDisconnect = () => {

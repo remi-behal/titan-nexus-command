@@ -12,6 +12,8 @@ vi.mock('./hooks/useGameSocket', () => {
         },
         useGameSocket: () => ({
             isConnected: true,
+            currentRoomId: null,
+            roomsList: [],
             myPlayerId: null,
             playerState: null,
             lobbyStatus: {
