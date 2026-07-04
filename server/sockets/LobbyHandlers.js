@@ -116,7 +116,9 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
             slotIndex = payload;
         }
 
-        const res = room.claimSeat(slotIndex, socket.currentToken, socket.id, playerName);
+        const res = playerName !== undefined
+            ? room.claimSeat(slotIndex, socket.currentToken, socket.id, playerName)
+            : room.claimSeat(slotIndex, socket.currentToken, socket.id);
         if (res.success) {
             socket.assignedPlayerId = `player${slotIndex + 1}`;
             context.safeEmit(socket, 'playerAssignment', socket.assignedPlayerId);

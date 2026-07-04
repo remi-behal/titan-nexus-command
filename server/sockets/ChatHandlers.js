@@ -24,8 +24,8 @@ export function registerChatHandlers(socket, io, context) {
         );
         if (slot && slot.playerName) {
             senderName = slot.playerName;
-        } else if (context.matchStarted && socket.assignedPlayerId && socket.assignedPlayerId !== 'spectator') {
-            const player = context.game.players[socket.assignedPlayerId];
+        } else if (socket.assignedPlayerId && socket.assignedPlayerId !== 'spectator') {
+            const player = room.game?.players?.[socket.assignedPlayerId];
             senderName = player?.name || socket.assignedPlayerId.replace('player', 'Player ');
         } else {
             senderName = `Spectator (${socket.id.slice(0, 4)})`;
