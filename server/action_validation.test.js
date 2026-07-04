@@ -113,6 +113,11 @@ describe('Server Integration - Action Validation Sockets', () => {
             client2.emit('authenticate', 'val-token-p2');
         });
 
+        // Join room explicitly
+        client1.emit('lobby:joinRoom', 'default');
+        client2.emit('lobby:joinRoom', 'default');
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
         // Lobby Handshake
         await new Promise((resolve, reject) => {
             const timeout = setTimeout(() => reject(new Error('Lobby handshake')), 40000);

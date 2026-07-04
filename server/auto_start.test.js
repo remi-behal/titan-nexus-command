@@ -49,6 +49,11 @@ describe('Auto-Start Integration', () => {
             new Promise((res) => client2.once('playerAssignment', res))
         ]);
 
+        // Join default room
+        client1.emit('lobby:joinRoom', 'default');
+        client2.emit('lobby:joinRoom', 'default');
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
         // Auto-join client 1
         const update1 = await new Promise((resolve) => {
             const listener = (update) => {

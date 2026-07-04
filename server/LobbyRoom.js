@@ -54,7 +54,7 @@ export class LobbyRoom {
         if (!this.matchStarted) return;
         const baseState = state || this.game.getState();
 
-        io.to(this.id).emit('gameStateUpdate', baseState); // Spectators fallback
+        this.emit(io, 'gameStateUpdate', baseState); // Spectators fallback
         
         // Send player-specific updates
         for (let i = 1; i <= this.maxPlayers; i++) {

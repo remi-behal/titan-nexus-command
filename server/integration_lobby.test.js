@@ -39,18 +39,30 @@ describe('Lobby Integration Handshake', () => {
     });
 
     it('should receive lobby update on connection', async () => {
+        client1.emit('authenticate', 'test-token');
         const update = await new Promise((resolve) => {
-            client1.on('lobby:update', resolve);
-            client1.emit('authenticate', 'test-token');
+            const onUpdate = (data) => {
+                if (data.id === 'default') {
+                    client1.off('lobby:update', onUpdate);
+                    resolve(data);
+                }
+            };
+            client1.on('lobby:update', onUpdate);
         });
         expect(update.id).toBe('default');
         expect(update.slots).toHaveLength(8);
     });
 
     it('should allow claiming a seat and receiving update', async () => {
+        client1.emit('lobby:claimSeat', 0);
         const update = await new Promise((resolve) => {
-            client1.once('lobby:update', resolve);
-            client1.emit('lobby:claimSeat', 0);
+            const onUpdate = (data) => {
+                if (data.slots[0] && data.slots[0].token === 'test-token') {
+                    client1.off('lobby:update', onUpdate);
+                    resolve(data);
+                }
+            };
+            client1.on('lobby:update', onUpdate);
         });
         expect(update.slots[0].token).toBe('test-token');
     });

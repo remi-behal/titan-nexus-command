@@ -33,14 +33,14 @@ const context = new SessionContext();
 context.io = io;
 const timerService = new TimerService(context);
 
-function startMatch() {
-    console.log('[Lobby] Starting match...');
-    const room = context.lobbyManager.getOrCreateRoom('default');
+function startMatch(roomId = 'default') {
+    console.log(`[Lobby] Starting match in room ${roomId}...`);
+    const room = context.lobbyManager.getOrCreateRoom(roomId);
 
     // Assign players based on lobby slots
     context.playerIds.forEach((pid, index) => {
-        context.playerAssignments[pid] = room.slots[index]?.token || null;
-        context.activeSockets[pid] = room.slots[index]?.socketId || null;
+        room.playerAssignments[pid] = room.slots[index]?.token || null;
+        room.activeSockets[pid] = room.slots[index]?.socketId || null;
     });
 
     // Load custom map if selected
@@ -56,15 +56,21 @@ function startMatch() {
         }
     }
 
-    context.game.initializeGame(context.playerIds, mapConfig);
-    context.matchStarted = true;
+    room.game.initializeGame(context.playerIds, mapConfig);
+    room.matchStarted = true;
     room.status = 'IN_GAME';
 
-    context.safeEmit(io, 'matchStarted', { playerAssignments: context.playerAssignments });
+    // Keep context sync for legacy tests
+    context.game = room.game;
+    context.matchStarted = true;
+    context.playerAssignments = room.playerAssignments;
+    context.activeSockets = room.activeSockets;
+
+    room.emit(io, 'matchStarted', { playerAssignments: room.playerAssignments });
 
     // Send individual assignments to each socket that was in a slot
     context.playerIds.forEach((pid) => {
-        const sid = context.activeSockets[pid];
+        const sid = room.activeSockets[pid];
         if (sid) {
             const socket = io.sockets.sockets.get(sid);
             if (socket) {
@@ -74,53 +80,66 @@ function startMatch() {
         }
     });
 
-    context.emitFilteredState();
-    timerService.startTimer();
+    room.emitFilteredState(io);
+    room.timerService.startTimer();
 }
 
 io.on('connection', (socket) => {
     console.log(`User Connected: ${socket.id}`);
+    
+    // Default to 'default' room on connection
+    socket.currentRoomId = 'default';
+    socket.join('default');
+    
+    // Immediately send the room list to the socket
+    socket.emit('lobby:roomsList', context.lobbyManager.getRoomList());
 
     socket.on('authenticate', (token) => {
         if (!token) return;
         socket.currentToken = token;
         console.log(`Authenticating socket ${socket.id} with token ${token}`);
 
-        const room = context.lobbyManager.getOrCreateRoom('default');
+        // Look up room using findRoomBySocketId or currentRoomId (defaulting to 'default')
+        const room = context.lobbyManager.findRoomBySocketId(socket.id) ||
+                     (socket.currentRoomId ? context.lobbyManager.getOrCreateRoom(socket.currentRoomId) : context.lobbyManager.getOrCreateRoom('default'));
+        
+        socket.currentRoomId = room.id;
+        socket.join(room.id);
+        const roomId = room.id;
 
-        if (context.matchStarted) {
+        if (room.matchStarted) {
             // Re-claim slot logic
             socket.assignedPlayerId =
-                Object.keys(context.playerAssignments).find(
-                    (pid) => context.playerAssignments[pid] === token
+                Object.keys(room.playerAssignments).find(
+                    (pid) => room.playerAssignments[pid] === token
                 ) || 'spectator';
 
             if (socket.assignedPlayerId !== 'spectator') {
-                context.activeSockets[socket.assignedPlayerId] = socket.id;
+                room.activeSockets[socket.assignedPlayerId] = socket.id;
                 console.log(`Re-assigned ${socket.assignedPlayerId} to socket ${socket.id}`);
                 context.safeEmit(socket, 'playerAssignment', socket.assignedPlayerId);
                 context.safeEmit(
                     socket,
                     'gameStateUpdate',
-                    context.game.getVisibleState(socket.assignedPlayerId)
+                    room.game.getVisibleState(socket.assignedPlayerId)
                 );
-                const currentActions = context.turnActions[socket.assignedPlayerId] || [];
+                const currentActions = room.turnActions[socket.assignedPlayerId] || [];
                 context.safeEmit(socket, 'actionsUpdate', currentActions);
             } else {
                 console.log(`${socket.id} joined match as spectator`);
                 context.safeEmit(socket, 'playerAssignment', 'spectator');
-                context.safeEmit(socket, 'gameStateUpdate', context.game.getState());
+                context.safeEmit(socket, 'gameStateUpdate', room.game.getState());
             }
             context.safeEmit(socket, 'lobby:update', room.getUpdate()); // Send lobby state on reconnect
 
             // Only send valid player lock status
             const filteredLockedIn = {};
             context.playerIds.forEach((pid) => {
-                if (context.playerAssignments[pid]) {
-                    filteredLockedIn[pid] = context.lockedIn[pid];
+                if (room.playerAssignments[pid]) {
+                    filteredLockedIn[pid] = room.lockedIn[pid];
                 }
             });
-            context.safeEmit(io, 'syncStatus', { lockedIn: filteredLockedIn });
+            context.safeEmit(io.to(roomId), 'syncStatus', { lockedIn: filteredLockedIn });
         } else {
             // Lobby Phase
             console.log(`Socket ${socket.id} in lobby`);
@@ -149,28 +168,42 @@ io.on('connection', (socket) => {
     registerChatHandlers(socket, io, context);
 
     socket.on('restartGame', () => {
-        timerService.stop();
-        context.reset();
+        const roomId = socket.currentRoomId || (context.lobbyManager.findRoomBySocketId(socket.id)?.id) || 'default';
+        const room = context.lobbyManager.getOrCreateRoom(roomId);
+        room.timerService.stop();
+        room.reset();
 
-        // Reset all sockets
+        // Reset all sockets in the room
         io.sockets.sockets.forEach((s) => {
-            s.assignedPlayerId = null;
+            if (s.currentRoomId === roomId) {
+                s.assignedPlayerId = null;
+            }
         });
 
-        io.emit('lobby:update', context.lobbyManager.getOrCreateRoom('default').getUpdate());
-        io.emit('matchRestarted');
+        io.to(roomId).emit('lobby:update', room.getUpdate());
+        io.to(roomId).emit('matchRestarted');
     });
 
     socket.on('disconnect', () => {
         console.log(`User Disconnected: ${socket.id}`);
-        if (!context.matchStarted) {
-            context.lobbyManager.handleSocketDisconnect(socket.id);
-            io.emit('lobby:update', context.lobbyManager.getOrCreateRoom('default').getUpdate());
-        } else if (socket.assignedPlayerId) {
-            if (context.activeSockets[socket.assignedPlayerId] === socket.id) {
-                context.activeSockets[socket.assignedPlayerId] = null;
+        const roomId = socket.currentRoomId || (context.lobbyManager.findRoomBySocketId(socket.id)?.id) || 'default';
+        const room = context.lobbyManager.rooms.get(roomId);
+        if (room) {
+            room.handleDisconnect(socket.id);
+            if (socket.assignedPlayerId) {
+                if (room.activeSockets[socket.assignedPlayerId] === socket.id) {
+                    room.activeSockets[socket.assignedPlayerId] = null;
+                }
+            }
+            const playerCount = room.slots.filter((s) => s !== null).length;
+            const spectatorCount = room.spectators.length;
+            if (playerCount === 0 && spectatorCount === 0) {
+                context.lobbyManager.deleteRoom(roomId);
+            } else {
+                io.to(roomId).emit('lobby:update', room.getUpdate());
             }
         }
+        io.emit('lobby:roomsList', context.lobbyManager.getRoomList());
     });
 });
 
