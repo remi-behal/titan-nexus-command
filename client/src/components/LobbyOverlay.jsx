@@ -10,6 +10,7 @@ export const LobbyOverlay = ({
     onOpenDesigner,
     onOpenSandbox,
     onSetTeam,
+    onMapDelete,
     socketId,
     socket
 }) => {
@@ -59,22 +60,47 @@ export const LobbyOverlay = ({
                 </div>
 
 
-                <div className="map-selection">
+                <div className="map-selection" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label>Battlefield:</label>
-                    <select
-                        value={lobbyUpdate.selectedMapName || ''}
-                        onChange={(e) => onSetMap(e.target.value || null)}
-                        disabled={mySeatIndex !== 0}
-                        className="map-select"
-                    >
-                        <option value="">Default Sector</option>
-                        {availableMaps &&
-                            availableMaps.map((map) => (
-                                <option key={map} value={map}>
-                                    {map.replace(/_/g, ' ')}
-                                </option>
-                            ))}
-                    </select>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <select
+                            value={lobbyUpdate.selectedMapName || ''}
+                            onChange={(e) => onSetMap(e.target.value || null)}
+                            disabled={mySeatIndex !== 0}
+                            className="map-select"
+                            style={{ flexGrow: 1 }}
+                        >
+                            <option value="">Default Sector</option>
+                            {availableMaps &&
+                                availableMaps.map((map) => (
+                                    <option key={map.id} value={map.id}>
+                                        {map.isCustom ? `[Custom] ${map.name}` : map.name}
+                                    </option>
+                                ))}
+                        </select>
+                        {mySeatIndex === 0 && lobbyUpdate.selectedMapName && availableMaps.find(m => m.id === lobbyUpdate.selectedMapName)?.isCustom && (
+                            <button
+                                onClick={() => {
+                                    if (confirm(`Are you sure you want to delete "${lobbyUpdate.selectedMapName}"?`)) {
+                                        onMapDelete(lobbyUpdate.selectedMapName);
+                                        onSetMap(null);
+                                    }
+                                }}
+                                style={{
+                                    backgroundColor: '#962d2d',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    padding: '8px 12px',
+                                    cursor: 'pointer',
+                                    fontFamily: 'monospace',
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                DELETE
+                            </button>
+                        )}
+                    </div>
                     {mySeatIndex !== 0 && (
                         <p className="host-only-hint">Only Player 1 can select maps</p>
                     )}

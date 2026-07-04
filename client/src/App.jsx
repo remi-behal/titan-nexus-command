@@ -43,7 +43,8 @@ function App() {
         handleReadyToggle,
         handleSetMap,
         handleSetTeam,
-        handleMapSave
+        handleMapSave,
+        handleMapDelete
     } = useGameSocket();
 
     const turnRef = useRef(1); // Track turn for stale closures in listeners
@@ -737,6 +738,7 @@ function App() {
                     onOpenDesigner={() => setCurrentView('DESIGNER')}
                     onOpenSandbox={handleOpenSandbox}
                     onSetTeam={triggerSetTeam}
+                    onMapDelete={handleMapDelete}
                     socketId={socket.id}
                     socket={socket}
                 />
