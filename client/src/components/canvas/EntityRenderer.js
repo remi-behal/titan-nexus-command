@@ -36,7 +36,8 @@ export function drawEntities(
     maxPullDistance,
     selectedItemType,
     showDebugPreview,
-    committedActions
+    committedActions,
+    isSandbox = false
 ) {
     const { viewL, viewR, viewT, viewB } = viewBounds;
     const mapW = currentGameState.map.width;
@@ -116,7 +117,7 @@ export function drawEntities(
         // DRAWING GUARD: Only render the entity if it is scouted (active vision/owned)
         // or if it's a ghost (previously scouted).
         // This prevents enemy hubs at link endpoints from being visible in the dark.
-        if (entity.scouted === false && !entity.isGhost) return;
+        if (!isSandbox && entity.scouted === false && !entity.isGhost) return;
 
         ctx.save();
 

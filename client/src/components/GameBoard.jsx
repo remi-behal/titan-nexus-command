@@ -44,7 +44,8 @@ const GameBoard = forwardRef(
             setCameraOffset,
             zoom,
             setZoom,
-            minZoom
+            minZoom,
+            isSandbox = false
         },
         ref
     ) => {
@@ -91,7 +92,8 @@ const GameBoard = forwardRef(
             mousePos,
             cameraOffset,
             maxPullDistance,
-            showDebugPreview
+            showDebugPreview,
+            isSandbox
         });
 
         useEffect(() => {
@@ -106,7 +108,8 @@ const GameBoard = forwardRef(
                 mousePos,
                 cameraOffset,
                 maxPullDistance,
-                showDebugPreview
+                showDebugPreview,
+                isSandbox
             };
         }, [
             gameState,
@@ -119,7 +122,8 @@ const GameBoard = forwardRef(
             mousePos,
             cameraOffset,
             maxPullDistance,
-            showDebugPreview
+            showDebugPreview,
+            isSandbox
         ]);
 
         // --- Main Animation & Draw Loop ---
@@ -154,7 +158,8 @@ const GameBoard = forwardRef(
                         mousePos,
                         cameraOffset: rawCameraOffset,
                         maxPullDistance,
-                        showDebugPreview
+                        showDebugPreview,
+                        isSandbox
                     } = propsRef.current;
 
                     // Defensive check for NaN camera offset
@@ -185,7 +190,7 @@ const GameBoard = forwardRef(
                     );
 
                     // 1. UPDATE VISUAL POSITIONS (Lerp) & GHOST LOGIC
-                    const { isInVision } = updateInterpolation(currentGameState, myPlayerId);
+                    const { isInVision } = updateInterpolation(currentGameState, myPlayerId, isSandbox);
 
                     // 2. CLEAR CANVAS
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -272,21 +277,23 @@ const GameBoard = forwardRef(
 
                     // -----------------------------------------------------------------
                     // 7. FOG OF WAR OVERLAY
-                    const fogViewBounds = { viewL, viewR, viewT, viewB };
-                    drawFogOfWar(
-                        ctx,
-                        fogCanvasRef,
-                        canvas.width,
-                        canvas.height,
-                        zoom,
-                        cameraOffset,
-                        mapW,
-                        mapH,
-                        fogViewBounds,
-                        currentGameState.entities,
-                        visualEntities.current,
-                        myPlayerId
-                    );
+                    if (!isSandbox) {
+                        const fogViewBounds = { viewL, viewR, viewT, viewB };
+                        drawFogOfWar(
+                            ctx,
+                            fogCanvasRef,
+                            canvas.width,
+                            canvas.height,
+                            zoom,
+                            cameraOffset,
+                            mapW,
+                            mapH,
+                            fogViewBounds,
+                            currentGameState.entities,
+                            visualEntities.current,
+                            myPlayerId
+                        );
+                    }
 
                     // 8. FOREGROUND & UI (Entities, Highlights, Aiming)
                     // -----------------------------------------------------------------
@@ -335,7 +342,8 @@ const GameBoard = forwardRef(
                                 maxPullDistance,
                                 selectedItemType,
                                 showDebugPreview,
-                                committedActions
+                                committedActions,
+                                isSandbox
                             );
 
                             // 6. DRAW UI OVERLAY
