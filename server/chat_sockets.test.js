@@ -19,7 +19,7 @@ describe('Chat Socket Server Handlers', () => {
         serverProcess.stdout.on('data', () => {});
         serverProcess.stderr.on('data', () => {});
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 200));
         client = Client('http://localhost:3109');
         await new Promise((r) => client.once('connect', r));
     });

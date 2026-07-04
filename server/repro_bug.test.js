@@ -89,7 +89,7 @@ describe('Reproduce Turn Button Bug', () => {
         });
 
         client2.emit('passTurn');
-        await new Promise((r) => setTimeout(r, 1000));
+        await new Promise((r) => setTimeout(r, 100));
 
         expect(received).toBe(true);
     });

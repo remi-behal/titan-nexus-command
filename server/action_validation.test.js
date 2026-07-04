@@ -94,7 +94,7 @@ describe('Server Integration - Action Validation Sockets', () => {
             console.error('[Spawned Server Error]', data.toString().trim());
         });
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 200));
         client1 = Client('http://localhost:3112');
         client2 = Client('http://localhost:3112');
 
