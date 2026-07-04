@@ -20,6 +20,7 @@ export default defineConfig({
             {
                 test: {
                     name: 'node-suite',
+                    globals: true,
                     environment: 'node',
                     include: ['server/**/*.test.js', 'shared/tests/**/*.test.js'],
                     exclude: ['shared/tests/*Performance.test.js']
@@ -28,6 +29,7 @@ export default defineConfig({
             {
                 test: {
                     name: 'client-ui',
+                    globals: true,
                     environment: 'jsdom',
                     include: ['client/src/**/*.test.js', 'client/src/**/*.test.jsx']
                 }
