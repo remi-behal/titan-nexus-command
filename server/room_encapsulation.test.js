@@ -14,3 +14,18 @@ describe('LobbyRoom Encapsulation', () => {
         expect(roomA.timerService).not.toBe(roomB.timerService);
     });
 });
+
+import { SessionContext } from './context/SessionContext.js';
+
+describe('LobbyManager Room Listings', () => {
+    it('should list rooms and locate room by socket id', () => {
+        const context = new SessionContext();
+        const manager = context.lobbyManager;
+        const room = manager.getOrCreateRoom('room-test');
+        room.slots[0] = { socketId: 'socket-123', token: 'token-abc' };
+        
+        expect(manager.getRoomList().length).toBeGreaterThan(0);
+        expect(manager.findRoomBySocketId('socket-123')).toBe(room);
+    });
+});
+
