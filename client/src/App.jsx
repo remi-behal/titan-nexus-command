@@ -5,6 +5,7 @@ import { ENTITY_STATS, GLOBAL_STATS } from '../../shared/constants/EntityStats.j
 import GameBoard from './components/GameBoard';
 import RadialMenu from './components/RadialMenu';
 import { LobbyOverlay } from './components/LobbyOverlay';
+import { RoomBrowser } from './components/RoomBrowser';
 import MapDesigner from './components/MapDesigner';
 import AssetGallery from './components/AssetGallery';
 import { audioManager } from './utils/AudioManager';
@@ -32,6 +33,11 @@ function App() {
         availableMaps,
         lastError,
         committedActions,
+        roomsList,
+        currentRoomId,
+        joinRoom,
+        createRoom,
+        leaveRoom,
         setCommittedActions,
         setLastError,
         handleSendMessage,
@@ -728,6 +734,15 @@ function App() {
         }
 
         if (!matchStarted) {
+            if (currentRoomId === null) {
+                return (
+                    <RoomBrowser
+                        rooms={roomsList}
+                        onCreateRoom={createRoom}
+                        onJoinRoom={joinRoom}
+                    />
+                );
+            }
             return (
                 <LobbyOverlay
                     lobbyUpdate={lobbyStatus}
@@ -741,6 +756,7 @@ function App() {
                     onMapDelete={handleMapDelete}
                     socketId={socket.id}
                     socket={socket}
+                    onLeaveRoom={leaveRoom}
                 />
             );
         }

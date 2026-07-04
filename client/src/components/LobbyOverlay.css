@@ -300,3 +300,25 @@
     margin-right: 0.5rem;
 }
 
+.leave-button {
+    margin-top: 0.5rem;
+    padding: 0.8rem 1.5rem;
+    background: transparent;
+    color: #ff007f;
+    border: 1px solid #ff007f;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+    font-weight: bold;
+    font-size: 1rem;
+    width: 100%;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+}
+
+.leave-button:hover {
+    background: #ff007f;
+    color: #fff;
+    box-shadow: 0 0 15px rgba(255, 0, 127, 0.5);
+}
+

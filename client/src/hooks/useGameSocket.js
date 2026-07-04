@@ -32,6 +32,8 @@ export function useGameSocket() {
     const [isResolving, setIsResolving] = useState(false);
     const [lobbyStatus, setLobbyStatus] = useState(null);
     const [matchStarted, setMatchStarted] = useState(false);
+    const [roomsList, setRoomsList] = useState([]);
+    const [currentRoomId, setCurrentRoomId] = useState(null);
 
     const isLocked = syncStatus?.lockedIn?.[myPlayerId] || false;
     const isResolvingPhase = playerState?.phase === 'RESOLVING';
@@ -91,6 +93,18 @@ export function useGameSocket() {
         socket.emit('map:delete', mapName);
     };
 
+    const joinRoom = (roomId) => {
+        socket.emit('lobby:joinRoom', roomId);
+    };
+
+    const createRoom = (roomId) => {
+        socket.emit('lobby:createRoom', roomId);
+    };
+
+    const leaveRoom = () => {
+        socket.emit('lobby:leaveRoom');
+    };
+
     useEffect(() => {
         const onConnect = () => {
             setIsConnected(true);
@@ -144,6 +158,18 @@ export function useGameSocket() {
 
         const onMapsUpdate = (maps) => {
             setAvailableMaps(maps);
+        };
+
+        const onRoomsList = (rooms) => {
+            setRoomsList(rooms || []);
+        };
+
+        const onJoinedRoom = (roomId) => {
+            setCurrentRoomId(roomId);
+        };
+
+        const onLeftRoom = () => {
+            setCurrentRoomId(null);
         };
 
         const onError = (err) => {
@@ -221,6 +247,9 @@ export function useGameSocket() {
         socket.on('lobby:update', onLobbyUpdate);
         socket.on('matchStarted', onMatchStarted);
         socket.on('room:mapsUpdate', onMapsUpdate);
+        socket.on('lobby:roomsList', onRoomsList);
+        socket.on('lobby:joinedRoom', onJoinedRoom);
+        socket.on('lobby:leftRoom', onLeftRoom);
         socket.on('connect_error', onError);
         socket.on('chat:history', onChatHistory);
         socket.on('chat:newMessage', onChatNewMessage);
@@ -244,6 +273,9 @@ export function useGameSocket() {
             socket.off('lobby:update', onLobbyUpdate);
             socket.off('matchStarted', onMatchStarted);
             socket.off('room:mapsUpdate', onMapsUpdate);
+            socket.off('lobby:roomsList', onRoomsList);
+            socket.off('lobby:joinedRoom', onJoinedRoom);
+            socket.off('lobby:leftRoom', onLeftRoom);
             socket.off('connect_error', onError);
             socket.off('chat:history', onChatHistory);
             socket.off('chat:newMessage', onChatNewMessage);
@@ -278,6 +310,11 @@ export function useGameSocket() {
         availableMaps,
         lastError,
         committedActions,
+        roomsList,
+        currentRoomId,
+        joinRoom,
+        createRoom,
+        leaveRoom,
         setCommittedActions,
         setLastError,
         setMatchStarted,

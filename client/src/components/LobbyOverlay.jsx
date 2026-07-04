@@ -12,7 +12,8 @@ export const LobbyOverlay = ({
     onSetTeam,
     onMapDelete,
     socketId,
-    socket
+    socket,
+    onLeaveRoom
 }) => {
     if (!lobbyUpdate) return null;
 
@@ -22,7 +23,7 @@ export const LobbyOverlay = ({
     return (
         <div className="lobby-overlay">
             <div className="lobby-content">
-                <h1 className="lobby-title">TITAN: NEXUS</h1>
+                <h1 className="lobby-title">TITAN: {(lobbyUpdate.id || 'NEXUS').toUpperCase()}</h1>
                 <p>Waiting for players...</p>
 
                 <div className="slots-container">
@@ -167,6 +168,13 @@ export const LobbyOverlay = ({
                     }}
                 >
                     PRACTICE RANGE
+                </button>
+
+                <button
+                    className="leave-button"
+                    onClick={onLeaveRoom}
+                >
+                    LEAVE SECTOR
                 </button>
 
                 <p style={{ marginTop: '1rem', opacity: 0.7, fontSize: '0.9rem' }}>
