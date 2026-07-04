@@ -11,7 +11,9 @@
         "lint": "eslint . && node scripts/validate-stats.cjs && node scripts/validate-canvas-stack.cjs",
         "lint:fix": "eslint . --fix && npx prettier . --write",
         "cleanup:git": "git rm -r --cached . && git add . && git commit -m 'chore: clean git index' && git push origin main",
-        "test": "vitest run --coverage",
+        "test": "vitest run",
+        "test:coverage": "vitest run --coverage",
+        "test:perf": "vitest run --config vitest.perf.config.js",
         "test:watch": "vitest",
         "test:ui": "vitest --ui"
     },
