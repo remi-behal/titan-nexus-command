@@ -1,13 +1,99 @@
+import { GameState } from '../shared/GameState.js';
+import { TimerService } from './services/TimerService.js';
+
 export class LobbyRoom {
-    constructor(id, maxPlayers = 8) {
+    constructor(id, maxPlayers = 8, context = null) {
         this.id = id;
         this.maxPlayers = maxPlayers;
+        this.context = context;
         this.slots = new Array(maxPlayers).fill(null);
         this.spectators = [];
         this.status = 'LOBBY'; // LOBBY, IN_GAME
         this.selectedMapName = null;
         this.chatHistory = [];
+
+        // Game context properties scoped to room
+        this.game = new GameState();
+        this.timerService = new TimerService(this);
+        this.playerAssignments = {};
+        this.activeSockets = {};
+        this.turnActions = {};
+        this.lockedIn = {};
+        
+        this.matchStarted = false;
+        
+        // Populate standard assignment maps
+        for (let i = 1; i <= maxPlayers; i++) {
+            const pid = `player${i}`;
+            this.playerAssignments[pid] = null;
+            this.activeSockets[pid] = null;
+            this.turnActions[pid] = null;
+            this.lockedIn[pid] = false;
+        }
     }
+
+    getMetadata() {
+        const playerCount = this.slots.filter(s => s !== null).length;
+        return {
+            id: this.id,
+            playerCount,
+            maxPlayers: this.maxPlayers,
+            status: this.status
+        };
+    }
+
+    emit(io, event, data) {
+        if (this.context) {
+            this.context.safeEmit(io.to(this.id), event, data);
+        } else {
+            io.to(this.id).emit(event, data);
+        }
+    }
+
+    emitFilteredState(io, state = null) {
+        if (!this.matchStarted) return;
+        const baseState = state || this.game.getState();
+
+        io.to(this.id).emit('gameStateUpdate', baseState); // Spectators fallback
+        
+        // Send player-specific updates
+        for (let i = 1; i <= this.maxPlayers; i++) {
+            const pid = `player${i}`;
+            const sid = this.activeSockets[pid];
+            if (sid) {
+                const socket = io.sockets.sockets.get(sid);
+                if (socket) {
+                    this.context.safeEmit(
+                        socket,
+                        'gameStateUpdate',
+                        this.game.getVisibleState(pid, baseState)
+                    );
+                }
+            }
+        }
+    }
+
+    reset() {
+        this.matchStarted = false;
+        this.status = 'LOBBY';
+        this.slots = new Array(this.maxPlayers).fill(null);
+        this.playerAssignments = {};
+        this.activeSockets = {};
+        this.turnActions = {};
+        this.lockedIn = {};
+        
+        for (let i = 1; i <= this.maxPlayers; i++) {
+            const pid = `player${i}`;
+            this.playerAssignments[pid] = null;
+            this.activeSockets[pid] = null;
+            this.turnActions[pid] = null;
+            this.lockedIn[pid] = false;
+        }
+        this.game = new GameState();
+        if (this.timerService) this.timerService.stop();
+        this.timerService = new TimerService(this);
+    }
+
 
     addMessage(senderId, senderName, text) {
         const message = {
