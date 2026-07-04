@@ -87,6 +87,10 @@ export function useGameSocket() {
         }
     };
 
+    const handleMapDelete = (mapName) => {
+        socket.emit('map:delete', mapName);
+    };
+
     useEffect(() => {
         const onConnect = () => {
             setIsConnected(true);
@@ -188,6 +192,24 @@ export function useGameSocket() {
             setCommittedActions(actions);
         };
 
+        const onSaveSuccess = (fileName) => {
+            alert(`Map successfully saved: ${fileName}`);
+        };
+
+        const onSaveError = (err) => {
+            setLastError(err);
+            alert(`Failed to save map: ${err}`);
+        };
+
+        const onDeleteSuccess = (mapName) => {
+            alert(`Map successfully deleted: ${mapName}`);
+        };
+
+        const onDeleteError = (err) => {
+            setLastError(err);
+            alert(`Failed to delete map: ${err}`);
+        };
+
         socket.on('connect', onConnect);
         socket.on('disconnect', onDisconnect);
         socket.on('gameStateUpdate', onUpdate);
@@ -203,6 +225,10 @@ export function useGameSocket() {
         socket.on('chat:history', onChatHistory);
         socket.on('chat:newMessage', onChatNewMessage);
         socket.on('actionsUpdate', onActionsUpdate);
+        socket.on('map:saveSuccess', onSaveSuccess);
+        socket.on('map:saveError', onSaveError);
+        socket.on('map:deleteSuccess', onDeleteSuccess);
+        socket.on('map:deleteError', onDeleteError);
 
         if (socket.connected) onConnect();
 
@@ -222,6 +248,10 @@ export function useGameSocket() {
             socket.off('chat:history', onChatHistory);
             socket.off('chat:newMessage', onChatNewMessage);
             socket.off('actionsUpdate', onActionsUpdate);
+            socket.off('map:saveSuccess', onSaveSuccess);
+            socket.off('map:saveError', onSaveError);
+            socket.off('map:deleteSuccess', onDeleteSuccess);
+            socket.off('map:deleteError', onDeleteError);
         };
     }, []);
 
@@ -262,6 +292,7 @@ export function useGameSocket() {
         handleReadyToggle,
         handleSetMap,
         handleSetTeam,
-        handleMapSave
+        handleMapSave,
+        handleMapDelete
     };
 }
