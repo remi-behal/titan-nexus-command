@@ -143,7 +143,7 @@ describe('Server Integration - Turn Resolution Race Condition', () => {
         client2.emit('submitActions', []);
 
         // Wait for resolution full process
-        await new Promise((resolve) => setTimeout(resolve, 2500));
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         // Request final state
         const finalState = await new Promise((resolve) => {
