@@ -3,14 +3,20 @@ export function registerChatHandlers(socket, io, context) {
 
     socket.on('authenticate', (token) => {
         if (!token) return;
-        const room = lobbyManager.getOrCreateRoom('default');
+        const roomId = socket.currentRoomId;
+        if (!roomId) return;
+        const room = lobbyManager.rooms.get(roomId);
+        if (!room) return;
         socket.emit('chat:history', room.chatHistory || []);
     });
 
     socket.on('chat:sendMessage', ({ text }) => {
         if (!text || typeof text !== 'string') return;
 
-        const room = lobbyManager.getOrCreateRoom('default');
+        const roomId = socket.currentRoomId;
+        if (!roomId) return;
+        const room = lobbyManager.rooms.get(roomId);
+        if (!room) return;
 
         let senderName;
         if (socket.assignedPlayerId === 'player1') {
@@ -24,6 +30,6 @@ export function registerChatHandlers(socket, io, context) {
         const senderId = socket.assignedPlayerId || 'spectator';
         const msg = room.addMessage(senderId, senderName, text);
 
-        io.emit('chat:newMessage', msg);
+        io.to(roomId).emit('chat:newMessage', msg);
     });
 }
