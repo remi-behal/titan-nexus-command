@@ -25,6 +25,16 @@ class MapService {
         return fileName;
     }
 
+    deleteMap(name) {
+        const fileName = `${name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
+        const filePath = path.join(MAP_DIR, fileName);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            return true;
+        }
+        return false;
+    }
+
     listMaps() {
         if (!fs.existsSync(MAP_DIR)) return [];
         return fs
