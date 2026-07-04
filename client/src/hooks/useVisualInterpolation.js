@@ -59,7 +59,7 @@ export function useVisualInterpolation() {
     const isFirstUpdate = useRef(true);
     const lastFlightSoundTimes = useRef({});
 
-    const updateInterpolation = (currentGameState, myPlayerId) => {
+    const updateInterpolation = (currentGameState, myPlayerId, isSandbox = false) => {
         if (!currentGameState) {
             return {
                 visualEntities: visualEntities.current,
@@ -122,6 +122,7 @@ export function useVisualInterpolation() {
             .filter((c) => c.radius > 0);
 
         const isInVision = (x, y) => {
+            if (isSandbox) return true;
             if (!myPlayerId || myPlayerId === 'spectator') return true;
 
             if (
@@ -240,7 +241,7 @@ export function useVisualInterpolation() {
                     return;
                 }
 
-                const currentlyInVision = isInVision(viz.x, viz.y);
+                const currentlyInVision = isSandbox ? true : isInVision(viz.x, viz.y);
 
                 if (currentlyInVision) {
                     delete visualEntities.current[id];

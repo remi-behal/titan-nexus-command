@@ -620,6 +620,7 @@ function App() {
                                 ref={gameBoardRef}
                                 gameState={sandboxState}
                                 myPlayerId={activeSandboxPlayer}
+                                isSandbox={true}
                                 selectedHubId={selectedHubId}
                                 selectedItemType={selectedItemType}
                                 launchMode={launchMode}
