@@ -740,6 +740,8 @@ function App() {
                         rooms={roomsList}
                         onCreateRoom={createRoom}
                         onJoinRoom={joinRoom}
+                        onOpenDesigner={() => setCurrentView('DESIGNER')}
+                        onOpenSandbox={handleOpenSandbox}
                     />
                 );
             }

@@ -58,7 +58,7 @@ describe('Chat Socket Server Handlers', () => {
         // Claim a seat with custom name
         await new Promise((resolve) => {
             client.once('lobby:update', resolve);
-            client.emit('lobby:claimSeat', { slotIndex: 2, playerName: 'General Kenobi' });
+            client.emit('lobby:claimSeat', { slotIndex: 1, playerName: 'General Kenobi' });
         });
 
         const msgPromise = new Promise((resolve) => {

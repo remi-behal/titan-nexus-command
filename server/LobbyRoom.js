@@ -2,7 +2,7 @@ import { GameState } from '../shared/GameState.js';
 import { TimerService } from './services/TimerService.js';
 
 export class LobbyRoom {
-    constructor(id, maxPlayers = 8, context = null) {
+    constructor(id, maxPlayers = 2, context = null) {
         this.id = id;
         this.maxPlayers = maxPlayers;
         this.context = context;
@@ -92,6 +92,37 @@ export class LobbyRoom {
         this.game = new GameState();
         if (this.timerService) this.timerService.stop();
         this.timerService = new TimerService(this);
+    }
+
+    adjustSlots(action) {
+        if (action === 'add') {
+            if (this.maxPlayers < 8) {
+                this.maxPlayers++;
+                this.slots.push(null);
+                
+                const pid = `player${this.maxPlayers}`;
+                this.playerAssignments[pid] = null;
+                this.activeSockets[pid] = null;
+                this.turnActions[pid] = null;
+                this.lockedIn[pid] = false;
+                return true;
+            }
+        } else if (action === 'remove') {
+            if (this.maxPlayers > 2) {
+                if (this.slots[this.slots.length - 1] === null) {
+                    const pid = `player${this.maxPlayers}`;
+                    delete this.playerAssignments[pid];
+                    delete this.activeSockets[pid];
+                    delete this.turnActions[pid];
+                    delete this.lockedIn[pid];
+                    
+                    this.slots.pop();
+                    this.maxPlayers--;
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 

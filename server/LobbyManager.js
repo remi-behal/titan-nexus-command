@@ -10,7 +10,7 @@ export class LobbyManager {
 
     getOrCreateRoom(roomId) {
         if (!this.rooms.has(roomId)) {
-            this.rooms.set(roomId, new LobbyRoom(roomId, 8, this.context));
+            this.rooms.set(roomId, new LobbyRoom(roomId, 2, this.context));
         }
         return this.rooms.get(roomId);
     }
@@ -19,7 +19,7 @@ export class LobbyManager {
         return Array.from(this.rooms.values()).map(room => room.getMetadata());
     }
 
-    createRoom(roomId, maxPlayers = 8) {
+    createRoom(roomId, maxPlayers = 2) {
         if (this.rooms.has(roomId)) return null;
         const newRoom = new LobbyRoom(roomId, maxPlayers, this.context);
         this.rooms.set(roomId, newRoom);

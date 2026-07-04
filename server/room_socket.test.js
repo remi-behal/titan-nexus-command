@@ -143,9 +143,10 @@ describe('Socket Room Routing & Validation', () => {
             registerLobbyHandlers(mockSocket, mockIo, mockContext, {}, () => {});
 
             events['lobby:createRoom']('new-room');
-            expect(mockLobbyManager.createRoom).toHaveBeenCalledWith('new-room', 8);
+            expect(mockLobbyManager.createRoom).toHaveBeenCalledWith('new-room', 2);
             expect(mockSocket.join).toHaveBeenCalledWith('new-room');
             expect(mockSocket.currentRoomId).toBe('new-room');
+            expect(mockSocket.emit).toHaveBeenCalledWith('lobby:joinedRoom', 'new-room');
             expect(mockIoEmit).toHaveBeenCalledWith('lobby:roomsList', expect.any(Array));
         });
 
@@ -169,6 +170,7 @@ describe('Socket Room Routing & Validation', () => {
             expect(mockSocket.join).toHaveBeenCalledWith('room-1');
             expect(mockSocket.currentRoomId).toBe('room-1');
             expect(mockLobbyManager.rooms.get('room-1').spectators).toContain('socket-1');
+            expect(mockSocket.emit).toHaveBeenCalledWith('lobby:joinedRoom', 'room-1');
             expect(mockIoEmit).toHaveBeenCalledWith('lobby:roomsList', expect.any(Array));
         });
 
@@ -183,6 +185,7 @@ describe('Socket Room Routing & Validation', () => {
 
             expect(mockSocket.leave).toHaveBeenCalledWith('room-1');
             expect(mockSocket.currentRoomId).toBeNull();
+            expect(mockSocket.emit).toHaveBeenCalledWith('lobby:leftRoom');
             expect(mockLobbyManager.deleteRoom).toHaveBeenCalledWith('room-1');
         });
     });

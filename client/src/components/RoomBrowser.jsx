@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './RoomBrowser.css';
 
-export const RoomBrowser = ({ rooms, onCreateRoom, onJoinRoom }) => {
+export const RoomBrowser = ({ rooms, onCreateRoom, onJoinRoom, onOpenDesigner, onOpenSandbox }) => {
     const [newRoomId, setNewRoomId] = useState('');
     const [error, setError] = useState('');
 
@@ -39,6 +39,45 @@ export const RoomBrowser = ({ rooms, onCreateRoom, onJoinRoom }) => {
                     </button>
                 </form>
                 {error && <p className="error-message">{error}</p>}
+
+                <div className="browser-modes" style={{ display: 'flex', gap: '15px', marginBottom: '2rem' }}>
+                    <button
+                        onClick={onOpenSandbox}
+                        className="browser-mode-button sandbox-btn"
+                        style={{
+                            flex: 1,
+                            padding: '0.8rem 1.5rem',
+                            backgroundColor: '#27ae60',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            letterSpacing: '1px',
+                            fontFamily: 'inherit'
+                        }}
+                    >
+                        PRACTICE RANGE
+                    </button>
+                    <button
+                        onClick={onOpenDesigner}
+                        className="browser-mode-button designer-btn"
+                        style={{
+                            flex: 1,
+                            padding: '0.8rem 1.5rem',
+                            backgroundColor: '#2980b9',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            letterSpacing: '1px',
+                            fontFamily: 'inherit'
+                        }}
+                    >
+                        DESIGN CUSTOM MAP
+                    </button>
+                </div>
 
                 <div className="rooms-grid">
                     {rooms.map((room) => (

@@ -53,6 +53,48 @@ export const LobbyOverlay = ({
                     </div>
                 )}
 
+                {mySeatIndex === 0 && (
+                    <div className="slot-adjust-controls" style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                        <button
+                            className="adjust-slot-btn remove-slot-btn"
+                            onClick={() => socket.emit('lobby:adjustSlots', { action: 'remove' })}
+                            disabled={lobbyUpdate.slots.length <= 2}
+                            style={{
+                                padding: '0.6rem 1.2rem',
+                                backgroundColor: '#962d2d',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                opacity: lobbyUpdate.slots.length <= 2 ? 0.5 : 1
+                            }}
+                        >
+                            - REMOVE SLOT
+                        </button>
+                        <span style={{ alignSelf: 'center', fontWeight: 'bold', fontFamily: 'monospace', fontSize: '1.1rem', letterSpacing: '1px' }}>
+                            SLOTS: {lobbyUpdate.slots.length} / 8
+                        </span>
+                        <button
+                            className="adjust-slot-btn add-slot-btn"
+                            onClick={() => socket.emit('lobby:adjustSlots', { action: 'add' })}
+                            disabled={lobbyUpdate.slots.length >= 8}
+                            style={{
+                                padding: '0.6rem 1.2rem',
+                                backgroundColor: '#27ae60',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                opacity: lobbyUpdate.slots.length >= 8 ? 0.5 : 1
+                            }}
+                        >
+                            + ADD SLOT
+                        </button>
+                    </div>
+                )}
+
                 <div className="slots-container">
                     {lobbyUpdate.slots.map((slot, index) => (
                         <div

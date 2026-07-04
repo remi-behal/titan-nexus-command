@@ -10,11 +10,12 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
 
     socket.on('lobby:createRoom', (roomId) => {
         const id = typeof roomId === 'object' ? roomId.roomId : roomId;
-        const maxPlayers = typeof roomId === 'object' ? roomId.maxPlayers || 8 : 8;
+        const maxPlayers = typeof roomId === 'object' ? roomId.maxPlayers || 2 : 2;
         const room = lobbyManager.createRoom(id, maxPlayers);
         if (room) {
             socket.join(id);
             socket.currentRoomId = id;
+            socket.emit('lobby:joinedRoom', id);
             io.emit('lobby:roomsList', lobbyManager.getRoomList());
             io.to(id).emit('lobby:update', room.getUpdate());
         } else {
@@ -30,6 +31,7 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
         if (!room.spectators.includes(socket.id)) {
             room.spectators.push(socket.id);
         }
+        socket.emit('lobby:joinedRoom', id);
         io.emit('lobby:roomsList', lobbyManager.getRoomList());
         io.to(id).emit('lobby:update', room.getUpdate());
     });
@@ -53,6 +55,7 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
                 io.to(id).emit('lobby:update', room.getUpdate());
             }
         }
+        socket.emit('lobby:leftRoom');
         io.emit('lobby:roomsList', lobbyManager.getRoomList());
     });
 
@@ -173,6 +176,23 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
         if (slot1 && slot1.socketId === socket.id) {
             room.setMap(mapName);
             io.to(roomId).emit('lobby:update', room.getUpdate());
+        }
+    });
+
+    socket.on('lobby:adjustSlots', ({ action }) => {
+        const roomId = socket.currentRoomId;
+        if (!roomId) return;
+        const room = lobbyManager.rooms.get(roomId);
+        if (!room) return;
+
+        const slot1 = room.slots[0];
+        if (slot1 && slot1.socketId === socket.id) {
+            if (room.adjustSlots(action)) {
+                io.to(roomId).emit('lobby:update', room.getUpdate());
+                io.emit('lobby:roomsList', lobbyManager.getRoomList());
+            }
+        } else {
+            socket.emit('lobby:error', { message: 'Only room owner can adjust slots.' });
         }
     });
 }

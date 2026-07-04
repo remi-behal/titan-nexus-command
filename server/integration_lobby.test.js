@@ -50,7 +50,7 @@ describe('Lobby Integration Handshake', () => {
             client1.on('lobby:update', onUpdate);
         });
         expect(update.id).toBe('default');
-        expect(update.slots).toHaveLength(8);
+        expect(update.slots).toHaveLength(2);
     });
 
     it('should allow claiming a seat and receiving update', async () => {

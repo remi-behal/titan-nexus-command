@@ -30,6 +30,7 @@
     letter-spacing: 4px;
     background: linear-gradient(135deg, #00d2ff 0%, #0066ff 100%);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 0.5rem;
 }
@@ -167,4 +168,13 @@
     border-radius: 8px;
     color: rgba(255, 255, 255, 0.4);
     letter-spacing: 2px;
+}
+
+.browser-mode-button {
+    transition: all 0.2s ease;
+}
+
+.browser-mode-button:hover {
+    filter: brightness(1.2);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.25);
 }
