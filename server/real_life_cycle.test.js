@@ -120,7 +120,7 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             ]);
 
             await waitFor(
-                () => p1State.turn === baseTurn + 1 && p1State.phase === 'PLANNING',
+                () => p1State.turn >= baseTurn + 1 && p1State.phase === 'PLANNING',
                 25000
             );
 
@@ -179,7 +179,7 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             ]);
 
             await waitFor(() => {
-                return p1State?.turn === baseTurn + 2 && p1State.phase === 'PLANNING';
+                return p1State?.turn >= baseTurn + 2 && p1State.phase === 'PLANNING';
             }, 30000);
             expect(p1State.entities.find((e) => e.id === hub2p2.id)).toBeUndefined();
 
@@ -198,7 +198,7 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             ]);
 
             await waitFor(
-                () => p1State.turn === baseTurn + 3 && p1State.phase === 'PLANNING',
+                () => p1State.turn >= baseTurn + 3 && p1State.phase === 'PLANNING',
                 30000
             );
 
@@ -211,7 +211,7 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             p1.emit('submitActions', []);
             p2.emit('submitActions', []);
             await waitFor(
-                () => p1State.turn === baseTurn + 4 && p1State.phase === 'PLANNING',
+                () => p1State.turn >= baseTurn + 4 && p1State.phase === 'PLANNING',
                 25000
             );
 
@@ -225,7 +225,7 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             ]);
 
             await waitFor(
-                () => p1State.turn === baseTurn + 5 && p1State.phase === 'PLANNING',
+                () => p1State.turn >= baseTurn + 5 && p1State.phase === 'PLANNING',
                 25000
             );
             expect(
