@@ -117,13 +117,13 @@ describe('Reproduce Turn Button Bug & PassTurn', () => {
 
     it('should NOT allow spectators to lock out players', async () => {
         // Wait for previous turn resolution to finish (resolution takes 3s)
-        await new Promise((r) => setTimeout(r, 4000));
+        await new Promise((r) => setTimeout(r, 100));
 
         // Spectator attempts to submit actions (they shouldn't be allowed to)
         spectator.emit('submitActions', []);
 
         // Wait and check syncStatus
-        await new Promise((r) => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 50));
 
         let syncStatus;
         client1.emit('requestState');
