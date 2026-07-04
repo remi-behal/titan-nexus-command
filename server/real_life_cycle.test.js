@@ -13,9 +13,9 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             env: {
                 ...process.env,
                 PORT: '3010',
-                TURN_DURATION: '1',
-                RESOLUTION_ROUND_DELAY: '200',
-                RESOLUTION_SUB_TICK_DELAY: '10'
+                TURN_DURATION: '10',
+                RESOLUTION_ROUND_DELAY: '10',
+                RESOLUTION_SUB_TICK_DELAY: '2'
             },
             stdio: 'pipe'
         });
@@ -82,16 +82,16 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             // 2. Sequential connect - ensure p1 gets player1
             p1.connect();
             p1.emit('authenticate', 'p1-token-real-life');
-            await new Promise((r) => setTimeout(r, 200));
+            await new Promise((r) => setTimeout(r, 50));
             p1.emit('lobby:claimSeat', 0);
-            await new Promise((r) => setTimeout(r, 200));
+            await new Promise((r) => setTimeout(r, 50));
             p1.emit('lobby:ready', true);
 
             p2.connect();
             p2.emit('authenticate', 'p2-token-real-life');
-            await new Promise((r) => setTimeout(r, 200));
+            await new Promise((r) => setTimeout(r, 50));
             p2.emit('lobby:claimSeat', 1);
-            await new Promise((r) => setTimeout(r, 200));
+            await new Promise((r) => setTimeout(r, 50));
             p2.emit('lobby:ready', true);
 
             await waitFor(() => p1Id === 'player1', 10000);
