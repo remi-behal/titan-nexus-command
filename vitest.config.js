@@ -22,8 +22,13 @@ export default defineConfig({
                     name: 'node-suite',
                     globals: true,
                     environment: 'node',
+                    isolate: false,
                     include: ['server/**/*.test.js', 'shared/tests/**/*.test.js'],
-                    exclude: ['**/node_modules/**', 'shared/tests/*Performance.test.js']
+                    exclude: ['**/node_modules/**', 'shared/tests/*Performance.test.js'],
+                    env: {
+                        RESOLUTION_ROUND_DELAY: '10',
+                        RESOLUTION_SUB_TICK_DELAY: '2'
+                    }
                 }
             },
             {
