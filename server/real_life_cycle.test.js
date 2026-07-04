@@ -13,7 +13,7 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
             env: {
                 ...process.env,
                 PORT: '3010',
-                TURN_DURATION: '10',
+                TURN_DURATION: '2',
                 RESOLUTION_ROUND_DELAY: '10',
                 RESOLUTION_SUB_TICK_DELAY: '2'
             },
@@ -196,6 +196,7 @@ describe('Full Cycle Integration - Real Life Scenarios', () => {
                     distance: 300
                 }
             ]);
+            p2.emit('submitActions', []);
 
             await waitFor(
                 () => p1State.turn === baseTurn + 3 && p1State.phase === 'PLANNING',
