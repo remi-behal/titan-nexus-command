@@ -32,6 +32,8 @@ describe('AudioManager', () => {
         // Reset properties
         audioManager.ctx = null;
         audioManager.player = null;
+        audioManager.compressor = null;
+        audioManager.initBasePromise = null;
         audioManager.initPromise = null;
         audioManager.currentTrack = null;
         audioManager.volume = 0.5;

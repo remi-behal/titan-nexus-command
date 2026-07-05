@@ -26,6 +26,7 @@ class AudioManager {
         this.compressor = null;
         this.frameSounds = new Set();
         this.cameraContext = null;
+        this.initBasePromise = null;
 
         this.registerJsonSounds();
         this.setupUnlockListeners();
@@ -36,17 +37,32 @@ class AudioManager {
             return;
         }
 
-        const unlock = async () => {
+        const unlock = () => {
             try {
                 if (!this.ctx) {
-                    await this.init();
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
                 }
                 if (this.ctx && this.ctx.state === 'suspended') {
-                    await this.ctx.resume();
-                }
-                if (this.ctx && this.ctx.state === 'running') {
+                    this.ctx.resume().then(() => {
+                        if (this.ctx && this.ctx.state === 'running') {
+                            removeListeners();
+                        }
+                    }).catch((e) => {
+                        console.error('Failed to resume AudioContext:', e);
+                    });
+                } else if (this.ctx && this.ctx.state === 'running') {
                     removeListeners();
                 }
+
+                // Kick off remaining initialization asynchronously
+                this.initBase().then(() => {
+                    this.init().catch((e) => {
+                        console.error('Failed full initialization after unlock:', e);
+                    });
+                }).catch((e) => {
+                    console.error('Failed base initialization after unlock:', e);
+                });
             } catch (e) {
                 console.error('Failed to unlock AudioContext:', e);
             }
@@ -127,38 +143,65 @@ class AudioManager {
         );
     }
 
+    initBase() {
+        if (this.initBasePromise) return this.initBasePromise;
+
+        this.initBasePromise = (async () => {
+            if (!this.ctx) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioCtx();
+            }
+
+            // Create DynamicsCompressor to prevent digital clipping
+            if (!this.compressor) {
+                this.compressor = this.ctx.createDynamicsCompressor();
+                this.compressor.threshold.setValueAtTime(-12, this.ctx.currentTime);
+                this.compressor.knee.setValueAtTime(30, this.ctx.currentTime);
+                this.compressor.ratio.setValueAtTime(12, this.ctx.currentTime);
+                this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
+                this.compressor.release.setValueAtTime(0.25, this.ctx.currentTime);
+                this.compressor.connect(this.ctx.destination);
+
+                setZzfxContext(this.ctx, this.compressor);
+            }
+        })().catch((e) => {
+            console.error('AudioManager base initialization failed:', e);
+            this.initBasePromise = null;
+            throw e;
+        });
+
+        return this.initBasePromise;
+    }
+
     init() {
         if (this.initPromise) return this.initPromise;
 
         this.initPromise = (async () => {
-            const AudioCtx = window.AudioContext || window.webkitAudioContext;
-            this.ctx = new AudioCtx();
+            await this.initBase();
 
-            // Create DynamicsCompressor to prevent digital clipping
-            this.compressor = this.ctx.createDynamicsCompressor();
-            this.compressor.threshold.setValueAtTime(-12, this.ctx.currentTime);
-            this.compressor.knee.setValueAtTime(30, this.ctx.currentTime);
-            this.compressor.ratio.setValueAtTime(12, this.ctx.currentTime);
-            this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
-            this.compressor.release.setValueAtTime(0.25, this.ctx.currentTime);
-            this.compressor.connect(this.ctx.destination);
+            // Check if audioWorklet is supported (secure contexts requirement on mobile)
+            const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
+            if (typeof this.ctx.audioWorklet === 'undefined' && !isTest) {
+                console.warn('AudioWorklet is not supported in this context (e.g. non-secure HTTP on mobile). Music player will be disabled.');
+                return;
+            }
 
-            setZzfxContext(this.ctx, this.compressor);
+            if (!this.player) {
+                // Dynamic import of chiptune3 only in browser context
+                const { ChiptuneJsPlayer } = await import('chiptune3/chiptune3.js');
+                this.player = new ChiptuneJsPlayer({
+                    context: this.ctx,
+                    repeatCount: 0
+                });
 
-            // Dynamic import of chiptune3 only in browser context
-            const { ChiptuneJsPlayer } = await import('chiptune3/chiptune3.js');
-            this.player = new ChiptuneJsPlayer({
-                context: this.ctx,
-                repeatCount: 0
-            });
+                // Explicitly connect gain node output to context destination
+                this.player.gain.connect(this.ctx.destination);
 
-            // Explicitly connect gain node output to context destination
-            this.player.gain.connect(this.ctx.destination);
-
-            // Register ended event to auto play the next track
-            this.player.onEnded(() => {
-                this.nextTrack();
-            });
+                // Register ended event to auto play the next track
+                this.player.onEnded(() => {
+                    this.nextTrack();
+                });
+            }
 
             // Wait for worklet module to load and compile before resolving
             return new Promise((resolve) => {
@@ -296,7 +339,7 @@ class AudioManager {
             }, 0);
         }
 
-        return this.init()
+        return this.initBase()
             .then(() => {
                 if (this.ctx && this.ctx.state === 'suspended') {
                     this.ctx.resume();
