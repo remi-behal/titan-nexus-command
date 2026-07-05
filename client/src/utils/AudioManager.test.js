@@ -68,6 +68,49 @@ describe('AudioManager', () => {
         expect(audioManager.player).toBeDefined();
     });
 
+    it('unlocks AudioContext on document click or touchstart', async () => {
+        const mockCompressor = {
+            threshold: { setValueAtTime: vi.fn() },
+            knee: { setValueAtTime: vi.fn() },
+            ratio: { setValueAtTime: vi.fn() },
+            attack: { setValueAtTime: vi.fn() },
+            release: { setValueAtTime: vi.fn() },
+            connect: vi.fn()
+        };
+        const mockContext = {
+            state: 'suspended',
+            currentTime: 0,
+            resume: vi.fn().mockImplementation(async () => {
+                mockContext.state = 'running';
+            }),
+            createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+            destination: {}
+        };
+        vi.stubGlobal(
+            'AudioContext',
+            vi.fn().mockImplementation(() => mockContext)
+        );
+
+        const addSpy = vi.spyOn(document, 'addEventListener');
+        const removeSpy = vi.spyOn(document, 'removeEventListener');
+
+        audioManager.setupUnlockListeners();
+
+        expect(addSpy).toHaveBeenCalledWith('click', expect.any(Function), true);
+        expect(addSpy).toHaveBeenCalledWith('touchstart', expect.any(Function), true);
+
+        const clickCall = addSpy.mock.calls.find(call => call[0] === 'click');
+        expect(clickCall).toBeDefined();
+        const clickHandler = clickCall[1];
+
+        await clickHandler();
+
+        expect(audioManager.ctx).toBe(mockContext);
+        expect(mockContext.resume).toHaveBeenCalled();
+        expect(removeSpy).toHaveBeenCalledWith('click', expect.any(Function), true);
+        expect(removeSpy).toHaveBeenCalledWith('touchstart', expect.any(Function), true);
+    });
+
     it('plays round start sound effect using ZzFX', async () => {
         const mockCompressor = {
             threshold: { setValueAtTime: vi.fn() },

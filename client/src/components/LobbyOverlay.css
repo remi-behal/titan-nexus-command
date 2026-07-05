@@ -453,3 +453,57 @@
     }
 }
 
+@media (max-width: 768px), (max-height: 600px) {
+    .lobby-content {
+        padding: 1.5rem;
+        width: 90%;
+        max-width: 380px;
+    }
+
+    .lobby-title {
+        font-size: 1.6rem;
+    }
+
+    .lobby-content p {
+        font-size: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .slots-container {
+        gap: 0.6rem;
+        margin-bottom: 1rem;
+    }
+
+    .slot-button {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.85rem;
+    }
+
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.6rem;
+    }
+
+    .map-selection {
+        margin: 0.8rem 0;
+        padding: 0.6rem;
+    }
+
+    .map-select {
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .ready-button {
+        padding: 0.6rem;
+        font-size: 0.95rem;
+        margin-top: 0.5rem;
+    }
+
+    .designer-button, .leave-button {
+        margin-top: 0.4rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+    }
+}
+

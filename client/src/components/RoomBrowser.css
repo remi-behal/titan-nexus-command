@@ -178,3 +178,50 @@
     filter: brightness(1.2);
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.25);
 }
+
+@media (max-width: 768px), (max-height: 600px) {
+    .browser-content {
+        padding: 1.5rem;
+        max-width: 95%;
+    }
+
+    .browser-title {
+        font-size: 1.6rem;
+    }
+
+    .browser-subtitle {
+        font-size: 0.8rem;
+        margin-bottom: 1rem;
+        letter-spacing: 3px;
+    }
+
+    .create-room-form {
+        margin-bottom: 1rem;
+    }
+
+    .create-room-input, .create-room-button {
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+    }
+
+    .rooms-grid {
+        max-height: 180px;
+        gap: 8px;
+    }
+
+    .room-card {
+        padding: 0.8rem;
+    }
+
+    .room-id {
+        font-size: 0.95rem;
+    }
+
+    .room-players {
+        font-size: 0.8rem;
+    }
+
+    .join-room-button {
+        padding: 0.4rem 1rem;
+    }
+}

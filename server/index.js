@@ -116,9 +116,11 @@ io.on('connection', (socket) => {
     socket.on('authenticate', (authData) => {
         let token;
         let playerName;
+        let roomId;
         if (authData && typeof authData === 'object') {
             token = authData.token;
             playerName = authData.playerName;
+            roomId = authData.roomId;
         } else {
             token = authData;
         }
@@ -127,15 +129,16 @@ io.on('connection', (socket) => {
         if (playerName) {
             socket.playerName = playerName;
         }
-        console.log(`Authenticating socket ${socket.id} with token ${token}`);
+        console.log(`Authenticating socket ${socket.id} with token ${token} (room: ${roomId || 'none'})`);
 
-        // Look up room using findRoomBySocketId or currentRoomId (defaulting to 'default')
+        // Look up room using findRoomBySocketId or custom roomId or currentRoomId
+        const targetRoomId = roomId || socket.currentRoomId || 'default';
         const room = context.lobbyManager.findRoomBySocketId(socket.id) ||
-                     (socket.currentRoomId ? context.lobbyManager.getOrCreateRoom(socket.currentRoomId) : context.lobbyManager.getOrCreateRoom('default'));
+                     context.lobbyManager.getOrCreateRoom(targetRoomId);
         
         socket.currentRoomId = room.id;
         socket.join(room.id);
-        const roomId = room.id;
+        roomId = room.id;
 
         if (room.matchStarted) {
             // Re-claim slot logic

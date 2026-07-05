@@ -198,7 +198,7 @@ export class GameState {
                 const name = playerNames ? playerNames[id] : null;
                 this.players[id] = {
                     energy: GLOBAL_STATS.STARTING_ENERGY,
-                    color: `hsl(${index * 60}, 85%, 60%)`,
+                    color: index === 0 ? 'hsl(0, 100%, 68%)' : `hsl(${index * 60}, 85%, 60%)`,
                     alive: true,
                     team: team || null,
                     name: name || `Player ${index + 1}`
@@ -254,7 +254,7 @@ export class GameState {
                 const name = playerNames ? playerNames[id] : null;
                 this.players[id] = {
                     energy: GLOBAL_STATS.STARTING_ENERGY,
-                    color: `hsl(${index * 60}, 85%, 60%)`,
+                    color: index === 0 ? 'hsl(0, 100%, 68%)' : `hsl(${index * 60}, 85%, 60%)`,
                     alive: true,
                     team: team || null,
                     name: name || `Player ${index + 1}`

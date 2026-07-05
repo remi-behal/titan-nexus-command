@@ -69,12 +69,74 @@ function App() {
     const localGameRef = useRef(null);
     const [isSandboxResolving, setIsSandboxResolving] = useState(false);
 
+    const [isMobile, setIsMobile] = useState(false);
+    const [isPortrait, setIsPortrait] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            const isMobUA = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            setIsMobile(hasTouch && (isMobUA || window.innerWidth <= 1024));
+        };
+
+        const checkOrientation = () => {
+            setIsPortrait(window.innerHeight > window.innerWidth);
+        };
+
+        const checkFullscreen = () => {
+            setIsFullscreen(!!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement));
+        };
+
+        checkMobile();
+        checkOrientation();
+        checkFullscreen();
+
+        window.addEventListener('resize', checkOrientation);
+        window.addEventListener('orientationchange', checkOrientation);
+        document.addEventListener('fullscreenchange', checkFullscreen);
+        document.addEventListener('webkitfullscreenchange', checkFullscreen);
+        document.addEventListener('mozfullscreenchange', checkFullscreen);
+        document.addEventListener('MSFullscreenChange', checkFullscreen);
+
+        return () => {
+            window.removeEventListener('resize', checkOrientation);
+            window.removeEventListener('orientationchange', checkOrientation);
+            document.removeEventListener('fullscreenchange', checkFullscreen);
+            document.removeEventListener('webkitfullscreenchange', checkFullscreen);
+            document.removeEventListener('mozfullscreenchange', checkFullscreen);
+            document.removeEventListener('MSFullscreenChange', checkFullscreen);
+        };
+    }, []);
+
+    const handleRequestFullscreen = async () => {
+        try {
+            const docEl = document.documentElement;
+            if (docEl.requestFullscreen) {
+                await docEl.requestFullscreen();
+            } else if (docEl.webkitRequestFullscreen) {
+                await docEl.webkitRequestFullscreen();
+            } else if (docEl.mozRequestFullScreen) {
+                await docEl.mozRequestFullScreen();
+            } else if (docEl.msRequestFullscreen) {
+                await docEl.msRequestFullscreen();
+            }
+            
+            if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+                await window.screen.orientation.lock('landscape').catch(() => {});
+            }
+        } catch (e) {
+            console.error('Fullscreen request failed:', e);
+        }
+    };
+
+
     const handleOpenSandbox = () => {
         const g = new GameState();
         g.initializeGame(['player1', 'player2'], playgroundMap);
         g.players.player1.energy = 9999;
         g.players.player2.energy = 9999;
-        g.players.player1.color = 'hsl(0, 85%, 60%)';
+        g.players.player1.color = 'hsl(0, 100%, 68%)';
         g.players.player2.color = 'hsl(60, 85%, 60%)';
         localGameRef.current = g;
         setSandboxState(g.getState());
@@ -390,7 +452,7 @@ function App() {
             );
             if (slotIndex !== -1 && lobbyStatus.slots[slotIndex]) {
                 // Match the colors used in GameState.js: hsl(index * 60, 85%, 60%)
-                return { color: `hsl(${slotIndex * 60}, 85%, 60%)` };
+                return { color: slotIndex === 0 ? 'hsl(0, 100%, 68%)' : `hsl(${slotIndex * 60}, 85%, 60%)` };
             }
         }
         // 3. Absolute fallback (Spectator or unassigned)
@@ -446,7 +508,7 @@ function App() {
     );
 
     const playerColor = currentView === 'SANDBOX'
-        ? (activeSandboxPlayer === 'player1' ? 'hsl(0, 85%, 60%)' : 'hsl(60, 85%, 60%)')
+        ? (activeSandboxPlayer === 'player1' ? 'hsl(0, 100%, 68%)' : 'hsl(60, 85%, 60%)')
         : (pBase?.color || '#00ff44');
     // Strict color helper for CRT phosphor (requires rgba format)
     const getCRTColor = (color, alpha) => {
@@ -514,7 +576,7 @@ function App() {
 
         if (currentView === 'SANDBOX') {
             const pCurrentSandbox = {
-                color: activeSandboxPlayer === 'player1' ? 'hsl(0, 85%, 60%)' : 'hsl(60, 85%, 60%)',
+                color: activeSandboxPlayer === 'player1' ? 'hsl(0, 100%, 68%)' : 'hsl(60, 85%, 60%)',
                 energy: 9999 - sandboxActions.filter(a => a.playerId === activeSandboxPlayer).reduce((sum, act) => {
                     const stats = ENTITY_STATS[act.itemType];
                     return sum + (stats?.cost || 0);
@@ -562,7 +624,7 @@ function App() {
                             <span>PRACTICE RANGE | ACTIVE PILOT:</span>
                             <button
                                 style={{
-                                    background: activeSandboxPlayer === 'player1' ? 'hsl(0, 85%, 60%)' : '#222',
+                                    background: activeSandboxPlayer === 'player1' ? 'hsl(0, 100%, 68%)' : '#222',
                                     color: activeSandboxPlayer === 'player1' ? '#000' : '#888',
                                     border: '1px solid #444',
                                     padding: '4px 12px',
@@ -951,6 +1013,20 @@ function App() {
                 onToggle={handleToggleChat}
                 unreadCount={unreadCount}
             />
+            {isMobile && isPortrait && (
+                <div className="mobile-portrait-warning">
+                    <div className="warning-content">
+                        <div className="warning-icon">🔄</div>
+                        <h2>LANDSCAPE MODE REQUIRED</h2>
+                        <p>Please rotate your device to begin pilot authentication.</p>
+                    </div>
+                </div>
+            )}
+            {isMobile && !isFullscreen && !isPortrait && (
+                <button className="mobile-fullscreen-prompt" onClick={handleRequestFullscreen}>
+                    ▲ INITIALIZE FULLSCREEN COMMAND ▲
+                </button>
+            )}
         </div>
     );
 }

@@ -28,6 +28,37 @@ class AudioManager {
         this.cameraContext = null;
 
         this.registerJsonSounds();
+        this.setupUnlockListeners();
+    }
+
+    setupUnlockListeners() {
+        if (typeof window === 'undefined' || typeof document === 'undefined') {
+            return;
+        }
+
+        const unlock = async () => {
+            try {
+                if (!this.ctx) {
+                    await this.init();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    await this.ctx.resume();
+                }
+                if (this.ctx && this.ctx.state === 'running') {
+                    removeListeners();
+                }
+            } catch (e) {
+                console.error('Failed to unlock AudioContext:', e);
+            }
+        };
+
+        const removeListeners = () => {
+            document.removeEventListener('click', unlock, true);
+            document.removeEventListener('touchstart', unlock, true);
+        };
+
+        document.addEventListener('click', unlock, true);
+        document.addEventListener('touchstart', unlock, true);
     }
 
     updateCameraContext(cameraOffset, zoom, canvasW, canvasH, mapW, mapH) {

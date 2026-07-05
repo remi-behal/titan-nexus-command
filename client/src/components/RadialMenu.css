@@ -24,13 +24,15 @@
     pointer-events: auto;
 }
 
-.menu-segment:hover {
-    color: #00ff44; /* bright neon green on hover */
-}
+@media (hover: hover) {
+    .menu-segment:hover {
+        color: #00ff44; /* bright neon green on hover */
+    }
 
-.menu-segment:hover path {
-    fill: rgba(0, 255, 68, 0.15);
-    stroke: #00ff44;
+    .menu-segment:hover path {
+        fill: rgba(0, 255, 68, 0.15);
+        stroke: #00ff44;
+    }
 }
 
 .menu-segment.disabled {
@@ -76,9 +78,11 @@
     pointer-events: auto;
 }
 
-.menu-center:hover {
-    fill: rgba(30, 10, 10, 0.95);
-    stroke: #ff3b30; /* Red alarm center button on hover */
+@media (hover: hover) {
+    .menu-center:hover {
+        fill: rgba(30, 10, 10, 0.95);
+        stroke: #ff3b30; /* Red alarm center button on hover */
+    }
 }
 
 .center-icon {

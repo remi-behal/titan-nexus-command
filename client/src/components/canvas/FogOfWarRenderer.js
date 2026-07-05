@@ -107,6 +107,8 @@ export function drawFogOfWar(
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
+    const isRed = myPlayerId === 'player1';
+    ctx.globalAlpha = isRed ? 0.78 : 0.85;
     ctx.drawImage(fogCanvas, 0, 0);
     ctx.restore();
 }

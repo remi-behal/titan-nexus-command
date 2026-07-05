@@ -34,6 +34,10 @@ export function useGameSocket() {
     const [matchStarted, setMatchStarted] = useState(false);
     const [roomsList, setRoomsList] = useState([]);
     const [currentRoomId, setCurrentRoomId] = useState(null);
+    const currentRoomIdRef = useRef(null);
+    useEffect(() => {
+        currentRoomIdRef.current = currentRoomId;
+    }, [currentRoomId]);
 
     const isLocked = syncStatus?.lockedIn?.[myPlayerId] || false;
     const isResolvingPhase = playerState?.phase === 'RESOLVING';
@@ -110,7 +114,7 @@ export function useGameSocket() {
             setIsConnected(true);
             const token = getSessionToken();
             const playerName = localStorage.getItem('titan_nexus_player_name') || `Pilot_${Math.floor(Math.random() * 9000 + 1000)}`;
-            socket.emit('authenticate', { token, playerName });
+            socket.emit('authenticate', { token, playerName, roomId: currentRoomIdRef.current });
         };
 
         const onDisconnect = () => {
@@ -153,7 +157,8 @@ export function useGameSocket() {
         const onMatchStarted = () => {
             setMatchStarted(true);
             const token = getSessionToken();
-            socket.emit('authenticate', token);
+            const playerName = localStorage.getItem('titan_nexus_player_name') || `Pilot_${Math.floor(Math.random() * 9000 + 1000)}`;
+            socket.emit('authenticate', { token, playerName, roomId: currentRoomIdRef.current });
             socket.emit('requestState');
         };
 
@@ -192,7 +197,8 @@ export function useGameSocket() {
         const onMatchRestarted = () => {
             setMatchStarted(false);
             const token = getSessionToken();
-            socket.emit('authenticate', token);
+            const playerName = localStorage.getItem('titan_nexus_player_name') || `Pilot_${Math.floor(Math.random() * 9000 + 1000)}`;
+            socket.emit('authenticate', { token, playerName, roomId: currentRoomIdRef.current });
         };
 
         const onChatHistory = (history) => {
