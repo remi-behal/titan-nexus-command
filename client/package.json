@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build && cp node_modules/chiptune3/libopenmpt.worklet.js dist/assets/",
+        "build": "vite build && cp node_modules/chiptune3/libopenmpt.worklet.js dist/assets/ && cp node_modules/chiptune3/libopenmpt.worklet.js dist/",
         "lint": "eslint .",
         "preview": "vite preview"
     },
