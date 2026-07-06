@@ -348,8 +348,7 @@ function App() {
         (e) => {
             e.preventDefault();
 
-            const resolving = currentView === 'SANDBOX' ? isSandboxResolving : isResolvingUI;
-            if (!viewportRef.current || resolving) return;
+            if (!viewportRef.current) return;
 
             const activeState = currentView === 'SANDBOX' ? sandboxState : playerState;
             if (!activeState?.map) return;
@@ -375,7 +374,7 @@ function App() {
 
             setZoom(newZoom);
         },
-        [zoom, isResolvingUI, isSandboxResolving, playerState, sandboxState, currentView, setCameraOffset, setZoom]
+        [zoom, playerState, sandboxState, currentView, setCameraOffset, setZoom]
     );
 
     // Use a Ref to ensure the non-passive native event listener always gets
