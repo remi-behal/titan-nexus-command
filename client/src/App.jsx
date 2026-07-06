@@ -879,14 +879,7 @@ function App() {
                     <main
                         className={`game-world ${isResolvingUI ? 'locked-out' : ''} ${glitchActive ? 'glitch-rejection' : ''}`}
                     >
-                        {!isResolvingUI &&
-                            !committedActions.length &&
-                            selectedHubId &&
-                            launchMode && (
-                                <div className="hint-overlay">
-                                    Drag from your selected Hub to launch
-                                </div>
-                            )}
+
 
                         <GameBoard
                             ref={gameBoardRef}
@@ -951,11 +944,7 @@ function App() {
                                 );
                             })()}
 
-                        {launchMode && !isResolvingUI && (
-                            <div className="hint-overlay">
-                                Pull back from the Hub to Aim & Launch!
-                            </div>
-                        )}
+
                     </main>
 
                     {playerState.winner && (
