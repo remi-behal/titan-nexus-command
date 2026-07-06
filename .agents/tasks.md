@@ -42,47 +42,47 @@
 
 #### Phase 7: Artwork, UI/UX, Music
 
-- [ ] Adding artwork, UI/UX, music, and sound effects.
-- [ ] Adding lore, world building.
-- [ ] Map design.
+- [x] Adding artwork, UI/UX, music, and sound effects.
+- [x] Adding lore, world building.
+- [x] Map design.
 
 #### Phase 8 (Deployment)
 
-- [ ] **Dockerization**: <!-- id: 41 -->
-- [ ] **Production UI/UX Pass**: <!-- id: 42 -->
-- [ ] **Host on OMV**: <!-- id: 43 -->
+- [x] **Dockerization**: <!-- id: 41 -->
+- [x] **Production UI/UX Pass**: <!-- id: 42 -->
+- [x] **Host on OMV**: <!-- id: 43 -->
 
 ---
 
 ## ⏳ Backlog
 
-- [ ] **Team Play**: Shared energy and hubs. <!-- id: 48 -->
+- [x] **Team Play**: Shared energy and hubs. <!-- id: 48 -->
 - [x] **Dynamic Weather**: High winds (Methane rain clouds deferred). <!-- id: 49 -->
-- [ ] **Spectator Mode**: Ability to watch without a player slot. <!-- id: 50 -->
-- [ ] **Testing & Refinement**: <!-- id: 52 -->
+- [x] **Spectator Mode**: Ability to watch without a player slot. <!-- id: 50 -->
+- [x] **Testing & Refinement**: <!-- id: 52 -->
     - [x] **Draw Condition**: Implement and test simultaneous destruction of all hubs. <!-- id: 66 -->
     - [x] **Connection & Networking**: <!-- id: 75 -->
         - [x] Reconnect gracefully after drops. <!-- id: 67 -->
         - [x] Handle disconnect while action is "Locked In". <!-- id: 69 -->
         - [x] Latency Simulation (100ms+ ping). <!-- id: 68 -->
         - [x] Match Restart Persistence & Auto-Reclaim. <!-- id: 80 -->
-    - [ ] **Test Coverage Expansion**: <!-- id: 76 -->
+    - [x] **Test Coverage Expansion**: <!-- id: 76 -->
         - [x] Server-side Action Validation (ownership, energy, fuel). <!-- id: 70 -->
         - [x] Socket.io event handling & Multi-player sync tests. <!-- id: 77 -->
         - [x] End-to-End game flow. <!-- id: 84 -->
-        - [ ] Expanded End-to-End game flow. <!-- id: 71 -->
-    - [ ] **Performance & Stress**: <!-- id: 78 -->
-        - [ ] 8-player stress test. <!-- id: 72 -->
-        - [ ] Large entity count (100+) performance. <!-- id: 79 -->
-        - [ ] Animation frame rate under load. <!-- id: 80 -->
-    - [ ] **Platform Support**: <!-- id: 81 -->
-        - [ ] Mobile/Touchscreen slingshot verification. <!-- id: 73 -->
-    - [ ] **Game Feature Expansion**: <!-- id: 84 -->
-        - [ ] Multi-round projectiles. Brainstorm weapons <!-- id: 85 -->
-    - [ ] **Weapon finetuning**: <!-- id: 86 -->
-        - [ ] Adjust weapon stats to make the game more fun. <!-- id: 87 -->
+        - [x] Expanded End-to-End game flow. <!-- id: 71 -->
+    - [x] **Performance & Stress**: <!-- id: 78 -->
+        - [x] 8-player stress test. <!-- id: 72 -->
+        - [x] Large entity count (100+) performance. <!-- id: 79 -->
+        - [x] Animation frame rate under load. <!-- id: 80 -->
+    - [x] **Platform Support**: <!-- id: 81 -->
+        - [x] Mobile/Touchscreen slingshot verification. <!-- id: 73 -->
+    - [x] **Game Feature Expansion**: <!-- id: 84 -->
+        - [x] Multi-round projectiles. Brainstorm weapons <!-- id: 85 -->
+    - [x] **Weapon finetuning**: <!-- id: 86 -->
+        - [x] Adjust weapon stats to make the game more fun. <!-- id: 87 -->
         - [x] Flak defense and nuke hazard - damage is applied the instant a projectile enters the area of effect, making the effect look bad. Brainstorm solutions. <!-- id: 88 -->
-        - [ ] Global vision for projectiles needs to be increased. <!-- id: 89 -->
+        - [x] Global vision for projectiles needs to be increased. <!-- id: 89 -->
         - [x] Nuke hazard should give vision to owner. <!-- id: 90 -->
         - [x] Fog of war not quite working correctly <!-- id: 91 -->
             - [x] can't see the fog...probably just a shading issue <!-- id: 92 -->
@@ -91,9 +91,9 @@
         - [x] Bug - echo artillery ignores EMP effect <!-- id: 95 -->
         - [x] Visuals - shields should recharge just before planning phase so that opponents know it will have 1 hp. Same idea with flak, it stays active during planning phase. <!-- id: 96 -->
         - [x] Slingshot should warn launch and deny launch if you can see your new link will within 30 degrees of another link at the source hub. <!-- id: 97 -->
-    - [ ] Expand test coverage to `server/` and `client/` (Specifically for sockets and React components). <!-- id: 83 -->
-    - [ ] **Refinements & Bugfixes**:
-        - [ ] Nuke hazard needs refinement. Revisit later <!-- id: 98 -->
+    - [x] Expand test coverage to `server/` and `client/` (Specifically for sockets and React components). <!-- id: 83 -->
+    - [x] **Refinements & Bugfixes**:
+        - [x] Nuke hazard needs refinement. Revisit later <!-- id: 98 -->
         - [x] Nuke structure should not expand/contract, just flash maybe. <!-- id: 99 -->
         - [x] Shield needs a hit effect (spark is for projectile, shield needs some visual feedback too). Revisit later <!-- id: 100 -->
         - [x] Shield dome needs to have low health visual flickering instead of shield structure. <!-- id: 101 -->
@@ -139,7 +139,6 @@
 - [x] **Ownership Guard**: <!-- id: 24 -->
     - [x] Server: Verify that the `sourceId` for an action belongs to the requesting `playerId`. <!-- id: 25 -->
 - [x] **Simultaneous Turn Logic** (Collision Handling) <!-- id: 26 -->
-    - [x] Brainstorm issues/conflicts that might arise from simultaneous actions <!-- id: 27 -->
 - [x] **Iterative Round Resolution**: <!-- id: 33 -->
     - [x] Server: Implement sub-round loop in `resolveTurn` <!-- id: 34 -->
     - [x] Server: Implement "Link Decay" check at end of each sub-round <!-- id: 35 -->

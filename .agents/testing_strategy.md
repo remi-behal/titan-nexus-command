@@ -124,22 +124,22 @@ See `.agents/workflows/test.md` for detailed workflow.
 
 ### Phase 1: Integration Tests (Server)
 
-- [ ] Action validation (ownership, energy, fuel)
-- [ ] Socket.io event handling
-- [ ] Turn timer enforcement
-- [ ] Multi-player turn synchronization
+- [x] Action validation (ownership, energy, fuel)
+- [x] Socket.io event handling
+- [x] Turn timer enforcement
+- [x] Multi-player turn synchronization
 
 ### Phase 2: End-to-End Tests
 
-- [ ] Full game flow (lobby → game → victory)
-- [ ] Multi-tab synchronization
-- [ ] Disconnect/reconnect scenarios
+- [x] Full game flow (lobby → game → victory)
+- [x] Multi-tab synchronization
+- [x] Disconnect/reconnect scenarios
 
 ### Phase 3: Performance Tests
 
-- [ ] 8-player stress test
-- [ ] Large entity count (100+ structures)
-- [ ] Animation frame rate under load
+- [x] 8-player stress test
+- [x] Large entity count (100+ structures)
+- [x] Animation frame rate under load
 
 ## Test Maintenance
 
