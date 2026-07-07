@@ -19,27 +19,91 @@ export default function SidebarRight({
     isLocked,
     isResolvingUI,
     isSpectator,
-    isUnassigned
+    isUnassigned,
+    isSandbox = false,
+    activeSandboxPlayer,
+    setActiveSandboxPlayer,
+    onExitSandbox
 }) {
     return (
         <aside className="sidebar-right">
-            <div className="sync-monitor">
-                {Object.keys(playerState?.players || { player1: {}, player2: {} }).map((pid) => {
-                    const p = playerState?.players?.[pid];
-                    const isReady = syncStatus?.lockedIn?.[pid];
-                    const name = p?.name || pid.replace('player', 'Player ');
-                    return (
-                        <div
-                            key={pid}
-                            className={`player-dot ${isReady ? 'ready' : ''}`}
-                            title={name}
-                            style={p?.color ? { borderColor: p.color } : {}}
-                        >
-                            {name.slice(0, 2).toUpperCase()}
-                        </div>
-                    );
-                })}
-            </div>
+            {!isSandbox ? (
+                <div className="sync-monitor">
+                    {Object.keys(playerState?.players || { player1: {}, player2: {} }).map((pid) => {
+                        const p = playerState?.players?.[pid];
+                        const isReady = syncStatus?.lockedIn?.[pid];
+                        const name = p?.name || pid.replace('player', 'Player ');
+                        return (
+                            <div
+                                key={pid}
+                                className={`player-dot ${isReady ? 'ready' : ''}`}
+                                title={name}
+                                style={p?.color ? { borderColor: p.color } : {}}
+                            >
+                                {name.slice(0, 2).toUpperCase()}
+                            </div>
+                        );
+                    })}
+                </div>
+            ) : (
+                <div className="sandbox-controls" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', borderBottom: '1px solid #222', paddingBottom: '12px' }}>
+                    <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#666', letterSpacing: '1px', marginBottom: '4px' }}>PRACTICE RANGE | ACTIVE PILOT:</div>
+                    <button
+                        style={{
+                            background: activeSandboxPlayer === 'player1' ? 'hsl(0, 100%, 68%)' : '#222',
+                            color: activeSandboxPlayer === 'player1' ? '#000' : '#888',
+                            border: '1px solid #444',
+                            padding: '6px 12px',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            borderRadius: '4px',
+                            fontFamily: 'Courier New, monospace'
+                        }}
+                        onClick={() => {
+                            setActiveSandboxPlayer('player1');
+                        }}
+                    >
+                        PLAYER 1 (RED)
+                    </button>
+                    <button
+                        style={{
+                            background: activeSandboxPlayer === 'player2' ? 'hsl(60, 85%, 60%)' : '#222',
+                            color: activeSandboxPlayer === 'player2' ? '#000' : '#888',
+                            border: '1px solid #444',
+                            padding: '6px 12px',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            borderRadius: '4px',
+                            fontFamily: 'Courier New, monospace'
+                        }}
+                        onClick={() => {
+                            setActiveSandboxPlayer('player2');
+                        }}
+                    >
+                        PLAYER 2 (YELLOW)
+                    </button>
+                    <button
+                        className="exit-btn"
+                        style={{
+                            background: '#552222',
+                            color: '#fff',
+                            border: '1px solid #883333',
+                            padding: '6px 12px',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            borderRadius: '4px',
+                            marginTop: '12px',
+                            fontFamily: 'Courier New, monospace'
+                        }}
+                        onClick={onExitSandbox}
+                    >
+                        EXIT RANGE
+                    </button>
+                </div>
+            )}
 
             <div className="controls-stack">
                 <div className="stats-blocks">

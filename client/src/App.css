@@ -743,45 +743,6 @@ canvas {
 }
 
 /* Practice Range (Sandbox Mode) styles */
-.viewport-crt-container.sandbox-active {
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: stretch;
-}
-
-.sandbox-header {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 8px 16px;
-    background: #0d0d0d;
-    border-bottom: 2px solid #222;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: center;
-    color: #888;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 0.8rem;
-    z-index: 100;
-}
-
-.sandbox-header button {
-    border-radius: 4px;
-    font-family: 'Courier New', Courier, monospace;
-    transition: all 0.2s ease-in-out;
-}
-
-.sandbox-header button:hover {
-    filter: brightness(1.2);
-}
-
-.sandbox-header .exit-btn {
-    transition: background-color 0.2s;
-}
-
-.sandbox-header .exit-btn:hover {
-    background-color: #773333 !important;
-}
 
 /* Mobile portrait and fullscreen overlays */
 .mobile-portrait-warning {

@@ -627,6 +627,13 @@ function App() {
                     isResolvingUI={isSandboxResolving}
                     isSpectator={false}
                     isUnassigned={false}
+                    isSandbox={true}
+                    activeSandboxPlayer={activeSandboxPlayer}
+                    setActiveSandboxPlayer={setActiveSandboxPlayer}
+                    onExitSandbox={() => {
+                        audioManager.playActionReset();
+                        setCurrentView('LOBBY');
+                    }}
                 />
             );
 
@@ -634,63 +641,7 @@ function App() {
                 <>
                     {sidebarLeftSandbox}
 
-                    <div className="viewport-crt-container sandbox-active" ref={viewportRef}>
-                        <div className="sandbox-header">
-                            <span>PRACTICE RANGE | ACTIVE PILOT:</span>
-                            <button
-                                style={{
-                                    background: activeSandboxPlayer === 'player1' ? 'hsl(0, 100%, 68%)' : '#222',
-                                    color: activeSandboxPlayer === 'player1' ? '#000' : '#888',
-                                    border: '1px solid #444',
-                                    padding: '4px 12px',
-                                    cursor: 'pointer',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 'bold'
-                                }}
-                                onClick={() => {
-                                    audioManager.playClick();
-                                    setActiveSandboxPlayer('player1');
-                                }}
-                            >
-                                PLAYER 1 (RED)
-                            </button>
-                            <button
-                                style={{
-                                    background: activeSandboxPlayer === 'player2' ? 'hsl(60, 85%, 60%)' : '#222',
-                                    color: activeSandboxPlayer === 'player2' ? '#000' : '#888',
-                                    border: '1px solid #444',
-                                    padding: '4px 12px',
-                                    cursor: 'pointer',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 'bold'
-                                }}
-                                onClick={() => {
-                                    audioManager.playClick();
-                                    setActiveSandboxPlayer('player2');
-                                }}
-                            >
-                                PLAYER 2 (YELLOW)
-                            </button>
-                            <button
-                                className="exit-btn"
-                                style={{
-                                    background: '#552222',
-                                    color: '#fff',
-                                    border: '1px solid #883333',
-                                    marginLeft: 'auto',
-                                    padding: '4px 12px',
-                                    cursor: 'pointer',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 'bold'
-                                }}
-                                onClick={() => {
-                                    audioManager.playActionReset();
-                                    setCurrentView('LOBBY');
-                                }}
-                            >
-                                EXIT RANGE
-                            </button>
-                        </div>
+                    <div className="viewport-crt-container" ref={viewportRef}>
                         <div className="crt-scanlines-pixel-perfect" />
                         <main className={`game-world ${isSandboxResolving ? 'locked-out' : ''}`}>
                             <GameBoard
