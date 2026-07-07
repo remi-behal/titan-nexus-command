@@ -52,13 +52,17 @@ class MapService {
     }
 
     loadMap(name) {
-        const filePath = path.join(MAP_DIR, `${name}.json`);
+        if (typeof name !== 'string') return null;
+        const safeName = name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const filePath = path.join(MAP_DIR, `${safeName}.json`);
         if (!fs.existsSync(filePath)) return null;
         return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     }
 
     loadReadyMap(name) {
-        const filePath = path.join(READY_MAP_DIR, `${name}.json`);
+        if (typeof name !== 'string') return null;
+        const safeName = name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const filePath = path.join(READY_MAP_DIR, `${safeName}.json`);
         if (!fs.existsSync(filePath)) return null;
         return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     }

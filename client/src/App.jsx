@@ -193,6 +193,14 @@ function App() {
     // Help RadialMenu track its hub
     const [hubScreenPos, setHubScreenPos] = useState(null);
     const gameBoardRef = useRef(null);
+    const [, setRefTick] = useState(0);
+    const setGameBoardRef = useCallback((node) => {
+        const prev = gameBoardRef.current;
+        gameBoardRef.current = node;
+        if ((!prev && node) || (prev && !node)) {
+            setRefTick((t) => t + 1);
+        }
+    }, []);
 
     const isResolvingPhase = playerState?.phase === 'RESOLVING';
     const isResolvingUI = isResolving || isResolvingPhase;
@@ -413,23 +421,31 @@ function App() {
             setHubScreenPos(null);
             return;
         }
-        const hub = activeState.entities.find((e) => e.id === selectedHubId);
-        if (!hub || !gameBoardRef.current) return;
 
-        const pos = gameBoardRef.current.getScreenCoords(hub.x, hub.y);
+        const updatePos = () => {
+            const hub = activeState.entities.find((e) => e.id === selectedHubId);
+            if (!hub || !gameBoardRef.current) return;
 
-        // Normalize viewport-absolute pos to the .game-world container
-        const gameWorld = document.querySelector('.game-world');
-        if (gameWorld) {
-            const rect = gameWorld.getBoundingClientRect();
-            const nx = pos.x - rect.left;
-            const ny = pos.y - rect.top;
+            const pos = gameBoardRef.current.getScreenCoords(hub.x, hub.y);
 
-            setHubScreenPos({ x: nx, y: ny });
-        } else {
-            setHubScreenPos(pos);
-        }
-    }, [selectedHubId, cameraOffset, zoom, playerState, sandboxState, currentView]);
+            // Normalize viewport-absolute pos to the .game-world container
+            const gameWorld = document.querySelector('.game-world');
+            if (gameWorld) {
+                const rect = gameWorld.getBoundingClientRect();
+                const nx = pos.x - rect.left;
+                const ny = pos.y - rect.top;
+
+                setHubScreenPos({ x: nx, y: ny });
+            } else {
+                setHubScreenPos(pos);
+            }
+        };
+
+        updatePos();
+
+        window.addEventListener('resize', updatePos);
+        return () => window.removeEventListener('resize', updatePos);
+    }, [selectedHubId, cameraOffset, zoom, playerState, sandboxState, currentView, gameBoardRef.current]);
 
     // Close menu when resolution starts or turn is submitted
     useEffect(() => {
@@ -678,7 +694,7 @@ function App() {
                         <div className="crt-scanlines-pixel-perfect" />
                         <main className={`game-world ${isSandboxResolving ? 'locked-out' : ''}`}>
                             <GameBoard
-                                ref={gameBoardRef}
+                                ref={setGameBoardRef}
                                 gameState={sandboxState}
                                 myPlayerId={activeSandboxPlayer}
                                 isSandbox={true}
@@ -881,7 +897,7 @@ function App() {
 
 
                         <GameBoard
-                            ref={gameBoardRef}
+                            ref={setGameBoardRef}
                             gameState={playerState}
                             myPlayerId={myPlayerId}
                             selectedHubId={selectedHubId}

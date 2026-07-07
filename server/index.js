@@ -9,8 +9,27 @@ import { registerGameHandlers } from './sockets/GameHandlers.js';
 import { registerChatHandlers } from './sockets/ChatHandlers.js';
 import { mapService } from './MapService.js';
 
+const allowedOrigins = new Set([
+    'https://titannexuscommand.rbtek.space',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:3000'
+]);
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.has(origin) || process.env.NODE_ENV === 'test') {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: ['GET', 'POST']
+};
+
 const app = express();
-app.use(cors());
+app.use(cors(corsOptions));
 
 // Debug logger
 app.use((req, res, next) => {
@@ -20,10 +39,7 @@ app.use((req, res, next) => {
 
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: {
-        origin: '*',
-        methods: ['GET', 'POST']
-    },
+    cors: corsOptions,
     transports: ['websocket', 'polling']
 });
 

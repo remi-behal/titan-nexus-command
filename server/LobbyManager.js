@@ -10,6 +10,9 @@ export class LobbyManager {
 
     getOrCreateRoom(roomId) {
         if (!this.rooms.has(roomId)) {
+            if (this.rooms.size >= 50) {
+                return this.rooms.get('default') || this.rooms.values().next().value;
+            }
             this.rooms.set(roomId, new LobbyRoom(roomId, 2, this.context));
         }
         return this.rooms.get(roomId);
@@ -21,6 +24,7 @@ export class LobbyManager {
 
     createRoom(roomId, maxPlayers = 2) {
         if (this.rooms.has(roomId)) return null;
+        if (this.rooms.size >= 50) return null;
         const newRoom = new LobbyRoom(roomId, maxPlayers, this.context);
         this.rooms.set(roomId, newRoom);
         return newRoom;

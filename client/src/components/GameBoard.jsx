@@ -422,7 +422,7 @@ const GameBoard = forwardRef(
         useImperativeHandle(ref, () => ({
             getScreenCoords,
             getGameCoords
-        }));
+        }), [getScreenCoords, getGameCoords]);
 
         return (
             <div
