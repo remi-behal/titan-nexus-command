@@ -186,16 +186,48 @@ export const RoomBrowser = ({ rooms = [], onCreateRoom, onJoinRoom, onOpenDesign
                                 <p>Destroy the <strong>Starter Hub</strong> of all opponent pilots to claim dominance in the sector. If your Starter Hub is destroyed, all your structures will decay and you will be eliminated.</p>
                             </div>
                             <div className="help-section">
-                                <h3>☄️ SLINGSHOT MECHANIC</h3>
-                                <p>Launch structures or projectiles from any of your active Hubs by dragging/pulling back from the Hub in the opposite direction. Trajectory and launch velocity depend on the drag distance and angle.</p>
+                                <h3>☄️ HOW TO LAUNCH</h3>
+                                <p>To launch, select any of your active Hubs, click and drag (pull back) in the opposite direction of your target, then release to open the radial menu and select a structure or weapon. The drag distance controls launch velocity and range, and the angle controls the trajectory path.</p>
                             </div>
                             <div className="help-section">
-                                <h3>⚡ ENERGY</h3>
-                                <p>Energy is your primary construction currency. It is generated passively or at a higher rate by deploying <strong>Extractors</strong>. Use energy to construct new structures or launch weapon payloads.</p>
+                                <h3>🔄 TURNS VS. ROUNDS</h3>
+                                <p>Titan: Nexus Command features a structured turn lifecycle:</p>
+                                <ul style={{ paddingLeft: '20px', margin: '5px 0 0 0', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                                    <li><strong>Planning Phase (Turn):</strong> Both players simultaneously plan, aim, and commit their launches. Initiating a launch costs Energy and 1 Hub Fuel.</li>
+                                    <li><strong>Resolution Phase (Rounds):</strong> All planned actions are simulated sequentially across multiple <strong>Rounds of launches</strong> (Round 1, Round 2, Round 3, etc.).</li>
+                                    <li><strong>One Launch Per Hub Per Round:</strong> Each Hub can only execute one action per round. If you queue multiple launches from the same Hub, they are resolved sequentially over consecutive rounds. Hubs can fire simultaneously if they are different structures. Active defenses can also perform one interception per round.</li>
+                                </ul>
                             </div>
                             <div className="help-section">
-                                <h3>⛽ FUEL</h3>
-                                <p>Each Hub or defense structure has limited fuel per turn (represented by green dots). Initiating any launch consumes 1 fuel point. Fuel fully regenerates at the start of each round.</p>
+                                <h3>🏗️ STRUCTURES</h3>
+                                <ul style={{ paddingLeft: '20px', margin: '5px 0 0 0', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                                    <li><strong>Hub (Cost: 20):</strong> The foundation of your network. Launches structures/weapons and forms links back to the Starter Hub.</li>
+                                    <li><strong>Extractor (Cost: 25):</strong> Generates +5 Energy per turn to fund constructions and weapon payloads.</li>
+                                    <li><strong>Shield (Cost: 45):</strong> Creates a protective energy dome that absorbs damage for structures inside its radius.</li>
+                                    <li><strong>Cloaking Field (Cost: 60):</strong> Conceals nearby friendly structures from enemy sensors and vision.</li>
+                                    <li><strong>Laser Point Defense (L.P.D.) (Cost: 25):</strong> Emits an instant laser that intercepts a single incoming projectile per round.</li>
+                                    <li><strong>Light SAM Defense (Cost: 25):</strong> Fires standard homing missiles to intercept incoming enemy threats.</li>
+                                    <li><strong>Smart SAM Defense (Cost: 40):</strong> Fires advanced interceptor missiles with a longer range and tracking capability.</li>
+                                    <li><strong>Flak Defense (Cost: 25):</strong> Sets up a persistent 90° zone of flak that damages all crossing units.</li>
+                                    <li><strong>Echo Artillery (Cost: 30):</strong> Monitors enemy launches and fires automatic retaliation shots in the next round.</li>
+                                </ul>
+                            </div>
+                            <div className="help-section">
+                                <h3>💣 WEAPONS & UTILITIES</h3>
+                                <ul style={{ paddingLeft: '20px', margin: '5px 0 0 0', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                                    <li><strong>Dumb Bomb (Cost: 15):</strong> A standard gravity-affected explosive shell dealing moderate landing damage.</li>
+                                    <li><strong>Cluster Bomb (Cost: 30):</strong> Splits mid-flight to drop three sub-bombs in a wide line perpendicular to travel.</li>
+                                    <li><strong>Homing Missile (Cost: 20):</strong> Automatically targets and accelerates toward the nearest detected enemy structure.</li>
+                                    <li><strong>Napalm (Cost: 35):</strong> Releases a canister creating a lingering line of fire that deals damage over 2 rounds.</li>
+                                    <li><strong>EMP (Cost: 50):</strong> Emits a non-damaging pulse that disables enemy shields and active defenses.</li>
+                                    <li><strong>Overload (Cost: 40):</strong> Targets and overloads active energy grids to deal system damage.</li>
+                                    <li><strong>Reclaimer (Cost: 0, Fuel: 1):</strong> Safely recycles friendly structures within its radius, returning 50% of the cost.</li>
+                                    <li><strong>Nuke (Cost: 100):</strong> A slow-moving, high-yield warhead that detonates, leaving a massive, long-lasting hazard zone.</li>
+                                </ul>
+                            </div>
+                            <div className="help-section">
+                                <h3>⚡ ENERGY & ⛽ FUEL</h3>
+                                <p>Energy is your construction currency, generated by Extractors. Each launch consumes 1 Hub Fuel point per turn. Hub Fuel fully regenerates at the start of each new turn.</p>
                             </div>
                             <div className="help-section">
                                 <h3>🔗 LINKS & DECAY</h3>

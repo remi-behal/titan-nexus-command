@@ -9,9 +9,6 @@ export default function SidebarRight({
     syncStatus,
     playerState,
     timeRemaining,
-    showDebugPreview,
-    cameraOffset,
-    zoom,
     committedActions,
     interactionBlocked,
     handleClearActions,
@@ -117,23 +114,7 @@ export default function SidebarRight({
                             {timeRemaining}s
                         </span>
                     </div>
-                    {showDebugPreview && playerState?.map && (
-                        <>
-                            <div
-                                className="stat-group"
-                                style={{ color: '#0f0', fontSize: '0.8em', marginTop: '10px' }}
-                            >
-                                <span className="label">Center:</span>
-                                <span className="value">
-                                    {(cameraOffset.x + playerState.map.width / zoom / 2).toFixed(0)}
-                                    ,{' '}
-                                    {(cameraOffset.y + playerState.map.height / zoom / 2).toFixed(
-                                        0
-                                    )}
-                                </span>
-                            </div>
-                        </>
-                    )}
+                    {/* Center coordinates removed as they are unnecessary */}
                 </div>
 
                 {committedActions.length > 0 && !interactionBlocked && (

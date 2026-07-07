@@ -33,6 +33,8 @@ const MapDesigner = ({ onSave, onBack }) => {
 
     const [selectedTool, setSelectedTool] = useState(TOOLS.SELECT);
     const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(0.8);
+    const [minZoom] = useState(0.25);
     const gameBoardRef = useRef(null);
 
     // Mock GameState for GameBoard to render
@@ -159,58 +161,68 @@ const MapDesigner = ({ onSave, onBack }) => {
     return (
         <div className="map-designer">
             <div className="designer-toolbar">
-                <button
-                    className={selectedTool === TOOLS.SELECT ? 'active' : ''}
-                    onClick={() => setSelectedTool(TOOLS.SELECT)}
-                >
-                    Select/Move
-                </button>
-                <button
-                    className={selectedTool === TOOLS.RESOURCE_STANDARD ? 'active' : ''}
-                    onClick={() => setSelectedTool(TOOLS.RESOURCE_STANDARD)}
-                >
-                    + Resource
-                </button>
-                <button
-                    className={selectedTool === TOOLS.RESOURCE_SUPER ? 'active' : ''}
-                    onClick={() => setSelectedTool(TOOLS.RESOURCE_SUPER)}
-                >
-                    + Super Res
-                </button>
-                <button
-                    className={selectedTool === TOOLS.LAKE ? 'active' : ''}
-                    onClick={() => setSelectedTool(TOOLS.LAKE)}
-                >
-                    + Lake
-                </button>
-                <button
-                    className={selectedTool === TOOLS.MOUNTAIN ? 'active' : ''}
-                    onClick={() => setSelectedTool(TOOLS.MOUNTAIN)}
-                >
-                    + Mountain
-                </button>
-                <button
-                    className={selectedTool === TOOLS.PLAYER1_BASE ? 'active' : ''}
-                    onClick={() => setSelectedTool(TOOLS.PLAYER1_BASE)}
-                >
-                    P1 Base
-                </button>
-                <button
-                    className={selectedTool === TOOLS.PLAYER2_BASE ? 'active' : ''}
-                    onClick={() => setSelectedTool(TOOLS.PLAYER2_BASE)}
-                >
-                    P2 Base
-                </button>
-                <button
-                    className={selectedTool === TOOLS.DELETE ? 'active' : ''}
-                    onClick={() => setSelectedTool(TOOLS.DELETE)}
-                >
-                    Delete
-                </button>
-                <div className="spacer"></div>
-                <button onClick={handleExport}>Copy JSON</button>
-                <button onClick={handleSaveLocal}>Save Map</button>
-                <button onClick={onBack}>Back to Lobby</button>
+                <div className="toolbar-section">
+                    <span className="section-label">Tools</span>
+                    <div className="button-group">
+                        <button
+                            className={selectedTool === TOOLS.SELECT ? 'active' : ''}
+                            onClick={() => setSelectedTool(TOOLS.SELECT)}
+                        >
+                            Select/Move
+                        </button>
+                        <button
+                            className={selectedTool === TOOLS.RESOURCE_STANDARD ? 'active' : ''}
+                            onClick={() => setSelectedTool(TOOLS.RESOURCE_STANDARD)}
+                        >
+                            + Resource
+                        </button>
+                        <button
+                            className={selectedTool === TOOLS.RESOURCE_SUPER ? 'active' : ''}
+                            onClick={() => setSelectedTool(TOOLS.RESOURCE_SUPER)}
+                        >
+                            + Super Res
+                        </button>
+                        <button
+                            className={selectedTool === TOOLS.LAKE ? 'active' : ''}
+                            onClick={() => setSelectedTool(TOOLS.LAKE)}
+                        >
+                            + Lake
+                        </button>
+                        <button
+                            className={selectedTool === TOOLS.MOUNTAIN ? 'active' : ''}
+                            onClick={() => setSelectedTool(TOOLS.MOUNTAIN)}
+                        >
+                            + Mountain
+                        </button>
+                        <button
+                            className={selectedTool === TOOLS.PLAYER1_BASE ? 'active' : ''}
+                            onClick={() => setSelectedTool(TOOLS.PLAYER1_BASE)}
+                        >
+                            P1 Base
+                        </button>
+                        <button
+                            className={selectedTool === TOOLS.PLAYER2_BASE ? 'active' : ''}
+                            onClick={() => setSelectedTool(TOOLS.PLAYER2_BASE)}
+                        >
+                            P2 Base
+                        </button>
+                        <button
+                            className={selectedTool === TOOLS.DELETE ? 'active' : ''}
+                            onClick={() => setSelectedTool(TOOLS.DELETE)}
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </div>
+                <div className="designer-toolbar-spacer"></div>
+                <div className="toolbar-section">
+                    <span className="section-label">Actions</span>
+                    <div className="button-group">
+                        <button onClick={handleExport}>Copy JSON</button>
+                        <button onClick={handleSaveLocal}>Save Map</button>
+                        <button className="btn-exit" onClick={onBack}>Exit</button>
+                    </div>
+                </div>
             </div>
 
             <main className="designer-world">
@@ -225,6 +237,9 @@ const MapDesigner = ({ onSave, onBack }) => {
                     showDebugPreview={false}
                     cameraOffset={cameraOffset}
                     setCameraOffset={setCameraOffset}
+                    zoom={zoom}
+                    setZoom={setZoom}
+                    minZoom={minZoom}
                     onSelectHub={() => {}}
                     onAimStart={() => {}}
                     onAimUpdate={() => {}}
