@@ -352,62 +352,6 @@ function App() {
         setZoom((prev) => Math.max(1.0, Math.min(3.0, prev)));
     }, [playerState?.map, sandboxState?.map, currentView]);
 
-    const handleWheel = useCallback(
-        (e) => {
-            e.preventDefault();
-
-            if (!viewportRef.current) return;
-
-            const activeState = currentView === 'SANDBOX' ? sandboxState : playerState;
-            if (!activeState?.map) return;
-
-            const zoomSpeed = 0.001;
-            const delta = -e.deltaY * zoomSpeed;
-            const newZoom = Math.max(1.0, Math.min(3.0, zoom + delta));
-
-            if (Math.abs(newZoom - zoom) < 0.0001) return;
-
-            // Zoom-at-cursor logic
-            const rect = viewportRef.current.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-
-            const mapW = activeState.map.width || 2000;
-            const mapH = activeState.map.height || 2000;
-
-            setCameraOffset((prev) => ({
-                x: (prev.x + mouseX * (1 / zoom - 1 / newZoom) + mapW) % mapW,
-                y: (prev.y + mouseY * (1 / zoom - 1 / newZoom) + mapH) % mapH
-            }));
-
-            setZoom(newZoom);
-        },
-        [zoom, playerState, sandboxState, currentView, setCameraOffset, setZoom]
-    );
-
-    // Use a Ref to ensure the non-passive native event listener always gets
-    // the freshest state closure without needing constant event re-binding.
-    const handleWheelRef = useRef(handleWheel);
-    useEffect(() => {
-        handleWheelRef.current = handleWheel;
-    }, [handleWheel]);
-
-    useEffect(() => {
-        const viewport = viewportRef.current;
-        if (!viewport) return;
-
-        const onWheelNative = (e) => {
-            if (handleWheelRef.current) {
-                handleWheelRef.current(e);
-            }
-        };
-
-        viewport.addEventListener('wheel', onWheelNative, { passive: false });
-        return () => {
-            viewport.removeEventListener('wheel', onWheelNative);
-        };
-    }, [matchStarted, playerState, sandboxState, myPlayerId, currentView]);
-
     useEffect(() => {
         if (!matchStarted && currentView === 'LOBBY') {
             socket.emit('room:listMaps');

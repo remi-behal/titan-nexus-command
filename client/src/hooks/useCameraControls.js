@@ -17,6 +17,7 @@ export function useCameraControls({
     onAimUpdate,
     onAimEnd,
     onSelectHub,
+    onMapClick,
     isResolving,
     cameraOffset,
     setCameraOffset,
@@ -147,6 +148,43 @@ export function useCameraControls({
         [cameraOffset, zoom, gameState.map.width, gameState.map.height, canvasRef]
     );
 
+    // native wheel zooming listener
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const handleWheel = (e) => {
+            e.preventDefault();
+
+            const zoomSpeed = 0.001;
+            const delta = -e.deltaY * zoomSpeed;
+            const currentMinZoom = minZoom || 1.0;
+            const newZoom = Math.max(currentMinZoom, Math.min(3.0, zoom + delta));
+
+            if (Math.abs(newZoom - zoom) < 0.0001) return;
+
+            // Zoom-at-cursor logic
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const mapW = gameState.map.width;
+            const mapH = gameState.map.height;
+
+            setCameraOffset((prev) => ({
+                x: (prev.x + mouseX * (1 / zoom - 1 / newZoom) + mapW) % mapW,
+                y: (prev.y + mouseY * (1 / zoom - 1 / newZoom) + mapH) % mapH
+            }));
+
+            setZoom(newZoom);
+        };
+
+        canvas.addEventListener('wheel', handleWheel, { passive: false });
+        return () => {
+            canvas.removeEventListener('wheel', handleWheel);
+        };
+    }, [zoom, setZoom, setCameraOffset, minZoom, gameState.map.width, gameState.map.height, canvasRef]);
+
     useEffect(() => {
         const handleGlobalMouseMove = (e) => {
             activePointersRef.current.set(e.pointerId, {
@@ -248,27 +286,31 @@ export function useCameraControls({
                 const isShortClick = dx < 5 && dy < 5;
 
                 if (isShortClick && !isResolving) {
-                    const { x: gameX, y: gameY } = getGameCoords(e);
-
-                    // Check for hub click
-                    const clickedHub = gameState.entities.find((ent) => {
-                        if (ent.type !== 'HUB') return false;
-                        const d = TorusMath.getToroidalDistance(
-                            ent.x,
-                            ent.y,
-                            gameX,
-                            gameY,
-                            gameState.map.width,
-                            gameState.map.height
-                        );
-                        return d < HUB_RADIUS;
-                    });
-
-                    if (clickedHub && clickedHub.owner === myPlayerId) {
-                        audioManager.playTerminalSelect();
-                        onSelectHub(clickedHub.id);
+                    if (onMapClick) {
+                        onMapClick(e);
                     } else {
-                        onSelectHub(null);
+                        const { x: gameX, y: gameY } = getGameCoords(e);
+
+                        // Check for hub click
+                        const clickedHub = gameState.entities.find((ent) => {
+                            if (ent.type !== 'HUB') return false;
+                            const d = TorusMath.getToroidalDistance(
+                                ent.x,
+                                ent.y,
+                                gameX,
+                                gameY,
+                                gameState.map.width,
+                                gameState.map.height
+                            );
+                            return d < HUB_RADIUS;
+                        });
+
+                        if (clickedHub && clickedHub.owner === myPlayerId) {
+                            audioManager.playTerminalSelect();
+                            onSelectHub(clickedHub.id);
+                        } else {
+                            onSelectHub(null);
+                        }
                     }
                 }
             }

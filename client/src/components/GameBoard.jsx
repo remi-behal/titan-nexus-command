@@ -36,6 +36,7 @@ const GameBoard = forwardRef(
             onAimUpdate,
             onAimEnd,
             onSelectHub,
+            onMapClick,
             committedActions,
             showDebugPreview,
             maxPullDistance,
@@ -67,6 +68,7 @@ const GameBoard = forwardRef(
                 onAimUpdate,
                 onAimEnd,
                 onSelectHub,
+                onMapClick,
                 isResolving,
                 cameraOffset,
                 setCameraOffset,
@@ -441,7 +443,7 @@ const GameBoard = forwardRef(
                         cursor: isAiming ? 'crosshair' : isPanning ? 'grabbing' : 'grab',
                         width: '100%',
                         maxHeight: '100%',
-                        objectFit: 'fill'
+                        objectFit: 'contain'
                     }}
                 />
             </div>

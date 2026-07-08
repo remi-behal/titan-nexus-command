@@ -79,10 +79,7 @@ const MapDesigner = ({ onSave, onBack }) => {
     );
 
     const handleMapClick = (e) => {
-        // Stop propagation to prevent GameBoard from panning if we are placing
-        if (selectedTool !== TOOLS.SELECT) {
-            e.stopPropagation();
-        }
+        if (selectedTool === TOOLS.SELECT) return;
 
         if (!gameBoardRef.current) return;
         const coords = gameBoardRef.current.getGameCoords(e);
@@ -254,10 +251,8 @@ const MapDesigner = ({ onSave, onBack }) => {
                     onAimStart={() => {}}
                     onAimUpdate={() => {}}
                     onAimEnd={() => {}}
+                    onMapClick={handleMapClick}
                 />
-                {selectedTool !== TOOLS.SELECT && (
-                    <div className="designer-click-overlay" onMouseDown={handleMapClick} />
-                )}
             </main>
         </div>
     );
