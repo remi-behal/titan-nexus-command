@@ -1352,7 +1352,9 @@ export class GameState {
                                         y: v.y,
                                         radius: v.radius,
                                         targetX: v.targetX,
-                                        targetY: v.targetY
+                                        targetY: v.targetY,
+                                        duration: v.duration,
+                                        maxDuration: v.maxDuration || v.duration || 40
                                     }))
                                 ];
                                 snapshots.push({

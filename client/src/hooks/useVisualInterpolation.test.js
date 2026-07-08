@@ -208,4 +208,20 @@ describe('useVisualInterpolation SFX triggers', () => {
 
         timeSpy.mockRestore();
     });
+
+    it('should assign spawnTime to newly added visual entities', () => {
+        const { result } = renderHook(() => useVisualInterpolation());
+        const state = {
+            turn: 1,
+            phase: 'PLANNING',
+            map: { width: 2000, height: 2000 },
+            entities: [{ id: 'expl-1', type: 'EXPLOSION', x: 100, y: 100, radius: 40 }],
+            links: [],
+            audibleEvents: []
+        };
+        result.current.updateInterpolation(state, 'player1');
+        const entity = result.current.visualEntities.current['expl-1'];
+        expect(entity.spawnTime).toBeTypeOf('number');
+        expect(entity.spawnTime).toBeLessThanOrEqual(Date.now());
+    });
 });

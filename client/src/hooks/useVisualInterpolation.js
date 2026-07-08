@@ -155,7 +155,8 @@ export function useVisualInterpolation() {
                     ...serverEnt,
                     isGhost: false,
                     lastSeen: Date.now(),
-                    scouted: serverEnt.scouted
+                    scouted: serverEnt.scouted,
+                    spawnTime: Date.now()
                 };
 
                 // Play procedural SFX for newly spawned entities
