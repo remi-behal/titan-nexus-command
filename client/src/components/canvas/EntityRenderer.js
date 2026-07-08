@@ -11,6 +11,17 @@ import { SHAPES } from '../../constants/ShapeDefinitions.js';
 import * as TorusMath from '../../../../shared/utils/TorusMath.js';
 import { shouldHighlightRing } from '../../utils/uiLogic.js';
 
+function getSeededRandom(seedString) {
+    let hash = 0;
+    for (let i = 0; i < seedString.length; i++) {
+        hash = seedString.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return () => {
+        const x = Math.sin(hash++) * 10000;
+        return x - Math.floor(x);
+    };
+}
+
 const drawToroidalLine = (ctx, x1, y1, x2, y2, width, height, forceDx = null, forceDy = null) => {
     const dx = forceDx !== null ? forceDx : x2 - x1;
     const dy = forceDy !== null ? forceDy : y2 - y1;
@@ -263,17 +274,67 @@ export function drawEntities(
         } else if (entity.type === 'EXPLOSION') {
             const explosionRadius = entity.radius || 40;
             const vStats = VISUAL_STATS[entity.itemType] || {};
-            const shapeKey = entity.itemType === 'NUKE' ? 'NUKE_EXPLOSION' : 'EXPLOSION';
-            drawShape(
-                ctx,
-                entity.x,
-                entity.y,
-                shapeKey,
-                explosionRadius,
-                vStats.color || '#ff9900',
-                0,
-                displayAsGhost
-            );
+            const baseColor = vStats.color || '#ff9900';
+            
+            // Calculate animation progress
+            const maxDuration = entity.maxDuration || 40;
+            const durationMs = maxDuration * 60; // 60ms per subtick
+            const age = Date.now() - (entity.spawnTime || Date.now());
+            const progress = Math.min(1.0, Math.max(0.0, age / durationMs));
+            
+            // Fast initial expansion curve
+            const pFast = Math.pow(progress, 0.3);
+            const pSlow = Math.pow(Math.max(0, progress - 0.15), 0.4);
+            const alpha = displayAsGhost ? 0.3 : Math.max(0, 1 - Math.pow(progress, 1.5));
+            const lineWidth = Math.max(0.5, 3 * (1 - progress));
+            
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            if (!displayAsGhost) {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = baseColor;
+            }
+            
+            // 1. Primary Shockwave Ring
+            ctx.beginPath();
+            ctx.arc(entity.x, entity.y, explosionRadius * pFast, 0, Math.PI * 2);
+            ctx.strokeStyle = baseColor;
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+            
+            // 2. Secondary Shockwave Ring (delayed)
+            if (progress > 0.15) {
+                ctx.beginPath();
+                ctx.arc(entity.x, entity.y, explosionRadius * 0.7 * pSlow, 0, Math.PI * 2);
+                ctx.strokeStyle = baseColor;
+                ctx.lineWidth = lineWidth * 0.6;
+                ctx.stroke();
+            }
+            
+            // 3. Seeded sparks radiating outward
+            const rand = getSeededRandom(entity.id || 'expl');
+            const sparkCount = 14;
+            for (let i = 0; i < sparkCount; i++) {
+                const angle = rand() * Math.PI * 2;
+                const speed = 0.5 + rand() * 0.7;
+                // Drag distance formula
+                const maxDist = explosionRadius * 1.3 * speed;
+                const currentDist = maxDist * (1 - Math.exp(-5 * progress));
+                
+                const startX = entity.x + Math.cos(angle) * (currentDist - 6 * (1 - progress));
+                const startY = entity.y + Math.sin(angle) * (currentDist - 6 * (1 - progress));
+                const endX = entity.x + Math.cos(angle) * currentDist;
+                const endY = entity.y + Math.sin(angle) * currentDist;
+                
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = baseColor;
+                ctx.lineWidth = Math.max(0.5, 1.5 * (1 - progress));
+                ctx.stroke();
+            }
+            
+            ctx.restore();
         } else if (entity.type === 'SHIELD_HIT') {
             drawShape(
                 ctx,
