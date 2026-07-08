@@ -36,6 +36,14 @@ const MapDesigner = ({ onSave, onBack }) => {
     const [zoom, setZoom] = useState(0.8);
     const [minZoom] = useState(0.25);
     const gameBoardRef = useRef(null);
+    const [, setRefTick] = useState(0);
+    const setGameBoardRef = React.useCallback((node) => {
+        const prev = gameBoardRef.current;
+        gameBoardRef.current = node;
+        if ((!prev && node) || (prev && !node)) {
+            setRefTick((t) => t + 1);
+        }
+    }, []);
 
     // Mock GameState for GameBoard to render
     const mockGameState = React.useMemo(
@@ -76,6 +84,7 @@ const MapDesigner = ({ onSave, onBack }) => {
             e.stopPropagation();
         }
 
+        if (!gameBoardRef.current) return;
         const coords = gameBoardRef.current.getGameCoords(e);
         if (!coords) return;
 
@@ -227,7 +236,7 @@ const MapDesigner = ({ onSave, onBack }) => {
 
             <main className="designer-world">
                 <GameBoard
-                    ref={gameBoardRef}
+                    ref={setGameBoardRef}
                     gameState={mockGameState}
                     myPlayerId="spectator"
                     selectedHubId={null}
@@ -240,6 +249,7 @@ const MapDesigner = ({ onSave, onBack }) => {
                     zoom={zoom}
                     setZoom={setZoom}
                     minZoom={minZoom}
+                    isSandbox={true}
                     onSelectHub={() => {}}
                     onAimStart={() => {}}
                     onAimUpdate={() => {}}
