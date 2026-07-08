@@ -178,8 +178,11 @@ export function registerLobbyHandlers(socket, io, context, timerService, startMa
 
         const slot1 = room.slots[0];
         if (slot1 && slot1.socketId === socket.id) {
-            room.setMap(mapName);
+            const mapConfig = mapService.loadReadyMap(mapName) || mapService.loadMap(mapName);
+            const playerBasesCount = mapConfig?.playerBases?.length || null;
+            room.setMap(mapName, playerBasesCount);
             io.to(roomId).emit('lobby:update', room.getUpdate());
+            io.emit('lobby:roomsList', lobbyManager.getRoomList());
         }
     });
 

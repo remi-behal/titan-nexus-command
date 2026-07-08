@@ -204,8 +204,16 @@ export class LobbyRoom {
         return false;
     }
 
-    setMap(mapName) {
+    setMap(mapName, playerBasesCount = null) {
         this.selectedMapName = mapName;
+        if (playerBasesCount !== null && playerBasesCount >= 2 && playerBasesCount <= 8) {
+            this.maxPlayers = playerBasesCount;
+            const oldSlots = this.slots;
+            this.slots = new Array(playerBasesCount).fill(null);
+            for (let i = 0; i < Math.min(oldSlots.length, playerBasesCount); i++) {
+                this.slots[i] = oldSlots[i];
+            }
+        }
     }
 
     handleDisconnect(socketId) {

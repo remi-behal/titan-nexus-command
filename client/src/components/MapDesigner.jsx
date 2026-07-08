@@ -13,8 +13,15 @@ const TOOLS = {
     RESOURCE_SUPER: 'RESOURCE_SUPER',
     LAKE: 'LAKE',
     MOUNTAIN: 'MOUNTAIN',
-    PLAYER1_BASE: 'PLAYER1_BASE',
-    PLAYER2_BASE: 'PLAYER2_BASE',
+    STARTER_HUB_ADD: 'STARTER_HUB_ADD',
+    MOVE_HUB_1: 'MOVE_HUB_1',
+    MOVE_HUB_2: 'MOVE_HUB_2',
+    MOVE_HUB_3: 'MOVE_HUB_3',
+    MOVE_HUB_4: 'MOVE_HUB_4',
+    MOVE_HUB_5: 'MOVE_HUB_5',
+    MOVE_HUB_6: 'MOVE_HUB_6',
+    MOVE_HUB_7: 'MOVE_HUB_7',
+    MOVE_HUB_8: 'MOVE_HUB_8',
     DELETE: 'DELETE'
 };
 
@@ -49,10 +56,13 @@ const MapDesigner = ({ onSave, onBack }) => {
     const mockGameState = React.useMemo(
         () => ({
             turn: 1,
-            players: {
-                player1: { color: 'hsl(0, 100%, 68%)', energy: 100 },
-                player2: { color: 'hsl(60, 85%, 60%)', energy: 100 }
-            },
+            players: mapData.playerBases.reduce((acc, b, index) => {
+                acc[b.owner] = {
+                    color: index === 0 ? 'hsl(0, 100%, 68%)' : `hsl(${index * 60}, 85%, 60%)`,
+                    energy: 100
+                };
+                return acc;
+            }, {}),
             map: {
                 width: mapData.width,
                 height: mapData.height,
@@ -133,14 +143,40 @@ const MapDesigner = ({ onSave, onBack }) => {
                 newState.resources = prev.resources.filter((r) => dist(r, coords) > 30);
                 newState.lakes = prev.lakes.filter((l) => dist(l, coords) > l.radius);
                 newState.mountains = prev.mountains.filter((m) => dist(m, coords) > m.radius);
-            } else if (selectedTool === TOOLS.PLAYER1_BASE) {
-                newState.playerBases = prev.playerBases.map((b) =>
-                    b.owner === 'player1' ? { ...b, x: coords.x, y: coords.y } : b
-                );
-            } else if (selectedTool === TOOLS.PLAYER2_BASE) {
-                newState.playerBases = prev.playerBases.map((b) =>
-                    b.owner === 'player2' ? { ...b, x: coords.x, y: coords.y } : b
-                );
+                const remainingBases = prev.playerBases.filter((b) => dist(b, coords) > 30);
+                newState.playerBases = remainingBases.map((b, idx) => ({
+                    ...b,
+                    id: `p${idx + 1}`,
+                    owner: `player${idx + 1}`
+                }));
+                if (selectedTool.startsWith('MOVE_HUB_')) {
+                    const hubIdx = parseInt(selectedTool.replace('MOVE_HUB_', ''), 10) - 1;
+                    if (hubIdx >= newState.playerBases.length) {
+                        setSelectedTool(TOOLS.SELECT);
+                    }
+                }
+            } else if (selectedTool === TOOLS.STARTER_HUB_ADD) {
+                if (prev.playerBases.length < 8) {
+                    const nextNum = prev.playerBases.length + 1;
+                    newState.playerBases = [
+                        ...prev.playerBases,
+                        {
+                            id: `p${nextNum}`,
+                            x: coords.x,
+                            y: coords.y,
+                            owner: `player${nextNum}`
+                        }
+                    ];
+                } else {
+                    alert("Maximum of 8 starter hubs reached.");
+                }
+            } else if (selectedTool.startsWith('MOVE_HUB_')) {
+                const hubIdx = parseInt(selectedTool.replace('MOVE_HUB_', ''), 10) - 1;
+                if (newState.playerBases[hubIdx]) {
+                    newState.playerBases = prev.playerBases.map((b, idx) =>
+                        idx === hubIdx ? { ...b, x: coords.x, y: coords.y } : b
+                    );
+                }
             }
             return newState;
         });
@@ -200,18 +236,26 @@ const MapDesigner = ({ onSave, onBack }) => {
                         >
                             + Mountain
                         </button>
-                        <button
-                            className={selectedTool === TOOLS.PLAYER1_BASE ? 'active' : ''}
-                            onClick={() => setSelectedTool(TOOLS.PLAYER1_BASE)}
-                        >
-                            P1 Base
-                        </button>
-                        <button
-                            className={selectedTool === TOOLS.PLAYER2_BASE ? 'active' : ''}
-                            onClick={() => setSelectedTool(TOOLS.PLAYER2_BASE)}
-                        >
-                            P2 Base
-                        </button>
+                        {mapData.playerBases.length < 8 && (
+                            <button
+                                className={selectedTool === TOOLS.STARTER_HUB_ADD ? 'active' : ''}
+                                onClick={() => setSelectedTool(TOOLS.STARTER_HUB_ADD)}
+                            >
+                                + Hub
+                            </button>
+                        )}
+                        {mapData.playerBases.map((b, idx) => {
+                            const toolKey = `MOVE_HUB_${idx + 1}`;
+                            return (
+                                <button
+                                    key={toolKey}
+                                    className={selectedTool === toolKey ? 'active' : ''}
+                                    onClick={() => setSelectedTool(toolKey)}
+                                >
+                                    Move H{idx + 1}
+                                </button>
+                            );
+                        })}
                         <button
                             className={selectedTool === TOOLS.DELETE ? 'active' : ''}
                             onClick={() => setSelectedTool(TOOLS.DELETE)}
