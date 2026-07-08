@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { validateMapConfig } from '../shared/utils/MapValidator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,13 +20,18 @@ class MapService {
     }
 
     saveMap(name, data) {
+        if (typeof name !== 'string' || !name.trim()) {
+            throw new Error('Map name must be a non-empty string');
+        }
+        const validated = validateMapConfig(data);
         const fileName = `${name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
         const filePath = path.join(MAP_DIR, fileName);
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+        fs.writeFileSync(filePath, JSON.stringify(validated, null, 2));
         return fileName;
     }
 
     deleteMap(name) {
+        if (typeof name !== 'string') return false;
         const fileName = `${name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
         const filePath = path.join(MAP_DIR, fileName);
         if (fs.existsSync(filePath)) {
@@ -56,7 +62,13 @@ class MapService {
         const safeName = name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
         const filePath = path.join(MAP_DIR, `${safeName}.json`);
         if (!fs.existsSync(filePath)) return null;
-        return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        try {
+            const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+            return validateMapConfig(raw);
+        } catch (e) {
+            console.error(`[MapService] Failed to load/validate custom map ${name}:`, e.message);
+            return null;
+        }
     }
 
     loadReadyMap(name) {
@@ -64,7 +76,13 @@ class MapService {
         const safeName = name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
         const filePath = path.join(READY_MAP_DIR, `${safeName}.json`);
         if (!fs.existsSync(filePath)) return null;
-        return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        try {
+            const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+            return validateMapConfig(raw);
+        } catch (e) {
+            console.error(`[MapService] Failed to load/validate ready map ${name}:`, e.message);
+            return null;
+        }
     }
 }
 

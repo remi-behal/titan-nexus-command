@@ -91,8 +91,12 @@ export function registerGameHandlers(socket, io, context, timerService) {
         }
     });
 
-    socket.on('map:save', ({ name, data }) => {
+    socket.on('map:save', (payload) => {
         try {
+            if (!payload || typeof payload !== 'object') {
+                throw new Error('Invalid request payload');
+            }
+            const { name, data } = payload;
             const fileName = mapService.saveMap(name, data);
             socket.emit('map:saveSuccess', fileName);
 
