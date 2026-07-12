@@ -27,6 +27,7 @@ class AudioManager {
         this.frameSounds = new Set();
         this.cameraContext = null;
         this.initBasePromise = null;
+        this.voiceCache = {};
 
         this.registerJsonSounds();
         this.setupUnlockListeners();
@@ -447,6 +448,69 @@ class AudioManager {
         // Plays both sounds in parallel and returns their sources in an array
         const sources = await Promise.all([this.playHeavyLaunch(), this.playLongError()]);
         return sources; // Can be routed or handled together
+    }
+
+    /**
+     * Preloads a voice snippet and stores the decoded AudioBuffer in cache.
+     * @param {string} fileName The voice file name (e.g., 'enemy_detected.mp3')
+     */
+    async preloadVoice(fileName) {
+        const path = `/audio/voices/${fileName}`;
+        if (this.voiceCache[path]) {
+            return this.voiceCache[path];
+        }
+
+        try {
+            const response = await fetch(path);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const arrayBuffer = await response.arrayBuffer();
+            const decodedBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+            this.voiceCache[path] = decodedBuffer;
+            return decodedBuffer;
+        } catch (e) {
+            console.error(`Failed to preload voice snippet: ${path}`, e);
+            return null;
+        }
+    }
+
+    /**
+     * Plays a voice snippet globally.
+     * @param {string} fileName The voice file name (e.g., 'enemy_detected.mp3')
+     */
+    async playVoiceSnippet(fileName) {
+        if (this.isMuted) return null;
+
+        await this.initBase();
+        if (this.ctx && this.ctx.state === 'suspended') {
+            await this.ctx.resume();
+        }
+
+        const path = `/audio/voices/${fileName}`;
+        try {
+            let buffer = this.voiceCache[path];
+            if (!buffer) {
+                buffer = await this.preloadVoice(fileName);
+            }
+            if (!buffer) return null;
+
+            const source = this.ctx.createBufferSource();
+            source.buffer = buffer;
+
+            // Apply global volume
+            const gainNode = this.ctx.createGain();
+            gainNode.gain.value = this.volume;
+
+            // Connect source -> gain -> dynamics compressor -> destination
+            source.connect(gainNode).connect(this.compressor || this.ctx.destination);
+
+            source.start();
+            return source;
+        } catch (e) {
+            console.error(`Failed to play voice snippet: ${path}`, e);
+            return null;
+        }
     }
 }
 

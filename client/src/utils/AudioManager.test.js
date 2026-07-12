@@ -735,4 +735,104 @@ describe('AudioManager', () => {
             );
         });
     });
+
+    describe('AudioManager Voice Playback', () => {
+        let mockContext;
+        let mockBuffer;
+        let mockSource;
+        let mockGain;
+
+        beforeEach(() => {
+            // Reset voice cache
+            audioManager.voiceCache = {};
+
+            mockSource = {
+                buffer: null,
+                connect: vi.fn().mockImplementation((node) => node),
+                start: vi.fn()
+            };
+
+            mockGain = {
+                gain: { value: 1.0 },
+                connect: vi.fn().mockImplementation((node) => node)
+            };
+
+            mockBuffer = { duration: 1.5 };
+
+            const mockCompressor = {
+                threshold: { setValueAtTime: vi.fn() },
+                knee: { setValueAtTime: vi.fn() },
+                ratio: { setValueAtTime: vi.fn() },
+                attack: { setValueAtTime: vi.fn() },
+                release: { setValueAtTime: vi.fn() },
+                connect: vi.fn()
+            };
+
+            mockContext = {
+                state: 'running',
+                currentTime: 0,
+                resume: vi.fn().mockResolvedValue(),
+                createDynamicsCompressor: vi.fn().mockReturnValue(mockCompressor),
+                createBufferSource: vi.fn().mockReturnValue(mockSource),
+                createGain: vi.fn().mockReturnValue(mockGain),
+                decodeAudioData: vi.fn().mockResolvedValue(mockBuffer),
+                destination: {}
+            };
+
+            vi.stubGlobal(
+                'AudioContext',
+                vi.fn().mockImplementation(() => mockContext)
+            );
+
+            vi.stubGlobal(
+                'fetch',
+                vi.fn().mockResolvedValue({
+                    ok: true,
+                    arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8))
+                })
+            );
+        });
+
+        it('preloads a voice snippet and caches it', async () => {
+            await audioManager.initBase();
+            const buffer = await audioManager.preloadVoice('enemy_detected.mp3');
+
+            expect(global.fetch).toHaveBeenCalledWith('/audio/voices/enemy_detected.mp3');
+            expect(mockContext.decodeAudioData).toHaveBeenCalled();
+            expect(buffer).toBe(mockBuffer);
+            expect(audioManager.voiceCache['/audio/voices/enemy_detected.mp3']).toBe(mockBuffer);
+        });
+
+        it('uses cached voice buffer on subsequent preload calls', async () => {
+            await audioManager.initBase();
+            audioManager.voiceCache['/audio/voices/enemy_detected.mp3'] = mockBuffer;
+
+            const buffer = await audioManager.preloadVoice('enemy_detected.mp3');
+
+            expect(global.fetch).not.toHaveBeenCalled();
+            expect(buffer).toBe(mockBuffer);
+        });
+
+        it('plays voice snippet and connects nodes correctly', async () => {
+            audioManager.volume = 0.85;
+            audioManager.voiceCache['/audio/voices/enemy_detected.mp3'] = mockBuffer;
+
+            const source = await audioManager.playVoiceSnippet('enemy_detected.mp3');
+
+            expect(mockContext.createBufferSource).toHaveBeenCalled();
+            expect(mockSource.buffer).toBe(mockBuffer);
+            expect(mockGain.gain.value).toBe(0.85);
+            expect(mockSource.connect).toHaveBeenCalledWith(mockGain);
+            expect(mockGain.connect).toHaveBeenCalled();
+            expect(mockSource.start).toHaveBeenCalled();
+            expect(source).toBe(mockSource);
+        });
+
+        it('does not play voice snippet if muted', async () => {
+            audioManager.isMuted = true;
+            const source = await audioManager.playVoiceSnippet('enemy_detected.mp3');
+            expect(source).toBeNull();
+        });
+    });
 });
+
