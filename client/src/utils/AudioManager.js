@@ -208,6 +208,8 @@ class AudioManager {
             return new Promise((resolve) => {
                 this.player.onInitialized(() => {
                     this.player.setVol(this.volume);
+                    // Preload the enemy detected voice snippet asynchronously
+                    this.preloadVoice('enemy_detected.mp3').catch(() => {});
                     resolve();
                 });
             });
