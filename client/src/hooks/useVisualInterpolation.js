@@ -162,6 +162,13 @@ export function useVisualInterpolation() {
                 // Play procedural SFX for newly spawned entities
                 if (!isFirstUpdate.current) {
                     triggerSpawnSfx(serverEnt.type, serverEnt.itemType, serverEnt.x, serverEnt.y);
+
+                    const stats = ENTITY_STATS[serverEnt.itemType || serverEnt.type];
+                    const isEnemy = serverEnt.owner && serverEnt.owner !== myPlayerId && myPlayerId !== 'spectator';
+                    const isStructure = stats?.type === ENTITY_TYPES.STRUCTURE;
+                    if (isEnemy && isStructure) {
+                        audioManager.playVoiceSnippet('enemy_detected.mp3');
+                    }
                 }
             } else {
                 const viz = visualEntities.current[serverEnt.id];

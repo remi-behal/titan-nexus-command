@@ -17,7 +17,8 @@ vi.mock('../utils/AudioManager', () => ({
         playSamLockOn: vi.fn(),
         playStructureDestroyed: vi.fn(),
         playLinkSevered: vi.fn(),
-        playLowBuzz: vi.fn()
+        playLowBuzz: vi.fn(),
+        playVoiceSnippet: vi.fn()
     }
 }));
 
@@ -223,5 +224,35 @@ describe('useVisualInterpolation SFX triggers', () => {
         const entity = result.current.visualEntities.current['expl-1'];
         expect(entity.spawnTime).toBeTypeOf('number');
         expect(entity.spawnTime).toBeLessThanOrEqual(Date.now());
+    });
+
+    it('should play enemy detected voice snippet when a new enemy structure is revealed', () => {
+        const { result } = renderHook(() => useVisualInterpolation());
+
+        const state1 = {
+            turn: 1,
+            phase: 'PLANNING',
+            map: { width: 2000, height: 2000 },
+            entities: [{ id: 'my-hub', type: 'HUB', x: 100, y: 100, owner: 'player1' }],
+            links: [],
+            audibleEvents: []
+        };
+
+        const state2 = {
+            turn: 1,
+            phase: 'RESOLVING',
+            map: { width: 2000, height: 2000 },
+            entities: [
+                { id: 'my-hub', type: 'HUB', x: 100, y: 100, owner: 'player1' },
+                { id: 'enemy-extractor', type: 'EXTRACTOR', x: 200, y: 200, owner: 'player2' }
+            ],
+            links: [],
+            audibleEvents: []
+        };
+
+        result.current.updateInterpolation(state1, 'player1');
+        result.current.updateInterpolation(state2, 'player1');
+
+        expect(audioManager.playVoiceSnippet).toHaveBeenCalledWith('enemy_detected.mp3');
     });
 });
