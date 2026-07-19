@@ -313,7 +313,7 @@ export function drawEntities(
             
             // 3. Seeded sparks radiating outward
             const rand = getSeededRandom(entity.id || 'expl');
-            const sparkCount = 14;
+            const sparkCount = 42;
             for (let i = 0; i < sparkCount; i++) {
                 const angle = rand() * Math.PI * 2;
                 const speed = 0.5 + rand() * 0.7;
