@@ -282,10 +282,10 @@ export function drawEntities(
             const age = Date.now() - (entity.spawnTime || Date.now());
             const progress = Math.min(1.0, Math.max(0.0, age / durationMs));
             
-            // Fast initial expansion curve
-            const pFast = Math.pow(progress, 0.3);
-            const pSlow = Math.pow(Math.max(0, progress - 0.15), 0.4);
-            const alpha = displayAsGhost ? 0.3 : Math.max(0, 1 - Math.pow(progress, 1.5));
+            // Scaled radii and alpha fade
+            const pFast = Math.pow(progress, 0.2);
+            const pOuter = Math.pow(progress, 0.4);
+            const alpha = displayAsGhost ? 0.3 : Math.max(0, 1 - progress * progress);
             const lineWidth = Math.max(0.5, 3 * (1 - progress));
             
             ctx.save();
@@ -295,44 +295,18 @@ export function drawEntities(
                 ctx.shadowColor = baseColor;
             }
             
-            // 1. Primary Shockwave Ring
+            // 1. Solid Core (White) expanding to 20% of max radius
             ctx.beginPath();
-            ctx.arc(entity.x, entity.y, explosionRadius * pFast, 0, Math.PI * 2);
+            ctx.arc(entity.x, entity.y, explosionRadius * 0.2 * pFast, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            
+            // 2. Hollow Outer Ring expanding to full max radius
+            ctx.beginPath();
+            ctx.arc(entity.x, entity.y, explosionRadius * pOuter, 0, Math.PI * 2);
             ctx.strokeStyle = baseColor;
             ctx.lineWidth = lineWidth;
             ctx.stroke();
-            
-            // 2. Secondary Shockwave Ring (delayed)
-            if (progress > 0.15) {
-                ctx.beginPath();
-                ctx.arc(entity.x, entity.y, explosionRadius * 0.7 * pSlow, 0, Math.PI * 2);
-                ctx.strokeStyle = baseColor;
-                ctx.lineWidth = lineWidth * 0.6;
-                ctx.stroke();
-            }
-            
-            // 3. Seeded sparks radiating outward
-            const rand = getSeededRandom(entity.id || 'expl');
-            const sparkCount = 42;
-            for (let i = 0; i < sparkCount; i++) {
-                const angle = rand() * Math.PI * 2;
-                const speed = 0.5 + rand() * 0.7;
-                // Drag distance formula
-                const maxDist = explosionRadius * 1.3 * speed;
-                const currentDist = maxDist * (1 - Math.exp(-5 * progress));
-                
-                const startX = entity.x + Math.cos(angle) * (currentDist - 6 * (1 - progress));
-                const startY = entity.y + Math.sin(angle) * (currentDist - 6 * (1 - progress));
-                const endX = entity.x + Math.cos(angle) * currentDist;
-                const endY = entity.y + Math.sin(angle) * currentDist;
-                
-                ctx.beginPath();
-                ctx.moveTo(startX, startY);
-                ctx.lineTo(endX, endY);
-                ctx.strokeStyle = baseColor;
-                ctx.lineWidth = Math.max(0.5, 1.5 * (1 - progress));
-                ctx.stroke();
-            }
             
             ctx.restore();
         } else if (entity.type === 'SHIELD_HIT') {
