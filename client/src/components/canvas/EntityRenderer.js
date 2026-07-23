@@ -277,7 +277,7 @@ export function drawEntities(
             const baseColor = vStats.color || '#ff9900';
             
             // Calculate animation progress
-            const maxDuration = entity.maxDuration || 40;
+            const maxDuration = entity.maxDuration || 80;
             const durationMs = maxDuration * 60; // 60ms per subtick
             const age = Date.now() - (entity.spawnTime || Date.now());
             const progress = Math.min(1.0, Math.max(0.0, age / durationMs));

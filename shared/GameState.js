@@ -1354,7 +1354,7 @@ export class GameState {
                                         targetX: v.targetX,
                                         targetY: v.targetY,
                                         duration: v.duration,
-                                        maxDuration: v.maxDuration || v.duration || 40
+                                        maxDuration: v.maxDuration || v.duration || 80
                                     }))
                                 ];
                                 snapshots.push({
